@@ -8,6 +8,7 @@ import OllamaEmbeddingService from "../../services/ollama/embed";
 import ChromaService from "../../services/chroma";
 
 import { ChatResponse } from "ollama";
+import { IRAGChunk } from "../../../../shared/models/chroma/rag-chunk";
 
 const handler = async (
   req: TypedRequest<AIAPITypes.GenerateRequestBody>,
@@ -33,7 +34,20 @@ const handler = async (
   const ragDocuments = await collection!.query({
     queryEmbeddings: [queryEmbedding], // Apply RAG
     where: {
-      campus: { $in: campuses },
+      $and: [
+        {
+          campuses_comayagua: campuses.includes("COMAYAGUA"),
+          campuses_global: campuses.includes("GLOBAL"),
+        } as Partial<IRAGChunk>,
+        {
+          deliveryModes_online: deliveryModes.includes("online"),
+          deliveryModes_inPerson: deliveryModes.includes("onsite"),
+          deliveryModes_hybrid: deliveryModes.includes("hybrid"),
+        } as Partial<IRAGChunk>,
+        {
+          category: category,
+        } as Partial<IRAGChunk>,
+      ],
     },
     nResults: 3,
   });
