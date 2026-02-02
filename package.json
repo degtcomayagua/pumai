@@ -16,7 +16,8 @@
     "dev:client": "npm --workspace=client run dev",
     "dev:server": "npm --workspace=server run dev",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "echo \"No tests configured\" && exit 0"
+    "test": "echo \"No tests configured\" && exit 0",
+    "docs": "mkdocs serve"
   },
   "author": "",
   "license": "ISC",

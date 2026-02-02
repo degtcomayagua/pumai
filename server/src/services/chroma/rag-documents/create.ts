@@ -7,7 +7,12 @@ import LoggingService from "../../logging";
 import ChromaService from "../../chroma";
 
 import OllamaEmbeddingService from "../../ollama/embed";
-import { DocumentCategory } from "../../../../../shared/models";
+import {
+  CampusCode,
+  DeliveryMode,
+  DocumentCategory,
+} from "../../../../../shared/models";
+import { IRAGChunk } from "../../../../../shared/models/chroma/rag-chunk";
 
 export const RAG_DOC_CHUNKS_COLLECTION = "rag-documents";
 
@@ -20,14 +25,18 @@ export type CreateRagDocChunkParameters = {
   category: DocumentCategory;
   authorityLevel: number;
 
-  campuses: string; // CampusCode[]
-  deliveryModes: string; // DeliveryMode[]
+  campuses: CampusCode[]; // CampusCode[]
+  deliveryModes: DeliveryMode[]; // DeliveryMode[]
 
   effectiveFrom: string; // ISO string
   effectiveUntil: string; // ISO string or null
   archived: boolean;
 
-  warnings: string; // JSON stringified
+  warnings: {
+    legal?: string;
+    timeSensitive?: string;
+    campusSpecific?: string;
+  };
 
   embedding: number[];
 };
@@ -73,11 +82,26 @@ export async function createRagDocChunk(
         archived,
         effectiveUntil,
         effectiveFrom,
-        warnings,
+        warnings: JSON.stringify(warnings || {}), // We store it this way because we dont use it for "fetching"
         authorityLevel,
-        campuses,
-        deliveryModes,
-      },
+        content: "", // We remove content from metadata to save space
+
+        // Array values as booleans for compatibility with Chroma indexing
+        campuses_choluteca: campuses.includes("CHOLUTECA"),
+        campuses_comayagua: campuses.includes("COMAYAGUA"),
+        campuses_danli: campuses.includes("DANLI"),
+        campuses_global: campuses.includes("GLOBAL"),
+        campuses_la_ceiba: campuses.includes("LA CEIBA"),
+        campuses_laceiba: campuses.includes("LA CEIBA"),
+        campuses_sanpedro: campuses.includes("SANPEDRO"),
+        campuses_santarosa: campuses.includes("SANTA ROSA"),
+        campuses_tegucigalpa: campuses.includes("TEGUCIGALPA"),
+
+        // Array values as booleans for compatibility with Chroma indexing
+        deliveryModes_hybrid: deliveryModes.includes("hybrid"),
+        deliveryModes_online: deliveryModes.includes("online"),
+        deliveryModes_onsite: deliveryModes.includes("onsite"),
+      } as Partial<IRAGChunk>,
     ],
   });
 

@@ -80,6 +80,9 @@ function Page() {
       const result = await AIFeature.api.generate({
         prompt: trimmed,
         chat: messages,
+        deliveryModes: ["onsite", "online", "hybrid"],
+        category: undefined,
+        campuses: ["COMAYAGUA"],
       });
       if (result.status === "success") {
         setMessages((prev) => [

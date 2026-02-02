@@ -11,5 +11,35 @@ const generateSchema = z.object({
         .max(10000, "message-content-too-long"),
     }),
   ),
+
+  // New
+  campuses: z
+    .array(
+      z.enum([
+        "COMAYAGUA",
+        "TEGUCIGALPA",
+        "SANPEDRO",
+        "CHOLUTECA",
+        "LA CEIBA",
+        "DANLI",
+        "SANTA ROSA",
+        "GLOBAL",
+      ]),
+    )
+    .min(1, "at-least-one-campus-required"),
+
+  deliveryModes: z
+    .array(z.enum(["onsite", "online", "hybrid"], {}))
+    .min(1, "at-least-one-delivery-mode-required"),
+
+  category: z
+    .enum([
+      "regulation",
+      "administrative",
+      "campus_service",
+      "student_life",
+      "support",
+    ])
+    .optional(),
 });
 export { generateSchema };

@@ -1,5 +1,5 @@
 // API
-import * as AIAPITypes from "../../../../shared/types/api/ai";
+import * as AIAPITypes from "../../../../shared/api/ai";
 import * as schemas from "../../../../shared/schemas/ai";
 import api from "./api";
 

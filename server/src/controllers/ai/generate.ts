@@ -5,6 +5,8 @@ import * as AIAPITypes from "../../../../shared/api/ai";
 
 import OllamaChatService from "../../services/ollama/chat";
 import OllamaEmbeddingService from "../../services/ollama/embed";
+import ChromaService from "../../services/chroma";
+
 import { ChatResponse } from "ollama";
 
 const handler = async (
@@ -13,13 +15,31 @@ const handler = async (
   _next: NextFunction,
 ) => {
   // TODO: Expand this
-  const { prompt, chat } = req.parsedBody;
+  const { prompt, chat, campuses, deliveryModes, category } = req.parsedBody;
 
-  const context = await OllamaEmbeddingService.getInstance().getContext(prompt);
-  console.log(context)
+  // TODO: Safety checks
+
+  // Get the embedding for the prompt
+  const queryEmbedding =
+    await OllamaEmbeddingService.getInstance().embedText(prompt);
+
+  // Fetch relevant documents from ChromaDB
+  const collection = await ChromaService.getInstance()
+    .getClient()
+    .getOrCreateCollection({
+      name: "rag-documents",
+      embeddingFunction: OllamaEmbeddingService.getInstance().getEmbedder(),
+    });
+  const ragDocuments = await collection!.query({
+    queryEmbeddings: [queryEmbedding], // Apply RAG
+    where: {
+      campus: { $in: campuses },
+    },
+    nResults: 3,
+  });
 
   const finalPrompt = OllamaChatService.getInstance().getFinalPrompt(
-    context.documents.join("\n"),
+    ragDocuments.documents.join("\n"),
     prompt,
   );
 

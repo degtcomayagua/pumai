@@ -1,0 +1,46 @@
+site_name: PumAI
+site_description: LLM and RAG powered AI system for UNAH student enquiries
+site_author: Fernando Rivera
+
+repo_name: Asterki/PumAI
+repo_url: https://github.com/Asterki/PumAI
+
+theme:
+  name: windmill
+  language: en
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - awesome-pages
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.superfences
+
+extra_javascript: []
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - RAG Pipeline: rag.md
+  - Deployment: deployment.md

@@ -76,9 +76,11 @@ const handler = async (
         effectiveUntil: effectiveUntil
           ? new Date(effectiveUntil).toISOString()
           : "",
-        warnings: JSON.stringify(warnings || {}),
-        deliveryModes: deliveryModes.join(","),
-        campuses: campuses.join(","),
+        warnings: {
+          ...warnings,
+        },
+        deliveryModes: deliveryModes,
+        campuses: campuses,
         authorityLevel,
         category,
         embedding,
