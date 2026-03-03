@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VoiceChatRouteImport } from './routes/voice-chat'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +20,11 @@ import { Route as AdminRagDocumentsIndexRouteImport } from './routes/admin/rag-d
 import { Route as AdminAccountsIndexRouteImport } from './routes/admin/accounts/index'
 import { Route as AdminAccountsRolesRouteImport } from './routes/admin/accounts/roles'
 
+const VoiceChatRoute = VoiceChatRouteImport.update({
+  id: '/voice-chat',
+  path: '/voice-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/chat': typeof ChatRoute
+  '/voice-chat': typeof VoiceChatRoute
   '/admin/logs': typeof AdminLogsRoute
   '/auth/login': typeof AuthLoginRoute
   '/admin': typeof AdminIndexRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/chat': typeof ChatRoute
+  '/voice-chat': typeof VoiceChatRoute
   '/admin/logs': typeof AdminLogsRoute
   '/auth/login': typeof AuthLoginRoute
   '/admin': typeof AdminIndexRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/chat': typeof ChatRoute
+  '/voice-chat': typeof VoiceChatRoute
   '/admin/logs': typeof AdminLogsRoute
   '/auth/login': typeof AuthLoginRoute
   '/admin/': typeof AdminIndexRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/chat'
+    | '/voice-chat'
     | '/admin/logs'
     | '/auth/login'
     | '/admin'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/chat'
+    | '/voice-chat'
     | '/admin/logs'
     | '/auth/login'
     | '/admin'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/chat'
+    | '/voice-chat'
     | '/admin/logs'
     | '/auth/login'
     | '/admin/'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   ChatRoute: typeof ChatRoute
+  VoiceChatRoute: typeof VoiceChatRoute
   AdminLogsRoute: typeof AdminLogsRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -149,6 +162,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/voice-chat': {
+      id: '/voice-chat'
+      path: '/voice-chat'
+      fullPath: '/voice-chat'
+      preLoaderRoute: typeof VoiceChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat': {
       id: '/chat'
       path: '/chat'
@@ -219,6 +239,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   ChatRoute: ChatRoute,
+  VoiceChatRoute: VoiceChatRoute,
   AdminLogsRoute: AdminLogsRoute,
   AuthLoginRoute: AuthLoginRoute,
   AdminIndexRoute: AdminIndexRoute,

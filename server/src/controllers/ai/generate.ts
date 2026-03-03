@@ -33,22 +33,22 @@ const handler = async (
     });
   const ragDocuments = await collection!.query({
     queryEmbeddings: [queryEmbedding], // Apply RAG
-    where: {
-      $and: [
-        {
-          campuses_comayagua: campuses.includes("COMAYAGUA"),
-          campuses_global: campuses.includes("GLOBAL"),
-        } as Partial<IRAGChunk>,
-        {
-          deliveryModes_online: deliveryModes.includes("online"),
-          deliveryModes_inPerson: deliveryModes.includes("onsite"),
-          deliveryModes_hybrid: deliveryModes.includes("hybrid"),
-        } as Partial<IRAGChunk>,
-        {
-          category: category,
-        } as Partial<IRAGChunk>,
-      ],
-    },
+    // where: {
+    //   $and: [
+    //     {
+    //       campuses_comayagua: campuses.includes("COMAYAGUA"),
+    //       campuses_global: campuses.includes("GLOBAL"),
+    //     } as Partial<IRAGChunk>,
+    //     {
+    //       deliveryModes_online: deliveryModes.includes("online"),
+    //       deliveryModes_inPerson: deliveryModes.includes("onsite"),
+    //       deliveryModes_hybrid: deliveryModes.includes("hybrid"),
+    //     } as Partial<IRAGChunk>,
+    //     {
+    //       category: category,
+    //     } as Partial<IRAGChunk>,
+    //   ],
+    // },
     nResults: 3,
   });
 

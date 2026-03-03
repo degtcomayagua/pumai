@@ -28,6 +28,13 @@ class ChromaService {
     something.then(() => {
       console.log("ChromaDB connected successfully");
     });
+
+    // Clear the current collection on startup for testing purposes (TODO: Remove this in production) 
+    // this.deleteCollection().then(() => {
+    //   console.log("ChromaDB collection cleared");
+    // }).catch((err) => {
+    //   console.error("Error clearing ChromaDB collection:", err.message);
+    // });
   }
 
   public async init() {}
