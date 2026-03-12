@@ -1,9 +1,9 @@
 import api from "./api";
-import * as schemas from "../../../../shared/schemas/rag-documents";
+import * as schemas from "../../../../../contracts/pumai/schemas/rag-documents";
 
-import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents";
-import { IRAGDocument } from "../../../../shared/models/rag-document";
-import { CampusCode, DocumentCategory } from "../../../../shared/models";
+import * as RAGDocumentsAPITypes from "../../../../../contracts/pumai/api/rag-documents";
+import { IRAGDocument } from "../../../../../contracts/pumai/models/rag-document";
+import { CampusCode, DocumentCategory } from "../../../../../contracts/pumai/models";
 
 interface ListRAGDocument {
   _id: string;

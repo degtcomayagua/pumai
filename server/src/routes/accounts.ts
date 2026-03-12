@@ -22,7 +22,7 @@ import {
   getSchema,
   updateSchema,
   listSchema,
-} from "../../../shared/schemas/accounts";
+} from "../../../../contracts/pumai/schemas/accounts";
 
 // Apply global middlewares
 router.use(ensureAuthenticated);

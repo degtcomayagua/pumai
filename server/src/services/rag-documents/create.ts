@@ -3,14 +3,14 @@ import retry from "async-retry";
 import { performance } from "perf_hooks";
 
 import RAGDocumentModel from "../../models/RAGDocument";
-import { IRAGDocument } from "../../../../shared/models/rag-document";
-import { IAccount } from "../../../../shared/models/account";
+import { IRAGDocument } from "../../../../../contracts/pumai/models/rag-document";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 import {
   CampusCode,
   SourceType,
   DeliveryMode,
   DocumentCategory,
-} from "../../../../shared/models/index";
+} from "../../../../../contracts/pumai/models/index";
 
 import LoggingService from "../../services/logging";
 

@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as RolesAPITypes from "../../../../shared/api/account-roles";
+import * as RolesAPITypes from "../../../../../contracts/pumai/api/account-roles";
 import ApiUtils from "../../utils/api";
 
 const baseUrl =

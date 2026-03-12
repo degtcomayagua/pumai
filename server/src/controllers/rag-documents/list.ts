@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents";
+import * as RAGDocumentsAPITypes from "../../../../../contracts/pumai/api/rag-documents";
 
 import RAGDocumentsModel from "../../models/RAGDocument";
-import { IAccount } from "../../../../shared/models/account";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 
 import LoggingService from "../../services/logging";
 

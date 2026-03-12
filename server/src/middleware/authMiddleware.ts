@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { ISessionAccount } from "../../../shared/types/sessions";
-import { Permission } from "../../../shared/types/permissions";
+import { ISessionAccount } from "../../../../contracts/pumai/types/sessions";
+import { Permission } from "../../../../contracts/pumai/types/permissions";
 
 const ensureAuthenticated = (
   req: Request,

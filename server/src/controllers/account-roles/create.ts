@@ -1,14 +1,14 @@
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
-import { IAccount } from "../../../../shared/models/account";
+import * as AccountRolesAPITypes from "../../../../../contracts/pumai/api/account-roles";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 
 import LoggingService from "../../services/logging";
 import { createAccountRoleWithRetry } from "../../services/account-roles/create";
 
 import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../shared/models/account-role";
+import { IAccountRole } from "../../../../../contracts/pumai/models/account-role";
 
 class CannotCreateRoleAtThisLevelError extends Error {
   constructor(message: string) {

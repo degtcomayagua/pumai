@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents";
+import * as RAGDocumentsAPITypes from "../../../../../contracts/pumai/api/rag-documents";
 import ApiUtils from "../../utils/api";
 
 const baseUrl =

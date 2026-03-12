@@ -1,8 +1,8 @@
-import type { IAccount } from "../../../../shared/models/account";
+import type { IAccount } from "../../../../../contracts/pumai/models/account";
 import AccounUtils from "../../utils/accounts";
 
 import { NextFunction, Request, Response } from "express";
-import * as AccountAPITypes from "../../../../shared/api/auth";
+import * as AccountAPITypes from "../../../../../contracts/pumai/api/auth";
 
 const handler = async (
   req: Request,

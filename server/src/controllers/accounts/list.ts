@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import * as AccountsAPITypes from "../../../../shared/api/accounts";
+import * as AccountsAPITypes from "../../../../../contracts/pumai/api/accounts";
 
 import AccountsModel from "../../models/Account";
-import { IAccount } from "../../../../shared/models/account";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 
 import LoggingService from "../../services/logging";
 

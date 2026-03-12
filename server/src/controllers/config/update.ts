@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from "express";
-import * as ConfigAPITypes from "../../../../shared/api/config";
+import * as ConfigAPITypes from "../../../../../contracts/pumai/api/config";
 
 import LoggingService from "../../services/logging";
-import type { IAccount } from "../../../../shared/models/account";
+import type { IAccount } from "../../../../../contracts/pumai/models/account";
 import { updateConfig } from "../../services/config/update";
-import { IConfig } from "../../../../shared/models/config";
+import { IConfig } from "../../../../../contracts/pumai/models/config";
 
 const handler = async (
   req: Request<{}, {}, ConfigAPITypes.UpdateConfigRequestBody>,

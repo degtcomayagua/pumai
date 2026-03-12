@@ -7,7 +7,7 @@ const router = express.Router();
 import { validateRequestBody } from "../middleware/validationMiddleware";
 
 // Schemas
-import { generateSchema } from "../../../shared/schemas/ai";
+import { generateSchema } from "../../../../contracts/pumai/schemas/ai";
 
 // Routes
 router.post(

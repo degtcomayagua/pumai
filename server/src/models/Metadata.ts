@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-import { IMetadata } from "../../../shared/models/metadata";
+import { IMetadata } from "../../../../contracts/pumai/models/metadata";
 
 const metadataSchema = new mongoose.Schema<IMetadata>(
   {

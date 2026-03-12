@@ -1,6 +1,6 @@
-import { IMetadata } from "../../../shared/models/metadata";
+import { IMetadata } from "../../../../contracts/pumai/models/metadata";
 import LogsModel from "../models/Log";
-import { ILog } from "../../../shared/models/log";
+import { ILog } from "../../../../contracts/pumai/models/log";
 
 type LogLevel = "info" | "warning" | "important" | "error" | "critical";
 

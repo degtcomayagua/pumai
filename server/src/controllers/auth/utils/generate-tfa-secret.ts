@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import speakeasy from "speakeasy";
 
-import type * as AuthAPITypes from "../../../../../shared/api/auth";
+import type * as AuthAPITypes from "../../../../../../contracts/pumai/api/auth";
 
 const handler = async (
 	_req: Request<{}, {}, {}>,

@@ -14,7 +14,7 @@ import MongoStore from "connect-mongo";
 
 import AccountsModel from "../models/Account";
 
-import type { IAccount } from "../../../shared/models/account";
+import type { IAccount } from "../../../../contracts/pumai/models/account";
 class SessionManager {
   authStrategies: { [key: string]: passportLocal.Strategy };
   private instance: SessionManager | null = null;

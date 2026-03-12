@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import * as ConfigAPITypes from "../../../../shared/api/config";
+import * as ConfigAPITypes from "../../../../../contracts/pumai/api/config";
 
 import LoggingService from "../../services/logging";
 import ConfigModel from "../../models/Config";

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { IRAGDocument } from "../../../shared/models/rag-document";
+import { IRAGDocument } from "../../../../contracts/pumai/models/rag-document";
 import metadataSchema from "./Metadata"; // reuse your existing metadata schema
 
 const ragDocumentSchema = new mongoose.Schema<IRAGDocument>(

@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountsAPITypes from "../../../../shared/api/accounts";
-import { IAccount } from "../../../../shared/models/account";
+import * as AccountsAPITypes from "../../../../../contracts/pumai/api/accounts";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 
 import LoggingService from "../../services/logging";
 import EmailService from "../../services/email";
@@ -11,7 +11,7 @@ import { createUserAccountWithRetry } from "../../services/accounts/create";
 
 import AccountModel from "../../models/Account";
 import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../shared/models/account-role";
+import { IAccountRole } from "../../../../../contracts/pumai/models/account-role";
 
 import { APIError } from "../../errors/api";
 

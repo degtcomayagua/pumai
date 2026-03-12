@@ -4,8 +4,8 @@ import retry from "async-retry";
 import { performance } from "perf_hooks";
 
 import ConfigModel from "../../models/Config";
-import { IConfig } from "../../../../shared/models/config";
-import { IAccount } from "../../../../shared/models/account";
+import { IConfig } from "../../../../../contracts/pumai/models/config";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 
 import LoggingService from "../../services/logging";
 

@@ -9,7 +9,7 @@ import {
   ensurePermissions,
 } from "../middleware/authMiddleware";
 
-import { updateConfigSchema } from "../../../shared/schemas/config";
+import { updateConfigSchema } from "../../../../contracts/pumai/schemas/config";
 
 const router = express.Router();
 

@@ -3,8 +3,8 @@ import retry from "async-retry";
 import { performance } from "perf_hooks";
 
 import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../shared/models/account-role";
-import { IAccount } from "../../../../shared/models/account";
+import { IAccountRole } from "../../../../../contracts/pumai/models/account-role";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 
 import LoggingService from "../../services/logging";
 

@@ -1,7 +1,7 @@
 import AccountsModel from "../../models/Account";
 
 import { NextFunction, Request, Response } from "express";
-import type * as AuthAPITypes from "../../../../shared/api/auth";
+import type * as AuthAPITypes from "../../../../../contracts/pumai/api/auth";
 
 import LoggingService from "../../services/logging";
 //import EmailService from "../../services/email";

@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as StatsAPITypes from "../../../../shared/types/api/stats";
+import * as StatsAPITypes from "../../../../../contracts/pumai/types/api/stats";
 
 import ApiUtils from "../../utils/api";
 

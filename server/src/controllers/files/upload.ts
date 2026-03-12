@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
-import { IAccount } from "../../../../shared/models/account";
+import { IAccount } from "../../../../../contracts/pumai/models/account";
 
 import LoggingService from "../../services/logging";
 import { uploadFileWithRetry } from "../../services/files/upload";
 
-import * as FilesAPITypes from "../../../../shared/types/api/files";
+import * as FilesAPITypes from "../../../../../contracts/pumai/types/api/files";
 
 const handler = async (
 	req: Request<{}, {}, FilesAPITypes.UploadFileRequestBody>,

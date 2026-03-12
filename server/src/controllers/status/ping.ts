@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-import * as StatsAPITypes from "../../../../shared/api/status";
+import * as StatsAPITypes from "../../../../../contracts/pumai/api/status";
 
 const handler = async (
   _: Request<{}, {}, StatsAPITypes.PingResponseData>,
