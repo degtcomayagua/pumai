@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as AccountsAPITypes from "../../../../../contracts/pumai/api/accounts";
+import * as AccountsAPITypes from "../../../../shared/api/accounts";
 import ApiUtils from "../../utils/api";
 
 const baseUrl =

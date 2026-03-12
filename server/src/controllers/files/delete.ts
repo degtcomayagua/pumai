@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../../shared/models/account";
 
 import LoggingService from "../../services/logging";
 import { deleteFileHardWithRetry } from "../../services/files/delete";
 
-import * as FilesAPITypes from "../../../../../contracts/pumai/types/api/files";
+import * as FilesAPITypes from "../../../../shared/types/api/files";
 
 const handler = async (
 	req: Request<{}, {}, FilesAPITypes.DeleteFileRequestBody>,

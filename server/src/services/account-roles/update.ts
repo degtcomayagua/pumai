@@ -3,9 +3,9 @@ import AccountRoleModel from "../../models/AccountRole";
 import LoggingService from "../../services/logging";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
-import { IAccountRole } from "../../../../../contracts/pumai/models/account-role";
-import { Permission } from "../../../../../contracts/pumai/types/permissions";
+import { IAccount } from "../../../../shared/models/account";
+import { IAccountRole } from "../../../../shared/models/account-role";
+import { Permission } from "../../../../shared/types/permissions";
 
 type UpdateAccountRoleParameters = {
   roleId: string;

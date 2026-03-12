@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import AccountModel from "../../models/Account";
 import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../../shared/models/account";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 

@@ -5,8 +5,8 @@ import { performance } from "perf_hooks";
 
 import AccountsModel from "../../models/Account";
 import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
-import { DeepPartial } from "../../../../../contracts/pumai/types/custom";
+import { IAccount } from "../../../../shared/models/account";
+import { DeepPartial } from "../../../../shared/types/custom";
 
 type UpdateUserOptions = {
   session?: mongoose.ClientSession;

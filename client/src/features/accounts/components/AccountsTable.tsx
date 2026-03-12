@@ -11,7 +11,7 @@ import {
 } from "react-icons/fa";
 
 import type { ListAccount } from "..";
-import type { Permission } from "../../../../../../contracts/pumai/types/permissions";
+import type { Permission } from "../../../../../shared/types/permissions";
 
 type AccountsTableProps = {
   accounts: { accounts: ListAccount[]; totalAccounts: number };

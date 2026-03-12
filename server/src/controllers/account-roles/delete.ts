@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountRolesAPITypes from "../../../../../contracts/pumai/api/account-roles";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
+import { IAccount } from "../../../../shared/models/account";
 
 import LoggingService from "../../services/logging";
 import {

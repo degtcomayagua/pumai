@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 import AccountRoleModel from "../../models/AccountRole";
 import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../../shared/models/account";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
-import { IAccountRole } from "../../../../../contracts/pumai/models/account-role";
+import { IAccountRole } from "../../../../shared/models/account-role";
 
 type DeleteAccountRoleOptions = {
   session?: mongoose.ClientSession;

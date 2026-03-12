@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 import RAGDocumentModel from "../../models/RAGDocument";
 import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../../shared/models/account";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
-import { IRAGDocument } from "../../../../../contracts/pumai/models/rag-document";
+import { IRAGDocument } from "../../../../shared/models/rag-document";
 
 type DeleteRAGDocumentOptions = {
   session?: mongoose.ClientSession;

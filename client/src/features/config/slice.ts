@@ -4,7 +4,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
 
 import configApi from './api'
-import type { IConfig } from '../../../../../contracts/pumai/models/config'
+import type { IConfig } from '../../../../shared/models/config'
 
 export interface ConfigState {
   config: IConfig | null

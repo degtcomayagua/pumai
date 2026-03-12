@@ -39,7 +39,7 @@ import {
   updateProfileSchema,
   enableTfaSchema,
   disableTfaSchema,
-} from "../../../../contracts/pumai/schemas/auth";
+} from "../../../shared/schemas/auth";
 
 const router = express.Router();
 

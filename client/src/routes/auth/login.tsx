@@ -12,7 +12,7 @@ import type { RootState, AppDispatch } from "../../store";
 
 import AuthFeature, { type AuthAPITypes } from "../../features/auth/";
 import type { AccountAPITypes } from "@/features/accounts";
-// import { LoginRequestBody } from "../../../../../contracts/pumai/types/api/auth";
+// import { LoginRequestBody } from "../../../../shared/types/api/auth";
 
 // import TerminalFeature from "../../features/terminals/";
 

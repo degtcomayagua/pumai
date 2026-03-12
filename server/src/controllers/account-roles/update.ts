@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountRolesAPITypes from "../../../../../contracts/pumai/api/account-roles";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
+import { IAccount } from "../../../../shared/models/account";
 
 import LoggingService from "../../services/logging";
 import {
@@ -11,7 +11,7 @@ import {
 } from "../../services/account-roles/update";
 
 import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../../contracts/pumai/models/account-role";
+import { IAccountRole } from "../../../../shared/models/account-role";
 
 class CannotUpdateRoleAtThisLevelError extends Error {
   constructor(message: string) {

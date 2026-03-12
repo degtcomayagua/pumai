@@ -1,9 +1,9 @@
 import api from "./api";
-import * as schemas from "../../../../../contracts/pumai/schemas/accounts";
+import * as schemas from "../../../../shared/schemas/accounts";
 
 // Types
-import * as AccountAPITypes from "../../../../../contracts/pumai/api/accounts";
-import type { IAccount } from "../../../../../contracts/pumai/models/account";
+import * as AccountAPITypes from "../../../../shared/api/accounts";
+import type { IAccount } from "../../../../shared/models/account";
 
 type ListAccount = {
   _id: string;

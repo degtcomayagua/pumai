@@ -6,9 +6,9 @@ import EmailService from "../../services/email";
 import AccountUtils from "../../utils/accounts";
 
 import { NextFunction, Request, Response } from "express";
-import type * as AuthAPITypes from "../../../../../contracts/pumai/api/auth";
+import type * as AuthAPITypes from "../../../../shared/api/auth";
 
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../../shared/models/account";
 
 const handler = (
   req: Request<{}, {}, AuthAPITypes.LoginRequestBody>,

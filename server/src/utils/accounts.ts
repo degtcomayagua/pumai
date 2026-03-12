@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import speakeasy from "speakeasy";
-import { IAccount } from "../../../../contracts/pumai/models/account";
-import { ISessionAccount } from "../../../../contracts/pumai/types/sessions";
+import { IAccount } from "../../../shared/models/account";
+import { ISessionAccount } from "../../../shared/types/sessions";
 
 import AccountRoleModel from "../models/AccountRole";
 

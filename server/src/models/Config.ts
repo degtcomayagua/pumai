@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-import { IConfig } from "../../../../contracts/pumai/models/config";
+import { IConfig } from "../../../shared/models/config";
 import metadataSchema from "./Metadata";
 
 const configSchema = new mongoose.Schema<IConfig>({

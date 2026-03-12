@@ -12,7 +12,7 @@ import {
   createSchema,
   listSchema,
   getSchema,
-} from "../../../../contracts/pumai/schemas/rag-documents";
+} from "../../../shared/schemas/rag-documents";
 
 // Routes
 router.post(

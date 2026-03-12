@@ -4,7 +4,7 @@ import { Form, Input, Collapse, Checkbox, InputNumber } from "antd";
 import { RolesAPITypes } from "../";
 import { FormInstance } from "antd/lib";
 
-import permissionsArray from "../../../../../../contracts/pumai/constants/permissions";
+import permissionsArray from "../../../../../shared/constants/permissions";
 
 type UpdateAccountRoleFormProps = {
   form: FormInstance<RolesAPITypes.UpdateRequestBody>;

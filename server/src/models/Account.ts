@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-import { IAccount } from "../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../shared/models/account";
 import metadataSchema from "./Metadata";
 
 const accountSchema = new mongoose.Schema<IAccount>({

@@ -23,7 +23,7 @@ import {
   listSchema,
   updateSchema,
   restoreSchema,
-} from "../../../../contracts/pumai/schemas/account-roles";
+} from "../../../shared/schemas/account-roles";
 
 const router = express.Router();
 

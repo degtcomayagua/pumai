@@ -1,6 +1,6 @@
 // API
-import * as AIAPITypes from "../../../../../contracts/pumai/api/ai";
-import * as schemas from "../../../../../contracts/pumai/schemas/ai";
+import * as AIAPITypes from "../../../../shared/api/ai";
+import * as schemas from "../../../../shared/schemas/ai";
 import api from "./api";
 
 // Componentes

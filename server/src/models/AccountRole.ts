@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-import { IAccountRole } from "../../../../contracts/pumai/models/account-role";
-import permissionsArray from "../../../../contracts/pumai/constants/permissions";
+import { IAccountRole } from "../../../shared/models/account-role";
+import permissionsArray from "../../../shared/constants/permissions";
 import metadataSchema from "./Metadata";
 
 const accountRoleSchema = new mongoose.Schema<IAccountRole>({

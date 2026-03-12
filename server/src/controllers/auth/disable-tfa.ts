@@ -1,8 +1,8 @@
 import AccountUtils from "../../utils/accounts";
-import type { IAccount } from "../../../../../contracts/pumai/models/account";
+import type { IAccount } from "../../../../shared/models/account";
 
 import { NextFunction, Request, Response } from "express";
-import type * as AuthAPITypes from "../../../../../contracts/pumai/api/auth";
+import type * as AuthAPITypes from "../../../../shared/api/auth";
 
 import LoggingService from "../../services/logging";
 import EmailService from "../../services/email";

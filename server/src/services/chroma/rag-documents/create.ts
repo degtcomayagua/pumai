@@ -11,8 +11,8 @@ import {
   CampusCode,
   DeliveryMode,
   DocumentCategory,
-} from "../../../../../../contracts/pumai/models";
-import { IRAGChunk } from "../../../../../../contracts/pumai/models/chroma/rag-chunk";
+} from "../../../../../shared/models";
+import { IRAGChunk } from "../../../../../shared/models/chroma/rag-chunk";
 
 export const RAG_DOC_CHUNKS_COLLECTION = "rag-documents";
 

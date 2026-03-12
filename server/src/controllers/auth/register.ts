@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import type * as AuthAPITypes from "../../../../../contracts/pumai/api/auth";
+import type * as AuthAPITypes from "../../../../shared/api/auth";
 
 import AccountUtils from "../../utils/accounts";
 

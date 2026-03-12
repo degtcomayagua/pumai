@@ -1,14 +1,14 @@
 import { Response, NextFunction } from "express";
 
 import { TypedRequest } from "../../types";
-import * as AIAPITypes from "../../../../../contracts/pumai/api/ai";
+import * as AIAPITypes from "../../../../shared/api/ai";
 
 import OllamaChatService from "../../services/ollama/chat";
 import OllamaEmbeddingService from "../../services/ollama/embed";
 import ChromaService from "../../services/chroma";
 
 import { ChatResponse } from "ollama";
-import { IRAGChunk } from "../../../../../contracts/pumai/models/chroma/rag-chunk";
+import { IRAGChunk } from "../../../../shared/models/chroma/rag-chunk";
 
 const handler = async (
   req: TypedRequest<AIAPITypes.GenerateRequestBody>,

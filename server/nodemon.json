@@ -1,5 +1,5 @@
 {
-	"watch": ["src", "../../contracts/pumai/"],
+	"watch": ["src", "../shared/"],
 	"ext": "ts",
 	"ignore": ["src/**/*.spec.ts"],
 	"exec": "ts-node --project tsconfig.json -r tsconfig-paths/register ./src/index.ts"

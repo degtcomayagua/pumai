@@ -41,7 +41,7 @@ import type { TourProps } from "antd/lib";
 import type { MenuItemType } from "antd/es/menu/interface";
 import type { IAccountRole } from "../features/roles";
 
-import type { Permission } from "../../../../contracts/pumai/types/permissions";
+import type { Permission } from "../../../shared/types/permissions";
 
 const { Header, Sider, Content, Footer } = Layout;
 

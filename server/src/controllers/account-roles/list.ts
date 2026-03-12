@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountRolesAPITypes from "../../../../../contracts/pumai/api/account-roles";
+import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
 import AccountRoleModel from "../../models/AccountRole";
 import LoggingService from "../../services/logging";
 
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../../shared/models/account";
 
 const handler = async (
   req: Request<{}, {}, AccountRolesAPITypes.ListRequestBody>,

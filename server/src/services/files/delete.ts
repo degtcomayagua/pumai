@@ -6,8 +6,8 @@ import { performance } from "perf_hooks";
 
 import FileModel from "../../models/File";
 import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
-import { IFile } from "../../../../../contracts/pumai/models/file";
+import { IAccount } from "../../../../shared/models/account";
+import { IFile } from "../../../../shared/models/file";
 
 type DeleteFileOptions = {
 	session?: mongoose.ClientSession;

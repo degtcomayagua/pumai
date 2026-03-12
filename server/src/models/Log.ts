@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { ILog } from "../../../../contracts/pumai/models/log";
+import { ILog } from "../../../shared/models/log";
 import metadataSchema from "./Metadata";
 
 const logSchema = new mongoose.Schema<ILog>(

@@ -26,7 +26,7 @@ import AdminLayout from "../../layouts/Admin";
 import type { MenuItemType } from "antd/es/menu/interface";
 import type { IAccountRole } from "../../features/roles";
 
-import type { Permission } from "../../../../../contracts/pumai/types/permissions";
+import type { Permission } from "../../../../shared/types/permissions";
 import { TiCalendar } from "react-icons/ti";
 
 export const Route = createFileRoute("/admin/")({

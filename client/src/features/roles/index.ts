@@ -1,8 +1,8 @@
 import api from "./api";
-import * as schemas from "../../../../../contracts/pumai/schemas/account-roles";
+import * as schemas from "../../../../shared/schemas/account-roles";
 
-import * as RolesAPITypes from "../../../../../contracts/pumai/api/account-roles";
-import { IAccountRole } from "../../../../../contracts/pumai/models/account-role";
+import * as RolesAPITypes from "../../../../shared/api/account-roles";
+import { IAccountRole } from "../../../../shared/models/account-role";
 
 // Hooks
 import { useAccountRolesList } from "./hooks/useAccountRolesList";

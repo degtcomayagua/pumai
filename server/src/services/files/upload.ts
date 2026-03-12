@@ -8,9 +8,9 @@ import mime from "mime-types";
 import { performance } from "perf_hooks";
 
 import FileModel from "../../models/File";
-import { IFile } from "../../../../../contracts/pumai/models/file";
+import { IFile } from "../../../../shared/models/file";
 import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../../contracts/pumai/models/account";
+import { IAccount } from "../../../../shared/models/account";
 
 type UploadFileParameters = {
 	buffer: Buffer;
