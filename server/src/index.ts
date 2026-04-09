@@ -34,15 +34,31 @@ export async function startServer() {
   if (dev) {
     app.use(
       cors({
-        origin: process.env.FRONT_END_ORIGIN,
+        origin: "http://localhost:2173",
         credentials: true,
         exposedHeaders: ["set-cookie"],
       }),
     );
   } else {
     const clientPath = path.join(__dirname, "../../client-dist");
+    app.use(
+      cors({
+        origin: (origin, callback) => {
+          if (!origin) return callback(null, true);
+
+          if (new URL(origin).hostname.endsWith(".asterki.xyz")) {
+            return callback(null, true);
+          }
+
+          return callback(null, true);
+        },
+
+        credentials: true,
+        exposedHeaders: ["set-cookie"],
+      }),
+    );
     app.use(express.static(clientPath));
-    app.get("*", (req, res, next) => {
+    app.get(/.*/, (req, res, next) => {
       if (req.path.startsWith("/api/")) return next();
       res.sendFile(path.join(clientPath, "index.html"));
     });
