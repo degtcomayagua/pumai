@@ -72,10 +72,11 @@ Tu respuesta:
           { role: "user", content: prompt },
         ],
         options,
+        think: false,
       });
       return response as unknown as T;
     } else {
-      console.log(prompt)
+      console.log(prompt);
       const response = await this.client.chat({
         model: process.env.OLLAMA_MODEL || "gemma3:12b",
         messages: [

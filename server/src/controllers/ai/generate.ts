@@ -62,7 +62,7 @@ const handler = async (
       finalPrompt,
       chat,
       false,
-      { temperature: 0.2 },
+      { temperature: 0.2,  },
     );
 
   res.status(200).json({ status: "success", result: result.message.content });
