@@ -10,9 +10,14 @@ class OllamaClient {
   }
 
   constructor() {
-    // Initialize the Ollama client with env.OLLAMA_URL
+    const host = process.env.OLLAMA_URL?.trim() || "http://localhost:11434";
+    const headers = process.env.OLLAMA_API_KEY
+      ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` }
+      : undefined;
+
     this.client = new Ollama({
-      host: process.env.OLLAMA_URL || "http://localhost:11434",
+      host,
+      headers,
     });
   }
 

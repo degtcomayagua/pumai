@@ -3,7 +3,10 @@ import { OllamaEmbeddingFunction } from "@chroma-core/ollama";
 import { Metadata, QueryResult } from "chromadb";
 
 import OllamaClient from "./client";
-import ChromaService from "../chroma";
+import {
+  queryRagDocumentsByEmbedding,
+  RagQueryFilters,
+} from "../chroma/rag-documents/query";
 
 class OllamaEmbeddingClient {
   private static instance: OllamaEmbeddingClient | null = null;
@@ -17,10 +20,16 @@ class OllamaEmbeddingClient {
   }
 
   constructor() {
+    const host = process.env.OLLAMA_URL?.trim() || "http://localhost:11434";
+
     this.embedder = new OllamaEmbeddingFunction({
-      url: process.env.OLLAMA_URL || "http://localhost:11434",
-      model: process.env.OLLAMA_EMBEDDING_MODEL || "embeddinggemma:latest",
+      url: host,
+      model: this.resolveEmbeddingModel(),
     });
+  }
+
+  private resolveEmbeddingModel() {
+    return process.env.OLLAMA_EMBEDDING_MODEL || "embeddinggemma:latest";
   }
 
   public getEmbedder() {
@@ -32,29 +41,31 @@ class OllamaEmbeddingClient {
     options?: EmbedRequest,
   ): Promise<number[]> {
     const response = await this.client.embed({
-      model: process.env.OLLAMA_EMBEDDING_MODEL || "embeddinggemma:latest",
+      model: this.resolveEmbeddingModel(),
       input: text,
       ...options,
     });
-    return response.embeddings[0];
+
+    const embedding = response.embeddings[0];
+
+    if (!embedding) {
+      throw new Error("Ollama returned an empty embedding response.");
+    }
+
+    return embedding;
   }
 
-  async getContext(prompt: string): Promise<QueryResult<Metadata>> {
+  async getContext(
+    prompt: string,
+    nResults = 3,
+    filters?: RagQueryFilters,
+  ): Promise<QueryResult<Metadata>> {
     const queryEmbedding = await this.embedText(prompt);
 
-    // Call the database
-    const collection = await ChromaService.getInstance()
-      .getClient()
-      .getOrCreateCollection({
-        name: "rag-documents",
-        embeddingFunction: this.getEmbedder(),
-      });
-    const results = await collection!.query({
-      queryEmbeddings: [queryEmbedding], // Apply RAG
-      nResults: 3,
+    return queryRagDocumentsByEmbedding(queryEmbedding, {
+      nResults,
+      filters,
     });
-
-    return results;
   }
 }
 

@@ -1,71 +1,126 @@
-import { Response, NextFunction } from "express";
+import { NextFunction, Response } from "express";
 
 import { TypedRequest } from "../../types";
-import * as AIAPITypes from "../../../../shared/api/ai";
 
 import OllamaChatService from "../../services/ollama/chat";
 import OllamaEmbeddingService from "../../services/ollama/embed";
-import ChromaService from "../../services/chroma";
+import { queryRagDocumentsByEmbedding } from "../../services/chroma/rag-documents/query";
 
-import { ChatResponse } from "ollama";
-import { IRAGChunk } from "../../../../shared/models/chroma/rag-chunk";
+import { ChatResponse, Message, Tool } from "ollama";
+import {
+  CampusCode,
+  DeliveryMode,
+  DocumentCategory,
+} from "../../../../shared/models";
+
+type GenerateRequestBody = {
+  prompt: string;
+  chat: Message[];
+  campuses: CampusCode[];
+  deliveryModes: DeliveryMode[];
+  category?: DocumentCategory;
+  tools?: Tool[];
+  mcpServers?: {
+    name: string;
+    description?: string;
+    tools: Tool[];
+  }[];
+};
+
+type GenerateResponseData = {
+  status: "success" | "internal-error";
+  result?: string;
+};
 
 const handler = async (
-  req: TypedRequest<AIAPITypes.GenerateRequestBody>,
-  res: Response<AIAPITypes.GenerateResponseData>,
+  req: TypedRequest<GenerateRequestBody>,
+  res: Response<GenerateResponseData>,
   _next: NextFunction,
 ) => {
-  // TODO: Expand this
-  const { prompt, chat, campuses, deliveryModes, category } = req.parsedBody;
-
-  // TODO: Safety checks
-
-  // Get the embedding for the prompt
-  const queryEmbedding =
-    await OllamaEmbeddingService.getInstance().embedText(prompt);
-
-  // Fetch relevant documents from ChromaDB
-  const collection = await ChromaService.getInstance()
-    .getClient()
-    .getOrCreateCollection({
-      name: "rag-documents",
-      embeddingFunction: OllamaEmbeddingService.getInstance().getEmbedder(),
-    });
-  const ragDocuments = await collection!.query({
-    queryEmbeddings: [queryEmbedding], // Apply RAG
-    // where: {
-    //   $and: [
-    //     {
-    //       campuses_comayagua: campuses.includes("COMAYAGUA"),
-    //       campuses_global: campuses.includes("GLOBAL"),
-    //     } as Partial<IRAGChunk>,
-    //     {
-    //       deliveryModes_online: deliveryModes.includes("online"),
-    //       deliveryModes_inPerson: deliveryModes.includes("onsite"),
-    //       deliveryModes_hybrid: deliveryModes.includes("hybrid"),
-    //     } as Partial<IRAGChunk>,
-    //     {
-    //       category: category,
-    //     } as Partial<IRAGChunk>,
-    //   ],
-    // },
-    nResults: 3,
-  });
-
-  const finalPrompt = OllamaChatService.getInstance().getFinalPrompt(
-    ragDocuments.documents.join("\n"),
+  const {
     prompt,
-  );
+    chat,
+    campuses,
+    deliveryModes,
+    category,
+    tools,
+    mcpServers,
+  } = req.parsedBody;
 
-  const result: ChatResponse =
-    await OllamaChatService.getInstance().generateChat<ChatResponse>(
-      finalPrompt,
-      chat,
-      false,
-      { temperature: 0.2,  },
+  try {
+    const queryEmbedding =
+      await OllamaEmbeddingService.getInstance().embedText(prompt);
+
+    const ragDocuments = await queryRagDocumentsByEmbedding(queryEmbedding, {
+      nResults: 3,
+      filters: {
+        campuses,
+        deliveryModes,
+        category,
+        includeArchived: false,
+      },
+    });
+    console.log("RAG Documents retrieved for prompt:", ragDocuments);
+
+    const finalPrompt = OllamaChatService.getInstance().getFinalPrompt(
+      ragDocuments.documents.join("\n"),
+      prompt,
     );
 
-  res.status(200).json({ status: "success", result: result.message.content });
+    const result: ChatResponse =
+      await OllamaChatService.getInstance().generateChat<ChatResponse>({
+        prompt: finalPrompt,
+        chat,
+        stream: false,
+        options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
+        tools,
+        mcpServers: [
+          {
+            name: "Calendario Académico",
+            description: "Proporciona información sobre eventos y fechas importantes en el calendario académico de la UNAH.",
+            tools: [
+              {
+                function: {
+                  description: "Obtiene una lista de eventos del calendario académico. No requiere parámetros.",
+                  parameters: {
+                    type: "object",
+                    properties: {},
+                  },
+                  name: "get_calendar_events",
+                  type: "function",
+                },
+                type: "tool",
+              },
+            ],
+          }
+        ],
+      });
+
+    res.status(200).json({ status: "success", result: result.message.content });
+
+  } catch (error: unknown) {
+    console.log(error)
+
+    if (error instanceof Error) {
+      // LoggingService.log({
+      //   source: "api:rag-documents:delete",
+      //   level: "error",
+      //   message: "Error during cai deletion",
+      //   traceId: req.traceId,
+      //   details: {
+      //     error: error.message,
+      //     stack: error.stack,
+      //   },
+      //   metadata: {
+      //     createdAt: new Date(),
+      //     // createdBy: adminAccount._id,
+      //   },
+      // });
+    }
+    res.status(500).json({
+      status: "internal-error",
+    });
+  }
 };
 
 export default handler;

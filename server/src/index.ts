@@ -34,7 +34,7 @@ export async function startServer() {
   if (dev) {
     app.use(
       cors({
-        origin: "http://localhost:2173",
+        origin: process.env.FRONT_END_ORIGIN,
         credentials: true,
         exposedHeaders: ["set-cookie"],
       }),

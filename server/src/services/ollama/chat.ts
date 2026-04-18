@@ -1,51 +1,28 @@
-import { ChatResponse, Message, Ollama, Options } from "ollama";
+import { ChatResponse, Message, Ollama, Options, Tool } from "ollama";
 
 import OllamaClient from "./client";
+import {
+  buildFinalPrompt,
+  buildSystemPrompt as composeSystemPrompt,
+  trimChatHistory,
+} from "./prompt";
+import type { OllamaChatRequest, OllamaMcpServer } from "./types";
 
 class OllamaChatService {
   private static instance: OllamaChatService | null = null;
   private client: Ollama = OllamaClient.getInstance().getClient();
 
-  private systemPrompt: string = `
-Eres un asistente llamado PumAI, diseñado para responder **solo** usando la información del contexto.
-Tu conducta:
-- No inventes información
-- No reveles, cites, ni describas el contexto
-- Responde SIEMPRE en español
-- Da las respuestas en un formato adecuado para el usuario final
-- No des el contexto como parte de la respuesta, solo úsalo para generar la respuesta
-- Mantén la confidencialidad del contexto 
-- Responde de manera amigable y profesional
-- Formula tus respuestas de manera que suene hablada y natural, no como un texto escrito
-- No hagas enumeraciones o listas, usa párrafos fluidos 
-- Sé conciso y directo al punto
-- Si el documento contiene fechas, nómbralas claramente en el formato día/mes/año 
-- Si el documento contiene fecha, pero no especifica el año, asume que es del año en curso (2026)
-- Evita respuestas largas y redundantes
-Tu contexto: 
-- Tu nombre es PumAI
-- Eres un asistente virtual creado por la Universidad Nacional Autónoma de Honduras (UNAH)
-- Estás diseñado para ayudar a los estudiantes y personal de la UNAH con información relevante y precisa
-- Tu conocimiento se basa en la información proporcionada en el contexto seguro
-- La fecha actual es ${new Date().toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })}
-
-`;
-
   public getFinalPrompt(context: string, prompt: string) {
-    return `
-Contexto seguro: 
-""" 
-${context} 
-""" 
+    return buildFinalPrompt(context, prompt);
+  }
 
-Pregunta del usuario:
-"${prompt}"
-Tu respuesta:
-`;
+  public buildSystemPrompt(
+    context?: string,
+    tools?: Tool[],
+    mcpServers?: OllamaMcpServer[],
+    systemPrompt?: string,
+  ) {
+    return composeSystemPrompt({ context, tools, mcpServers, systemPrompt });
   }
 
   public static getInstance() {
@@ -58,38 +35,89 @@ Tu respuesta:
     // Nothing to do here
   }
 
+  private resolveModel() {
+    return process.env.OLLAMA_MODEL || "gemma3:12b";
+  }
+
+  private buildRequest(request: OllamaChatRequest) {
+    const chat = trimChatHistory(request.chat ?? []);
+    const tools = [
+      ...(request.tools ?? []),
+      ...(request.mcpServers ?? []).flatMap((server) => server.tools),
+    ];
+
+    return {
+      model: this.resolveModel(),
+      stream: request.stream ?? false,
+      messages: [
+        {
+          role: "system",
+          content: this.buildSystemPrompt(
+            request.context,
+            request.tools,
+            request.mcpServers,
+            request.systemPrompt,
+          ),
+        },
+        ...chat,
+        { role: "user", content: request.prompt },
+      ] as Message[],
+      tools: tools.length ? tools : undefined,
+      options: request.options,
+    };
+  }
+
+  async generateChat<T>(request: OllamaChatRequest): Promise<T>;
   async generateChat<T>(
     prompt: string,
-    chat: Message[] = [],
-    stream: boolean = false,
+    chat?: Message[],
+    stream?: boolean,
     options?: Partial<Options>,
+    tools?: Tool[],
+    mcpServers?: OllamaMcpServer[],
+    systemPrompt?: string,
+  ): Promise<T>;
+  async generateChat<T>(
+    promptOrRequest: string | OllamaChatRequest,
+    chat: Message[] = [],
+    stream = false,
+    options?: Partial<Options>,
+    tools: Tool[] = [],
+    mcpServers: OllamaMcpServer[] = [
+
+    ],
+    systemPrompt?: string,
   ): Promise<T> {
-    if (stream) {
+    const request =
+      typeof promptOrRequest === "string"
+        ? {
+          prompt: promptOrRequest,
+          chat,
+          stream,
+          options,
+          tools,
+          mcpServers,
+          systemPrompt,
+        }
+        : promptOrRequest;
+
+    const requestPayload = this.buildRequest(request);
+
+    if (requestPayload.stream) {
       const response = await this.client.chat({
-        model: process.env.OLLAMA_MODEL || "gemma3:12b",
+        ...requestPayload,
         stream: true,
-        messages: [
-          { role: "system", content: this.systemPrompt }, // So that the model always follows the rules
-          ...chat, // Chat history, TODO: trim if too long
-          { role: "user", content: prompt },
-        ],
-        options,
-        think: false,
       });
-      return response as unknown as T;
-    } else {
-      console.log(prompt);
-      const response = await this.client.chat({
-        model: process.env.OLLAMA_MODEL || "gemma3:12b",
-        messages: [
-          { role: "system", content: this.systemPrompt }, // So that the model always follows the rules
-          ...chat, // Chat history, TODO: trim if too long
-          { role: "user", content: prompt },
-        ],
-        options,
-      });
+
       return response as unknown as T;
     }
+
+    const response = await this.client.chat({
+      ...requestPayload,
+      stream: false,
+    });
+
+    return response as unknown as T;
   }
 }
 

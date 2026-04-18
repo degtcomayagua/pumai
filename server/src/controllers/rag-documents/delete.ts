@@ -8,6 +8,7 @@ import {
   RAGDocumentNotFoundError,
   deleteRAGDocumentWithRetry,
 } from "../../services/rag-documents/delete";
+import { deleteRagChunksByDocId } from "../../services/chroma/rag-documents/query";
 
 const handler = async (
   req: Request<{}, {}, RAGDocumentAPITypes.DeleteRequestBody>,
@@ -23,7 +24,7 @@ const handler = async (
       adminAccount,
     });
 
-    // Also delete from chroma db
+    await deleteRagChunksByDocId(ragDocumentId);
 
     res.status(200).json({
       status: "success",

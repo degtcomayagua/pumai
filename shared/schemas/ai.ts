@@ -41,5 +41,27 @@ const generateSchema = z.object({
       "support",
     ])
     .optional(),
+  tools: z.array(z.object({
+    type: z.string().default("function"),
+    function: z.object({
+      name: z.string().min(1, "tool-name-required"),
+      description: z.string().optional(),
+      type: z.string().optional(),
+      parameters: z.record(z.any(), z.any()).optional(),
+    }),
+  })).optional(),
+  mcpServers: z.array(z.object({
+    name: z.string().min(1, "mcp-server-name-required"),
+    description: z.string().optional(),
+    tools: z.array(z.object({
+      type: z.string().default("function"),
+      function: z.object({
+        name: z.string().min(1, "tool-name-required"),
+        description: z.string().optional(),
+        type: z.string().optional(),
+        parameters: z.record(z.any(), z.any()).optional(),
+      }),
+    })).min(1, "at-least-one-mcp-tool-required"),
+  })).optional(),
 });
 export { generateSchema };

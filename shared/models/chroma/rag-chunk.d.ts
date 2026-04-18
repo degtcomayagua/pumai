@@ -11,12 +11,13 @@ export interface IRAGChunk {
   docId: string; // Original document docId
 
   content: string;
+  sourceType: SourceType;
 
   category: DocumentCategory;
   authorityLevel: number;
 
   effectiveFrom: string; // ISO string
-  effectiveUntil: string; // ISO string or null
+  effectiveUntil: string | null; // ISO string or null
   archived: boolean;
 
   warnings: string; // JSON stringified

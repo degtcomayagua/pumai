@@ -11,16 +11,17 @@ import {
   CampusCode,
   DeliveryMode,
   DocumentCategory,
+  SourceType,
 } from "../../../../../shared/models";
 import { IRAGChunk } from "../../../../../shared/models/chroma/rag-chunk";
-
-export const RAG_DOC_CHUNKS_COLLECTION = "rag-documents";
+import { RAG_DOC_CHUNKS_COLLECTION } from "./query";
 
 export type CreateRagDocChunkParameters = {
   chunkIndex: number; // Several chunks for the same document
   docId: string; // Original document docId
 
   content: string;
+  sourceType: SourceType;
 
   category: DocumentCategory;
   authorityLevel: number;
@@ -29,7 +30,7 @@ export type CreateRagDocChunkParameters = {
   deliveryModes: DeliveryMode[]; // DeliveryMode[]
 
   effectiveFrom: string; // ISO string
-  effectiveUntil: string; // ISO string or null
+  effectiveUntil: string | null; // ISO string or null
   archived: boolean;
 
   warnings: {
@@ -66,6 +67,7 @@ export async function createRagDocChunk(
     effectiveFrom,
     warnings,
     category,
+    sourceType,
     authorityLevel,
     campuses,
     deliveryModes,
@@ -82,6 +84,10 @@ export async function createRagDocChunk(
         archived,
         effectiveUntil,
         effectiveFrom,
+        category,
+        sourceType,
+        docId,
+        chunkIndex,
         warnings: JSON.stringify(warnings || {}), // We store it this way because we dont use it for "fetching"
         authorityLevel,
         content: "", // We remove content from metadata to save space
@@ -91,7 +97,6 @@ export async function createRagDocChunk(
         campuses_comayagua: campuses.includes("COMAYAGUA"),
         campuses_danli: campuses.includes("DANLI"),
         campuses_global: campuses.includes("GLOBAL"),
-        campuses_la_ceiba: campuses.includes("LA CEIBA"),
         campuses_laceiba: campuses.includes("LA CEIBA"),
         campuses_sanpedro: campuses.includes("SANPEDRO"),
         campuses_santarosa: campuses.includes("SANTA ROSA"),
