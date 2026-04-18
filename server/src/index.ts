@@ -34,7 +34,7 @@ export async function startServer() {
   if (dev) {
     app.use(
       cors({
-        origin: process.env.FRONT_END_ORIGIN,
+        origin: "https://unah-movil.asterki.xyz",
         credentials: true,
         exposedHeaders: ["set-cookie"],
       }),
