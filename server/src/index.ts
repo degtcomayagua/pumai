@@ -9,10 +9,14 @@ import path from "path";
 
 import { loadEnv } from "./config/env";
 import MongoDBClient from "./config/mongodb";
+import { setupQdrant } from "./config/qdrant";
+
 import { registerRoutes } from "./routes";
-import { traceIdMiddleware } from "./middleware/traceId";
+
 import SessionsService from "./services/sessions";
-import ChromaService from "./services/chroma";
+
+import { traceIdMiddleware } from "./middleware/traceId";
+import { sanitizeBody } from "./middleware/sanitizeBody";
 
 import SocketServer from "./services/socket";
 
@@ -29,6 +33,7 @@ export async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(cookie(process.env.SESSION_SECRET as string));
   app.use(traceIdMiddleware);
+  app.use(sanitizeBody);
   app.use("/uploads/", express.static(path.join(__dirname, "../uploads")));
 
   if (dev) {
@@ -68,9 +73,9 @@ export async function startServer() {
   sessions.loadToServer(app);
 
   registerRoutes(app);
+
   new MongoDBClient(process.env.MONGODB_URI!).connect();
-  const chromaService = ChromaService.getInstance();
-  await chromaService.init();
+  await setupQdrant();
 
   httpServer.listen(port, () => {
     console.log(`[Server] Listening on port ${port}`);

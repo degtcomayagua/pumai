@@ -14,7 +14,7 @@ const createSchema = z
       "support",
     ]),
 
-    content: z.string().min(1, "content-too-short").optional(),
+    content: z.string().min(1, "content-too-short"),
     contentType: z.enum(["file", "text"], "invalid-content-type"),
 
     authorityLevel: z

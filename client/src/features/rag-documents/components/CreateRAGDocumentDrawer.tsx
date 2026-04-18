@@ -95,7 +95,7 @@ export function CreateRagDocumentDrawer({
             options={[{ label: "Text", value: "text" }]}
             value="text"
             disabled
-            onChange={() => {}}
+            onChange={() => { }}
           />
         </Form.Item>
 
@@ -202,7 +202,7 @@ export function CreateRagDocumentDrawer({
         <Form.Item label={t("fields.effectiveUntil")}>
           <DatePicker
             className="w-full"
-            value={state.effectiveUntil ? dayjs(state.effectiveFrom) : null}
+            value={state.effectiveUntil ? dayjs(state.effectiveUntil) : null}
             onChange={(date) =>
               setState((prev) => ({
                 ...prev,

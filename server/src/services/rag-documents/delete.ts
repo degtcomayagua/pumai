@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import RAGDocumentModel from "../../models/RAGDocument";
-import LoggingService from "../../services/logging";
+import LoggingService from "../logging";
 import { IAccount } from "../../../../shared/models/account";
 import retry from "async-retry";
 import { performance } from "perf_hooks";

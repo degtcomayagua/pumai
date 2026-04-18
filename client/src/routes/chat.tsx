@@ -82,7 +82,7 @@ function Page() {
         chat: messages,
         deliveryModes: ["onsite", "online", "hybrid"],
         category: undefined,
-        campuses: ["COMAYAGUA"],
+        campuses: ["TEGUCIGALPA"],
       });
       if (result.status === "success") {
         setMessages((prev) => [

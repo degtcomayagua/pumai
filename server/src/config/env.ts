@@ -9,7 +9,20 @@ export function loadEnv() {
   dotenv.config(); // Load base first
   dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
-  const requiredEnv = ["MONGODB_URI", "FRONT_END_ORIGIN", "OLLAMA_URL", "OLLAMA_MODEL" ];
+  const requiredEnv = [
+    "OLLAMA_URL",
+    "OLLAMA_MODEL",
+    "OLLAMA_EMBEDDING_MODEL",
+
+    "MONGODB_URI",
+
+    "QDRANT_URI",
+    "QDRANT_RAG_DOCS_COLLECTION",
+
+    "FRONT_END_ORIGIN",
+    "SESSION_SECRET",
+    "PORT"
+  ];
 
   console.log("[ENV] Loaded variables:", requiredEnv.join(", "));
   const missing = requiredEnv.filter((key) => !process.env[key]);

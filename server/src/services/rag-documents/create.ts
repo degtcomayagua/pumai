@@ -12,11 +12,12 @@ import {
   DocumentCategory,
 } from "../../../../shared/models/index";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../logging";
 
 type CreateRAGDocumentParameters = {
   title: string;
   category: DocumentCategory;
+  documentId: string; // separate from MongoDB _id, used for Qdrant point ID
 
   authorityLevel: number; // higher = stronger authority
   sourceType: SourceType;
@@ -66,6 +67,7 @@ export async function createRAGDocument(
       authorityLevel,
       sourceType,
       campuses,
+      documentId,
       deliveryModes,
       effectiveFrom = new Date(),
       effectiveUntil = null,
@@ -82,6 +84,7 @@ export async function createRAGDocument(
       category,
       authorityLevel,
       sourceType,
+      documentId,
       campuses,
       deliveryModes,
       effectiveFrom,

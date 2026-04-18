@@ -1,5 +1,5 @@
 # Logs
-logs
+./server/logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -10,10 +10,13 @@ lerna-debug.log*
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Docker volumes 
+docker-data
+
 chroma-data
 mongo-data
 ollama-data
 redis-data
+
 
 # Runtime data
 pids

@@ -1,16 +1,14 @@
 import { EmbedRequest, Ollama } from "ollama";
-import { OllamaEmbeddingFunction } from "@chroma-core/ollama";
-import { Metadata, QueryResult } from "chromadb";
 
 import OllamaClient from "./client";
 import {
   queryRagDocumentsByEmbedding,
   RagQueryFilters,
-} from "../chroma/rag-documents/query";
+} from "../qdrant/rag-documents/query";
+import { RagQueryResult } from "../qdrant/rag-documents/shared";
 
 class OllamaEmbeddingClient {
   private static instance: OllamaEmbeddingClient | null = null;
-  private embedder: OllamaEmbeddingFunction;
   private client: Ollama = OllamaClient.getInstance().getClient();
 
   public static getInstance() {
@@ -20,20 +18,10 @@ class OllamaEmbeddingClient {
   }
 
   constructor() {
-    const host = process.env.OLLAMA_URL?.trim() || "http://localhost:11434";
-
-    this.embedder = new OllamaEmbeddingFunction({
-      url: host,
-      model: this.resolveEmbeddingModel(),
-    });
   }
 
   private resolveEmbeddingModel() {
     return process.env.OLLAMA_EMBEDDING_MODEL || "embeddinggemma:latest";
-  }
-
-  public getEmbedder() {
-    return this.embedder;
   }
 
   public async embedText(
@@ -59,7 +47,7 @@ class OllamaEmbeddingClient {
     prompt: string,
     nResults = 3,
     filters?: RagQueryFilters,
-  ): Promise<QueryResult<Metadata>> {
+  ): Promise<RagQueryResult> {
     const queryEmbedding = await this.embedText(prompt);
 
     return queryRagDocumentsByEmbedding(queryEmbedding, {

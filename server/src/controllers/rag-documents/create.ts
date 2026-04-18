@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from "express";
 
 import * as RagDocumentsAPITypes from "../../../../shared/api/rag-documents";
@@ -6,8 +7,8 @@ import { IAccount } from "../../../../shared/models/account";
 
 import LoggingService from "../../services/logging";
 
-import { createRagDocChunkWithRetry } from "../../services/chroma/rag-documents/create";
-import { buildTextChunks } from "../../services/chroma/rag-documents/chunking";
+import { createRagDocChunkWithRetry } from "../../services/qdrant/rag-documents/create";
+import { buildTextChunks } from "../../utils/chunking";
 import { createRAGDocumentWithRetry } from "src/services/rag-documents/create";
 
 import OllamaEmbedService from "../../services/ollama/embed";
@@ -40,23 +41,16 @@ const handler = async (
   try {
     session.startTransaction();
 
-    const rawContent = String(content ?? "").trim();
-    if (!rawContent) {
-      throw new APIError("invalid-parameters", 400);
-    }
-
-    const contentChunks = buildTextChunks(rawContent, {
-      // We rotate the target size so chunks have different lengths and contexts.
-      sizePattern: [2200, 1400, 900],
-      overlap: 180,
-      minChunkSize: 260,
-    });
+    // We use a generated document ID because of limitations of Qdrant's upsert 
+    // MongoDB IDs are not allowed by Qdrant as point IDs, therefore we generate a separate UUID for the document and use that as the point ID in Qdrant.
+    const documentId = uuidv4()
 
     const ragDocument = await createRAGDocumentWithRetry(
       {
         sourceType,
         archived: false,
         deliveryModes,
+        documentId,
         title,
         campuses,
         authorityLevel,
@@ -74,6 +68,13 @@ const handler = async (
       },
     );
 
+    // Create the chunks and embeddings for the document content
+    const contentChunks = buildTextChunks(content, {
+      // We rotate the target size so chunks have different lengths and contexts.
+      sizePattern: [2200, 1400, 900],
+      overlap: 180,
+      minChunkSize: 260,
+    });
     for (let index = 0; index < contentChunks.length; index += 1) {
       const chunk = contentChunks[index];
       const embedding = await OllamaEmbedService.getInstance().embedText(chunk);
@@ -81,13 +82,13 @@ const handler = async (
       await createRagDocChunkWithRetry(
         {
           archived: false,
-          docId: ragDocument._id,
+          docId: documentId,
           chunkIndex: index,
           content: chunk,
           sourceType,
-          effectiveFrom: new Date(effectiveFrom).toISOString(),
+          effectiveFrom: new Date(effectiveFrom),
           effectiveUntil: effectiveUntil
-            ? new Date(effectiveUntil).toISOString()
+            ? new Date(effectiveUntil)
             : null,
           warnings: {
             ...warnings,
@@ -106,7 +107,7 @@ const handler = async (
 
     await session.commitTransaction();
 
-    // Respond with created account (no logging here, service already logged)
+    // Respond with created document (no logging here, service already logged)
     res.status(201).json({
       status: "success",
     });

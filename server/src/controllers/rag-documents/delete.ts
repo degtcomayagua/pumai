@@ -8,7 +8,7 @@ import {
   RAGDocumentNotFoundError,
   deleteRAGDocumentWithRetry,
 } from "../../services/rag-documents/delete";
-import { deleteRagChunksByDocId } from "../../services/chroma/rag-documents/query";
+import { deleteRagChunksByDocId } from "../../services/qdrant/rag-documents/delete";
 
 const handler = async (
   req: Request<{}, {}, RAGDocumentAPITypes.DeleteRequestBody>,

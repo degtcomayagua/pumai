@@ -23,6 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "@chroma-core/ollama": "^0.1.7",
+    "@qdrant/js-client-rest": "^1.17.0",
     "@reduxjs/toolkit": "^2.9.1",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/nitro-v2-vite-plugin": "^1.132.31",

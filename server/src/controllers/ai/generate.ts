@@ -4,7 +4,7 @@ import { TypedRequest } from "../../types";
 
 import OllamaChatService from "../../services/ollama/chat";
 import OllamaEmbeddingService from "../../services/ollama/embed";
-import { queryRagDocumentsByEmbedding } from "../../services/chroma/rag-documents/query";
+import { queryRagDocumentsByEmbedding } from "../../services/qdrant/rag-documents/query";
 
 import { ChatResponse, Message, Tool } from "ollama";
 import {
