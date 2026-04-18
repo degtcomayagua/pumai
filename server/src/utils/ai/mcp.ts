@@ -3,39 +3,20 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 
-import { OllamaMcpServer } from "../services/ollama/types";
+import { OllamaMcpServer } from "../../types/ollama";
+import {
+  ExecutedToolCall,
+  MCPDiscoveryCacheValue,
+  MCPServerConfig,
+  MCPServerProtocol,
+  ResolvedMcpCatalog,
+} from "../../types/mcp";
 
 const MCP_DISCOVERY_CACHE_TTL_MS = 60_000;
 
-export type MCPServerProtocol = "streamable-http" | "sse";
-
-export type MCPServerConfig = {
-  name: string;
-  description?: string;
-  url: string;
-  protocol?: MCPServerProtocol;
-  enabled?: boolean;
-};
-
-type MCPDiscoveryCacheValue = {
-  expiresAt: number;
-  value: OllamaMcpServer;
-};
-
-export type ResolvedMcpCatalog = {
-  servers: OllamaMcpServer[];
-  toolServerByName: Map<string, MCPServerConfig>;
-};
-
-export type ExecutedToolCall = {
-  name: string;
-  arguments: Record<string, unknown>;
-  serverName: string;
-  result: string;
-};
-
 const mcpDiscoveryCache = new Map<string, MCPDiscoveryCacheValue>();
 
+/// TODO: Replace with a more robust solution if we end up with many MCP servers or large tool lists, but this will help avoid repeated discovery calls during development and testing. We can also consider adding an endpoint to manually trigger cache invalidation if needed.
 export const CENTRALIZED_AI_MCP_SERVERS: MCPServerConfig[] = [
   {
     name: "Calendario Académico",
@@ -68,7 +49,9 @@ function mapMcpToolToOllamaTool(tool: {
   };
 }
 
-function normalizeMcpServers(requestServers: MCPServerConfig[] = []): MCPServerConfig[] {
+function normalizeMcpServers(
+  requestServers: MCPServerConfig[] = [],
+): MCPServerConfig[] {
   const centralizedServers = CENTRALIZED_AI_MCP_SERVERS.filter(
     (server) => server.enabled !== false,
   );
@@ -181,7 +164,9 @@ async function discoverMcpToolsWithProtocol(
   }
 }
 
-async function discoverMcpTools(server: MCPServerConfig): Promise<OllamaMcpServer | null> {
+async function discoverMcpTools(
+  server: MCPServerConfig,
+): Promise<OllamaMcpServer | null> {
   const preferredProtocol = server.protocol ?? "streamable-http";
 
   try {
@@ -207,7 +192,9 @@ async function discoverMcpTools(server: MCPServerConfig): Promise<OllamaMcpServe
   }
 }
 
-export async function resolveAiMcpCatalog(requestServers: MCPServerConfig[] = []): Promise<ResolvedMcpCatalog> {
+export async function resolveAiMcpCatalog(
+  requestServers: MCPServerConfig[] = [],
+): Promise<ResolvedMcpCatalog> {
   const servers = normalizeMcpServers(requestServers);
 
   if (!servers.length) {
@@ -217,16 +204,21 @@ export async function resolveAiMcpCatalog(requestServers: MCPServerConfig[] = []
     };
   }
 
-  const discoveredServers = await Promise.all(servers.map((server) => discoverMcpTools(server)));
+  const discoveredServers = await Promise.all(
+    servers.map((server) => discoverMcpTools(server)),
+  );
 
   const filteredServers = discoveredServers.filter(
-    (server): server is OllamaMcpServer => Boolean(server && server.tools.length > 0),
+    (server): server is OllamaMcpServer =>
+      Boolean(server && server.tools.length > 0),
   );
 
   const toolServerByName = new Map<string, MCPServerConfig>();
 
   for (const discoveredServer of filteredServers) {
-    const matchingServer = servers.find((server) => server.name === discoveredServer.name);
+    const matchingServer = servers.find(
+      (server) => server.name === discoveredServer.name,
+    );
 
     if (!matchingServer) {
       continue;
@@ -288,7 +280,10 @@ async function callMcpToolWithProtocol(
 
     const formattedResult = formatCallToolResult(result);
 
-    console.log(`[MCP] Tool '${toolName}' response from '${server.name}':`, formattedResult);
+    console.log(
+      `[MCP] Tool '${toolName}' response from '${server.name}':`,
+      formattedResult,
+    );
 
     return formattedResult;
   } finally {
@@ -308,7 +303,12 @@ async function callMcpTool(
   const preferredProtocol = server.protocol ?? "streamable-http";
 
   try {
-    return await callMcpToolWithProtocol(server, preferredProtocol, toolName, toolArguments);
+    return await callMcpToolWithProtocol(
+      server,
+      preferredProtocol,
+      toolName,
+      toolArguments,
+    );
   } catch (primaryError) {
     if (preferredProtocol !== "streamable-http") {
       throw primaryError;
@@ -326,7 +326,10 @@ export async function executeMcpToolCalls(
 
   for (const toolCall of toolCalls) {
     const toolName = toolCall.function.name;
-    const toolArguments = (toolCall.function.arguments ?? {}) as Record<string, unknown>;
+    const toolArguments = (toolCall.function.arguments ?? {}) as Record<
+      string,
+      unknown
+    >;
     const targetServer = catalog.toolServerByName.get(toolName);
 
     if (!targetServer) {

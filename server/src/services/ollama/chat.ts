@@ -1,11 +1,11 @@
-import { ChatResponse, Message, Ollama, Options, Tool } from "ollama";
+import { ChatRequest, Message, Ollama, Options, Tool } from "ollama";
 
 import OllamaClient from "./client";
 import {
   buildFinalPrompt,
   buildSystemPrompt as composeSystemPrompt,
   trimChatHistory,
-} from "./prompt";
+} from "../../utils/ai/prompts";
 import type { OllamaChatRequest, OllamaMcpServer } from "./types";
 
 class OllamaChatService {
@@ -39,7 +39,7 @@ class OllamaChatService {
     return process.env.OLLAMA_MODEL || "gemma3:12b";
   }
 
-  private buildRequest(request: OllamaChatRequest) {
+  private buildRequest(request: OllamaChatRequest): ChatRequest {
     const chat = trimChatHistory(request.chat ?? []);
     const tools = [
       ...(request.tools ?? []),
@@ -63,7 +63,11 @@ class OllamaChatService {
         { role: "user", content: request.prompt },
       ] as Message[],
       tools: tools.length ? tools : undefined,
-      options: request.options,
+      options: {
+        ...request.options,
+        num_gpu: 9999,
+        temperature: 0.2
+      },
     };
   }
 
@@ -108,7 +112,6 @@ class OllamaChatService {
         ...requestPayload,
         stream: true,
       });
-      console.log(response)
 
       return response as unknown as T;
     }

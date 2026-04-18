@@ -4,12 +4,12 @@ import { TypedRequest } from "../../types";
 
 import OllamaChatService from "../../services/ollama/chat";
 import { AbortableAsyncIterator, ChatResponse } from "ollama";
-import { AiRequestBody, buildAiPrompt } from "../../utils/ai-rag";
+import { AiRequestBody, buildAiPrompt } from "../../utils/ai/rag";
 import {
   buildToolContext,
   executeMcpToolCalls,
   resolveAiMcpCatalog,
-} from "../../utils/ai-mcp";
+} from "../../utils/ai/mcp";
 
 const handler = async (
   req: TypedRequest<AiRequestBody>,

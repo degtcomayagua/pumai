@@ -6,12 +6,11 @@ import * as RagDocumentsAPITypes from "../../../../shared/api/rag-documents";
 import { IAccount } from "../../../../shared/models/account";
 
 import LoggingService from "../../services/logging";
-
 import { createRagDocChunkWithRetry } from "../../services/qdrant/rag-documents/create";
-import { buildTextChunks } from "../../utils/chunking";
-import { createRAGDocumentWithRetry } from "src/services/rag-documents/create";
-
+import { createRAGDocumentWithRetry } from "../../services/rag-documents/create";
 import OllamaEmbedService from "../../services/ollama/embed";
+
+import { buildTextChunks } from "../../utils/chunking";
 
 import { APIError } from "../../errors/api";
 

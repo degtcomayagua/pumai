@@ -9,12 +9,12 @@ import {
   buildAiPrompt,
   AiRequestBody,
   AiResponseData,
-} from "../../utils/ai-rag";
+} from "../../utils/ai/rag";
 import {
   buildToolContext,
   executeMcpToolCalls,
   resolveAiMcpCatalog,
-} from "../../utils/ai-mcp";
+} from "../../utils/ai/mcp";
 
 const handler = async (
   req: TypedRequest<AiRequestBody>,

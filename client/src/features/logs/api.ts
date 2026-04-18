@@ -1,58 +1,66 @@
 import axios from "axios";
-import * as LogsAPITypes from "../../../../shared/types/api/logs";
-
 import ApiUtils from "../../utils/api";
-import { getTerminalFingerPrint } from "../../utils/terminals";
 
 const baseUrl =
-	import.meta.env.MODE === "development"
-		? import.meta.env.VITE_SERVER_URL + "/api/logs"
-		: "/api/logs";
+  import.meta.env.MODE === "development"
+    ? import.meta.env.VITE_SERVER_URL + "/api/logs"
+    : "/api/logs";
 
 const axiosClient = axios.create({
-	baseURL: baseUrl,
-	headers: {
-		"Content-Type": "application/json",
-	},
-	withCredentials: true,
+  baseURL: baseUrl,
+  withCredentials: true,
 });
 
-axiosClient.interceptors.request.use(async (config) => {
-	const fingerprint = await getTerminalFingerPrint();
-	config.headers["x-device-fingerprint"] = fingerprint;
-	return config;
-});
+export interface LogEntry {
+  _id: string;
+  date: string;
+  level: string;
+  source: string;
+  message: string;
+  traceId?: string;
+  duration?: number;
+  details?: Record<string, any>;
+  _references?: Record<string, string>;
+}
+
+export interface LogQueryParams {
+  level?: string;
+  source?: string;
+  startDate?: string;
+  endDate?: string;
+  traceId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface LogQueryResponse {
+  status: string;
+  logs: LogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 export const logsApi = {
-	async get(
-		data: LogsAPITypes.GetRequestBody,
-	): Promise<LogsAPITypes.GetResponseData> {
-		try {
-			const response = await axiosClient.post<LogsAPITypes.GetResponseData>(
-				"/get",
-				data,
-			);
+  async query(params: LogQueryParams): Promise<LogQueryResponse> {
+    try {
+      const response = await axiosClient.post<LogQueryResponse>(
+        "/query",
+        params,
+      );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
 
-			return response.data;
-		} catch (error) {
-			return ApiUtils.handleAxiosError(error);
-		}
-	},
-
-	async list(
-		data: LogsAPITypes.ListRequestBody,
-	): Promise<LogsAPITypes.ListResponseData> {
-		try {
-			const response = await axiosClient.post<LogsAPITypes.ListResponseData>(
-				"/list",
-				data,
-			);
-
-			return response.data;
-		} catch (error) {
-			return ApiUtils.handleAxiosError(error);
-		}
-	},
+  async exportCSV(params: Omit<LogQueryParams, "page" | "limit">): Promise<Blob> {
+    const response = await axiosClient.post("/export", params, {
+      responseType: "blob",
+    });
+    return response.data;
+  },
 };
 
 export default logsApi;
