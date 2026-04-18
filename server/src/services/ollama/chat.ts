@@ -108,6 +108,7 @@ class OllamaChatService {
         ...requestPayload,
         stream: true,
       });
+      console.log(response)
 
       return response as unknown as T;
     }

@@ -1,5 +1,6 @@
 import axios from "axios";
-import AIFeature, { AIAPITypes } from ".";
+
+import type { AIAPITypes } from ".";
 
 import ApiUtils from "../../utils/api";
 
@@ -15,6 +16,53 @@ const axiosClient = axios.create({
   },
   withCredentials: true,
 });
+
+async function readStreamText(
+  response: Response,
+  onChunk?: (chunk: string, fullText: string) => void,
+) {
+  if (!response.body) {
+    throw new Error("Response body is empty");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    const chunk = decoder.decode(value, { stream: true });
+    if (!chunk) {
+      continue;
+    }
+
+    fullText += chunk;
+    onChunk?.(chunk, fullText);
+  }
+
+  fullText += decoder.decode();
+
+  return fullText;
+}
+
+async function parseErrorResponse(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch {
+      return { status: "internal-error" };
+    }
+  }
+
+  return { status: "internal-error" };
+}
 
 export const api = {
   async generate(
@@ -33,21 +81,41 @@ export const api = {
   },
 
   async generateStream(
-    data: AIAPITypes.GenerateRequestBody,
-  ): Promise<ReadableStream<Uint8Array> | AIAPITypes.GenerateResponseData> {
+    data: AIAPITypes.StreamRequestBody,
+    options: AIAPITypes.GenerateStreamOptions = {},
+  ): Promise<AIAPITypes.StreamResponseData> {
     try {
-      const response = await axiosClient.post("/generate-stream", data, {
-        responseType: "stream",
+      const response = await fetch(`${baseUrl}/generate-stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+        signal: options.signal,
       });
 
-      console.log(response)
+      if (!response.ok) {
+        return (await parseErrorResponse(response)) as AIAPITypes.StreamResponseData;
+      }
 
+      const result = await readStreamText(response, options.onChunk);
 
-      return response.data as ReadableStream<Uint8Array>;
+      return {
+        status: "success",
+        result,
+      };
     } catch (error) {
-      return ApiUtils.handleAxiosError(error);
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return {
+          status: "internal-error",
+          result: "",
+        };
+      }
+
+      return ApiUtils.handleAxiosError(error) as AIAPITypes.StreamResponseData;
     }
-  }
+  },
 };
 
 export default api;

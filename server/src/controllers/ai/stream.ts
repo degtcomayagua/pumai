@@ -1,83 +1,82 @@
 import { NextFunction, Response } from "express";
 
 import { TypedRequest } from "../../types";
+
 import OllamaChatService from "../../services/ollama/chat";
-import OllamaEmbeddingService from "../../services/ollama/embed";
-import { AbortableAsyncIterator, ChatResponse, Message, Tool } from "ollama";
+import { AbortableAsyncIterator, ChatResponse } from "ollama";
+import { AiRequestBody, buildAiPrompt } from "../../utils/ai-rag";
 import {
-  CampusCode,
-  DeliveryMode,
-  DocumentCategory,
-} from "../../../../shared/models";
-
-type GenerateRequestBody = {
-  prompt: string;
-  chat: Message[];
-  campuses: CampusCode[];
-  deliveryModes: DeliveryMode[];
-  category?: DocumentCategory;
-  tools?: Tool[];
-  mcpServers?: {
-    name: string;
-    description?: string;
-    tools: Tool[];
-  }[];
-};
-
-type GenerateResponseData = {
-  status: "success" | "internal-error";
-  result: string;
-};
+  buildToolContext,
+  executeMcpToolCalls,
+  resolveAiMcpCatalog,
+} from "../../utils/ai-mcp";
 
 const handler = async (
-  req: TypedRequest<GenerateRequestBody>,
-  res: Response<GenerateResponseData>,
+  req: TypedRequest<AiRequestBody>,
+  res: Response,
   _next: NextFunction,
 ) => {
   try {
-    const {
-      prompt,
-      campuses,
-      deliveryModes,
-      category,
-      tools,
-      mcpServers,
-    } = req.parsedBody;
+    const { chat, tools } = req.parsedBody;
+    const { finalPrompt } = await buildAiPrompt(req.parsedBody);
+    const mcpCatalog = await resolveAiMcpCatalog(req.parsedBody.mcpServers);
 
-    const context =
-      await OllamaEmbeddingService.getInstance().getContext(prompt, 3, {
-        campuses,
-        deliveryModes,
-        category,
-        includeArchived: false,
+    const firstPass: ChatResponse =
+      await OllamaChatService.getInstance().generateChat<ChatResponse>({
+        prompt: finalPrompt,
+        chat,
+        stream: false,
+        options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
+        tools,
+        mcpServers: mcpCatalog.servers,
       });
 
-    const finalPrompt = OllamaChatService.getInstance().getFinalPrompt(
-      context.documents.join("\n"),
-      prompt,
-    );
+    const toolCalls = firstPass.message.tool_calls ?? [];
+
+    let composedPrompt = finalPrompt;
+
+    res.status(200);
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    if (toolCalls.length) {
+      for (const toolCall of toolCalls) {
+        res.write(`\n[Tool] Calling ${toolCall.function.name}...\n`);
+      }
+
+      const toolExecutions = await executeMcpToolCalls(toolCalls, mcpCatalog);
+      const toolContext = buildToolContext(toolExecutions);
+      composedPrompt = [finalPrompt, toolContext].filter(Boolean).join("\n\n");
+
+      for (const execution of toolExecutions) {
+        res.write(`\n[Tool] ${execution.name} completed via ${execution.serverName}.\n`);
+      }
+    }
 
     const result: AbortableAsyncIterator<ChatResponse> =
       await OllamaChatService.getInstance().generateChat<
         AbortableAsyncIterator<ChatResponse>
       >({
-        prompt: finalPrompt,
-        chat: [],
+        prompt: composedPrompt,
+        chat,
         stream: true,
-        options: { temperature: 0.2 },
+        options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
         tools,
-        mcpServers,
+        mcpServers: toolCalls.length ? [] : mcpCatalog.servers,
       });
-
-    res.status(200);
 
     for await (const part of result) {
       try {
-        const chunk: string = part.message.content as string;
-        res.write(chunk);
+        const chunk = part.message.content ?? "";
+        res.write(String(chunk));
       } catch (writeError) {
         console.error("Error writing chunk to response:", writeError);
-        res.status(500).send({ status: "internal-error", result: "" });
+        if (!res.headersSent) {
+          res.status(500);
+        }
+        res.end();
         return;
       }
     }
@@ -85,7 +84,12 @@ const handler = async (
     res.end();
   } catch (error) {
     console.error("Error generating chat response:", error);
-    res.status(500).send({ status: "internal-error", result: "" });
+    if (!res.headersSent) {
+      res.status(500).json({ status: "internal-error" });
+      return;
+    }
+
+    res.end();
   }
 };
 

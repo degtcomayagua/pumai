@@ -3,100 +3,66 @@ import { NextFunction, Response } from "express";
 import { TypedRequest } from "../../types";
 
 import OllamaChatService from "../../services/ollama/chat";
-import OllamaEmbeddingService from "../../services/ollama/embed";
-import { queryRagDocumentsByEmbedding } from "../../services/qdrant/rag-documents/query";
+import { ChatResponse } from "ollama";
 
-import { ChatResponse, Message, Tool } from "ollama";
 import {
-  CampusCode,
-  DeliveryMode,
-  DocumentCategory,
-} from "../../../../shared/models";
-
-type GenerateRequestBody = {
-  prompt: string;
-  chat: Message[];
-  campuses: CampusCode[];
-  deliveryModes: DeliveryMode[];
-  category?: DocumentCategory;
-  tools?: Tool[];
-  mcpServers?: {
-    name: string;
-    description?: string;
-    tools: Tool[];
-  }[];
-};
-
-type GenerateResponseData = {
-  status: "success" | "internal-error";
-  result?: string;
-};
+  buildAiPrompt,
+  AiRequestBody,
+  AiResponseData,
+} from "../../utils/ai-rag";
+import {
+  buildToolContext,
+  executeMcpToolCalls,
+  resolveAiMcpCatalog,
+} from "../../utils/ai-mcp";
 
 const handler = async (
-  req: TypedRequest<GenerateRequestBody>,
-  res: Response<GenerateResponseData>,
+  req: TypedRequest<AiRequestBody>,
+  res: Response<AiResponseData>,
   _next: NextFunction,
 ) => {
   const {
     prompt,
     chat,
-    campuses,
-    deliveryModes,
-    category,
     tools,
-    mcpServers,
   } = req.parsedBody;
 
   try {
-    const queryEmbedding =
-      await OllamaEmbeddingService.getInstance().embedText(prompt);
+    const { finalPrompt, ragDocuments } = await buildAiPrompt(req.parsedBody);
+    const mcpCatalog = await resolveAiMcpCatalog(req.parsedBody.mcpServers);
 
-    const ragDocuments = await queryRagDocumentsByEmbedding(queryEmbedding, {
-      nResults: 3,
-      filters: {
-        campuses,
-        deliveryModes,
-        category,
-        includeArchived: false,
-      },
-    });
     console.log("RAG Documents retrieved for prompt:", ragDocuments);
 
-    const finalPrompt = OllamaChatService.getInstance().getFinalPrompt(
-      ragDocuments.documents.join("\n"),
-      prompt,
-    );
-
-    const result: ChatResponse =
+    const firstPass: ChatResponse =
       await OllamaChatService.getInstance().generateChat<ChatResponse>({
         prompt: finalPrompt,
         chat,
         stream: false,
         options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
         tools,
-        mcpServers: [
-          {
-            name: "Calendario Académico",
-            description: "Proporciona información sobre eventos y fechas importantes en el calendario académico de la UNAH.",
-            tools: [
-              {
-                function: {
-                  description: "Obtiene una lista de eventos del calendario académico. No requiere parámetros.",
-                  parameters: {
-                    type: "object",
-                    properties: {},
-                  },
-                  name: "get_calendar_events",
-                  type: "function",
-                },
-                type: "tool",
-              },
-            ],
-          }
-        ],
+        mcpServers: mcpCatalog.servers,
       });
 
-    res.status(200).json({ status: "success", result: result.message.content });
+    const toolCalls = firstPass.message.tool_calls ?? [];
+
+    if (!toolCalls.length) {
+      res.status(200).json({ status: "success", result: firstPass.message.content });
+      return;
+    }
+
+    const toolExecutions = await executeMcpToolCalls(toolCalls, mcpCatalog);
+    const toolContext = buildToolContext(toolExecutions);
+
+    const finalResult: ChatResponse =
+      await OllamaChatService.getInstance().generateChat<ChatResponse>({
+        prompt: [finalPrompt, toolContext].filter(Boolean).join("\n\n"),
+        chat,
+        stream: false,
+        options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
+        tools,
+      });
+
+    res.status(200).json({ status: "success", result: finalResult.message.content });
 
   } catch (error: unknown) {
     console.log(error)

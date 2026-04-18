@@ -1,14 +1,6 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  Input,
-  Button,
-  Spin,
-  message as antdMessage,
-  Modal,
-  Select,
-  Checkbox,
-} from "antd";
+import { Button, Input, Spin, message as antdMessage } from "antd";
 import { FaPaperPlane } from "react-icons/fa";
 
 import AIFeature, { ChatMessage } from "../features/ai";
@@ -45,7 +37,6 @@ function Page() {
   const [loading, setLoading] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages come in
   React.useEffect(() => {
     const container = containerRef.current;
     if (container) container.scrollTop = container.scrollHeight;
@@ -54,6 +45,11 @@ function Page() {
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
+
+    const chatHistory = messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
 
     const userMsg: ChatMessage = {
       source: "local",
@@ -67,68 +63,68 @@ function Page() {
     setLoading(true);
 
     try {
-      // const result = await AIFeature.api.generateStream({
-      //   prompt: trimmed,
-      // });
-      // const stream = result
-      //
-      // // @ts-ignore
-      // stream.on("data", (chunk: any) => {
-      //   console.log("chunk", chunk.toString())
-      // })
+      setMessages((prev) => [
+        ...prev,
+        {
+          source: "api",
+          role: "assistant",
+          content: "",
+          timestamp: Date.now(),
+        },
+      ]);
 
-      const result = await AIFeature.api.generate({
-        prompt: trimmed,
-        chat: messages,
-        deliveryModes: ["onsite", "online", "hybrid"],
-        category: undefined,
-        campuses: ["TEGUCIGALPA"],
-      });
-      if (result.status === "success") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            source: "api",
-            role: "assistant",
-            content: result.result,
-            timestamp: Date.now(),
+      const result = await AIFeature.api.generateStream(
+        {
+          prompt: trimmed,
+          chat: chatHistory,
+          deliveryModes: ["onsite", "online", "hybrid"],
+          category: undefined,
+          campuses: ["TEGUCIGALPA"],
+          mcpServers: [
+            {
+              name: "Calendario Académico",
+              url: "https://n8n.asterki.xyz/mcp/a593f38e-a11d-4f90-89a6-6c10e640ff16",
+              protocol: "streamable-http",
+              enabled: true,
+
+            }
+          ]
+        },
+        {
+          onChunk: (_chunk, fullText) => {
+            setMessages((prev) => {
+              const copy = [...prev];
+              const lastMessage = copy[copy.length - 1];
+
+              if (
+                lastMessage?.role === "assistant" &&
+                lastMessage.source === "api"
+              ) {
+                lastMessage.content = fullText;
+                return copy;
+              }
+
+              copy.push({
+                source: "api",
+                role: "assistant",
+                content: fullText,
+                timestamp: Date.now(),
+              });
+
+              return copy;
+            });
           },
-        ]);
-      } else {
+        },
+      );
+
+      if (result.status !== "success") {
+        setMessages((prev) => prev.slice(0, -1));
         antdMessage.error("Error generando respuesta del modelo.");
       }
-
-      // const stream = false;
-      // if (stream && stream instanceof ReadableStream) {
-      //   console.log("result", result);
-      //   let aiText = "";
-      //   const reader = stream.getReader();
-      //
-      //   while (true) {
-      //     const { value, done } = await reader.read();
-      //     if (done) break;
-      //     const chunk = new TextDecoder().decode(value);
-      //     aiText += chunk;
-      //
-      //     setMessages((prev) => {
-      //       const copy = [...prev];
-      //       const last = copy[copy.length - 1];
-      //       if (last.role === "assistant") last.content = aiText;
-      //       else
-      //         copy.push({
-      //           role: "assistant",
-      //           source: "api",
-      //           content: aiText,
-      //           timestamp: Date.now(),
-      //         });
-      //       return copy;
-      //     });
-      //   }
-      // } else {
-      // }
     } catch (err) {
       console.error(err);
       antdMessage.error("Error al comunicar con el modelo AI.");
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);
     }
@@ -137,7 +133,6 @@ function Page() {
   return (
     <GeneralLayout selectedPage="chat">
       <div className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden text-white">
-        {/* Messages */}
         <div
           ref={containerRef}
           className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-184px)] flex flex-col gap-4 px-6 md:px-40 py-6"
@@ -154,8 +149,6 @@ function Page() {
         </div>
 
         <div className="bottom-0 h-[120px] absolute w-full shrink-0 border-t border-white/10 bg-white/10">
-          {/* Input */}
-
           <div className="md:p-4 p-2 flex items-end md:gap-3 gap-2">
             <Input.TextArea
               autoSize={{ maxRows: 6 }}
@@ -184,7 +177,6 @@ function Page() {
             </Button>
           </div>
 
-          {/* Disclaimer */}
           <p className="mb-2 text-center text-sm text-gray-400">
             {t("disclaimer")}
           </p>

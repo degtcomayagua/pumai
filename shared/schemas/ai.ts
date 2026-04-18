@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const generateSchema = z.object({
+export const aiRequestSchema = z.object({
   prompt: z.string().min(1, "prompt-too-short").max(5000, "prompt-too-long"),
   chat: z.array(
     z.object({
@@ -11,8 +11,6 @@ const generateSchema = z.object({
         .max(10000, "message-content-too-long"),
     }),
   ),
-
-  // New
   campuses: z
     .array(
       z.enum([
@@ -27,11 +25,9 @@ const generateSchema = z.object({
       ]),
     )
     .min(1, "at-least-one-campus-required"),
-
   deliveryModes: z
-    .array(z.enum(["onsite", "online", "hybrid"], {}))
+    .array(z.enum(["onsite", "online", "hybrid"]))
     .min(1, "at-least-one-delivery-mode-required"),
-
   category: z
     .enum([
       "regulation",
@@ -41,27 +37,34 @@ const generateSchema = z.object({
       "support",
     ])
     .optional(),
-  tools: z.array(z.object({
-    type: z.string().default("function"),
-    function: z.object({
-      name: z.string().min(1, "tool-name-required"),
-      description: z.string().optional(),
-      type: z.string().optional(),
-      parameters: z.record(z.any(), z.any()).optional(),
-    }),
-  })).optional(),
-  mcpServers: z.array(z.object({
-    name: z.string().min(1, "mcp-server-name-required"),
-    description: z.string().optional(),
-    tools: z.array(z.object({
-      type: z.string().default("function"),
-      function: z.object({
-        name: z.string().min(1, "tool-name-required"),
-        description: z.string().optional(),
-        type: z.string().optional(),
-        parameters: z.record(z.any(), z.any()).optional(),
+  tools: z
+    .array(
+      z.object({
+        type: z.string().default("function"),
+        function: z.object({
+          name: z.string().min(1, "tool-name-required"),
+          description: z.string().optional(),
+          type: z.string().optional(),
+          parameters: z.record(z.any(), z.any()).optional(),
+        }),
       }),
-    })).min(1, "at-least-one-mcp-tool-required"),
-  })).optional(),
+    )
+    .optional(),
+  mcpServers: z
+    .array(
+      z.object({
+        name: z.string().min(1, "mcp-server-name-required"),
+        description: z.string().optional(),
+        url: z.url("invalid-mcp-server-url"),
+        protocol: z.enum(["streamable-http", "sse"]).optional(),
+        enabled: z.boolean().optional(),
+      }),
+    )
+    .optional(),
 });
-export { generateSchema };
+
+export const generateSchema = aiRequestSchema;
+export const streamSchema = aiRequestSchema;
+
+export type GenerateRequestBody = z.infer<typeof aiRequestSchema>;
+export type StreamRequestBody = GenerateRequestBody;
