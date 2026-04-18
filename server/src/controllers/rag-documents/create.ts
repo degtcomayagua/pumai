@@ -10,7 +10,7 @@ import { createRagDocChunkWithRetry } from "../../services/qdrant/rag-documents/
 import { createRAGDocumentWithRetry } from "../../services/rag-documents/create";
 import OllamaEmbedService from "../../services/ollama/embed";
 
-import { buildTextChunks } from "../../utils/chunking";
+import { buildTextChunks } from "../../utils/ai/chunking";
 
 import { APIError } from "../../errors/api";
 

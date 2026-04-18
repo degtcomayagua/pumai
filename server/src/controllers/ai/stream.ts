@@ -1,15 +1,19 @@
 import { NextFunction, Response } from "express";
+import { AbortableAsyncIterator, ChatResponse } from "ollama";
 
 import { TypedRequest } from "../../types";
 
 import OllamaChatService from "../../services/ollama/chat";
-import { AbortableAsyncIterator, ChatResponse } from "ollama";
+import LoggingService from "../../services/logging";
+
 import { AiRequestBody, buildAiPrompt } from "../../utils/ai/rag";
 import {
   buildToolContext,
   executeMcpToolCalls,
   resolveAiMcpCatalog,
 } from "../../utils/ai/mcp";
+
+const MAX_TOOL_CALL_ROUNDS = 4;
 
 const handler = async (
   req: TypedRequest<AiRequestBody>,
@@ -21,19 +25,8 @@ const handler = async (
     const { finalPrompt } = await buildAiPrompt(req.parsedBody);
     const mcpCatalog = await resolveAiMcpCatalog(req.parsedBody.mcpServers);
 
-    const firstPass: ChatResponse =
-      await OllamaChatService.getInstance().generateChat<ChatResponse>({
-        prompt: finalPrompt,
-        chat,
-        stream: false,
-        options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
-        tools,
-        mcpServers: mcpCatalog.servers,
-      });
-
-    const toolCalls = firstPass.message.tool_calls ?? [];
-
     let composedPrompt = finalPrompt;
+    let finalText = "";
 
     res.status(200);
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -41,19 +34,49 @@ const handler = async (
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
 
-    if (toolCalls.length) {
+    for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round += 1) {
+      const response: ChatResponse =
+        await OllamaChatService.getInstance().generateChat<ChatResponse>({
+          prompt: composedPrompt,
+          chat,
+          stream: false,
+          options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
+          tools,
+          mcpServers: mcpCatalog.servers,
+        });
+
+      const toolCalls = response.message.tool_calls ?? [];
+
+      if (!toolCalls.length) {
+        finalText = response.message.content?.trim() ?? "";
+        break;
+      }
+
       for (const toolCall of toolCalls) {
         res.write(`\n[Tool] Calling ${toolCall.function.name}...\n`);
       }
 
       const toolExecutions = await executeMcpToolCalls(toolCalls, mcpCatalog);
       const toolContext = buildToolContext(toolExecutions);
-      composedPrompt = [finalPrompt, toolContext].filter(Boolean).join("\n\n");
+      composedPrompt = [composedPrompt, toolContext].filter(Boolean).join("\n\n");
 
       for (const execution of toolExecutions) {
         res.write(`\n[Tool] ${execution.name} completed via ${execution.serverName}.\n`);
       }
     }
+
+    if (finalText) {
+      res.write(finalText);
+      res.end();
+      return;
+    }
+
+    composedPrompt = [
+      composedPrompt,
+      "Provide a final response to the user using the tool results above. Do not call tools.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const result: AbortableAsyncIterator<ChatResponse> =
       await OllamaChatService.getInstance().generateChat<
@@ -63,8 +86,8 @@ const handler = async (
         chat,
         stream: true,
         options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
-        tools,
-        mcpServers: toolCalls.length ? [] : mcpCatalog.servers,
+        tools: [],
+        mcpServers: [],
       });
 
     for await (const part of result) {
@@ -87,6 +110,24 @@ const handler = async (
     if (!res.headersSent) {
       res.status(500).json({ status: "internal-error" });
       return;
+    }
+
+
+    if (error instanceof Error) {
+      LoggingService.log({
+        source: "api:rag-documents:delete",
+        level: "error",
+        message: "Error during cai deletion",
+        traceId: req.traceId,
+        details: {
+          error: error.message,
+          stack: error.stack,
+        },
+        metadata: {
+          createdAt: new Date(),
+          // createdBy: adminAccount._id,
+        },
+      });
     }
 
     res.end();
