@@ -1,6 +1,8 @@
 import axios from "axios";
 import ApiUtils from "../../utils/api";
 
+import type { LogsAPITypes } from "."
+
 const baseUrl =
   import.meta.env.MODE === "development"
     ? import.meta.env.VITE_SERVER_URL + "/api/logs"
@@ -43,9 +45,9 @@ export interface LogQueryResponse {
 }
 
 export const logsApi = {
-  async query(params: LogQueryParams): Promise<LogQueryResponse> {
+  async query(params: LogsAPITypes.QueryRequestBody): Promise<LogsAPITypes.QueryResponseData> {
     try {
-      const response = await axiosClient.post<LogQueryResponse>(
+      const response = await axiosClient.post<LogsAPITypes.QueryResponseData>(
         "/query",
         params,
       );

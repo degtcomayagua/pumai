@@ -1,35 +1,31 @@
 import express from "express";
 
-import queryHandler from "../controllers/logs/query";
-import exportHandler from "../controllers/logs/export";
+import getHandler from "../controllers/logs/get";
+import listHandler from "../controllers/logs/list";
 
 import { validateRequestBody } from "../middleware/validationMiddleware";
 import {
   ensureAuthenticated,
   ensurePermissions,
 } from "../middleware/authMiddleware";
-import { exportSchema, querySchema } from "../../../shared/schemas/logs";
-
-
+import { getSchema, listSchema } from "../../../shared/schemas/logs";
 
 const router = express.Router();
 
 router.use(ensureAuthenticated);
 
-// Query logs
 router.post(
-  "/query",
+  "/list",
   ensurePermissions(["logs:read"]),
-  validateRequestBody(querySchema),
-  queryHandler,
+  validateRequestBody(listSchema),
+  listHandler,
 );
 
-// Export logs as CSV
 router.post(
-  "/export",
-  ensurePermissions(["logs:export"]),
-  validateRequestBody(exportSchema),
-  exportHandler,
+  "/get",
+  ensurePermissions(["logs:read"]),
+  validateRequestBody(getSchema),
+  getHandler,
 );
 
 export default router;
