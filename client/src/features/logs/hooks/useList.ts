@@ -20,17 +20,23 @@ type UseLogsListOptions = {
 
 export function useList({ apiList = api.list }: UseLogsListOptions = {}) {
   const { message } = App.useApp();
-
-  const { t } = useTranslation(["features"], {
-    keyPrefix: "logs.hooks.useList",
-  });
   const { t: tErrorMessages } = useTranslation(["error-messages"]);
 
   const [logsListState, setLogsListState] = useState<
     LogsAPITypes.ListRequestBody & { loading: boolean }
   >({
     loading: true,
-    fields: ["_id", "metadata", "date", "details", "details", "message", "traceId", "level"],
+    fields: [
+      "_id",
+      "date",
+      "source",
+      "level",
+      "message",
+      "duration",
+      "details",
+      "traceId",
+      "_references",
+    ],
     populate: [],
     count: 50,
     page: 0,
@@ -50,12 +56,16 @@ export function useList({ apiList = api.list }: UseLogsListOptions = {}) {
       page = logsListState.page,
       includeDeleted = logsListState.includeDeleted,
       search = logsListState.search,
+      filters = logsListState.filters,
     }: NullableLogsListState = {}) => {
       setLogsListState((prev) => ({ ...prev, loading: true }));
 
       const result = await apiList({
         ...logsListState,
+        count: count as number,
+        page: page as number,
         search: search == null ? undefined : search,
+        filters: filters == null ? undefined : filters,
         includeDeleted: includeDeleted == null ? undefined : includeDeleted,
       });
 
@@ -65,6 +75,7 @@ export function useList({ apiList = api.list }: UseLogsListOptions = {}) {
           count: count as number,
           page: page as number,
           search: search == null ? undefined : search,
+          filters: filters == null ? undefined : filters,
           includeDeleted: includeDeleted == null ? undefined : includeDeleted,
           loading: false,
         }));
@@ -79,6 +90,7 @@ export function useList({ apiList = api.list }: UseLogsListOptions = {}) {
             duration: log.duration,
             details: log.details,
             traceId: log.traceId,
+            _references: log._references,
           })),
           totalLogs: result.totalLogs ?? 0,
         });
@@ -89,7 +101,7 @@ export function useList({ apiList = api.list }: UseLogsListOptions = {}) {
         setLogsListState((prev) => ({ ...prev, loading: false }));
       }
     },
-    [logsListState, message, t, tErrorMessages, apiList],
+    [logsListState, message, tErrorMessages, apiList],
   );
 
   return {

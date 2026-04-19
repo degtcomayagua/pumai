@@ -1,6 +1,9 @@
 import api from "./api";
 
-import LogsViewer from "./components/LogsViewer";
+import LogsTable from "./components/LogsViewer";
+import LogDetails from "./components/LogDetails";
+
+import { useList } from "./hooks/useList"
 
 import * as LogsAPITypes from "../../../../shared/api/logs"
 import { ILog } from "../../../../shared/models/log"
@@ -13,12 +16,17 @@ interface ListLog {
   duration?: number; // Optional duration in milliseconds
   details?: Record<string, any>;
   traceId?: string; // Optional request ID for tracing requests
+  _references?: Record<string, string>;
 }
 
 export type { LogsAPITypes, ILog, ListLog }
 export default {
   api,
+  hooks: {
+    useList
+  },
   components: {
-    LogsViewer,
+    LogsTable,
+    LogDetails,
   },
 };

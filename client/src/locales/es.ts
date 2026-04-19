@@ -268,6 +268,51 @@ const translation = {
         },
       },
     },
+    logs: {
+      components: {
+        table: {
+          columns: {
+            date: "Fecha",
+            level: "Nivel",
+            source: "Origen",
+            message: "Mensaje",
+            traceId: "Trace ID",
+            duration: "Duración",
+          },
+          levels: {
+            info: "Info",
+            warning: "Advertencia",
+            important: "Importante",
+            error: "Error",
+            critical: "Crítico",
+            debug: "Depuración",
+          },
+          emptyValue: "-",
+          durationMs: "{{value}}ms",
+          traceIdShort: "{{value}}...",
+          total: "Mostrando {{range}} de {{total}} registros",
+        },
+        details: {
+          drawerTitleFallback: "Detalle del log",
+          cards: {
+            message: "Mensaje",
+            details: "Detalles",
+            references: "Referencias",
+          },
+          fields: {
+            date: "Fecha",
+            level: "Nivel",
+            source: "Origen",
+            duration: "Duración",
+            traceId: "Trace ID",
+            value: "Valor",
+            relatedDocument: "Documento relacionado",
+          },
+          emptyDetails: "El log no contiene detalles.",
+          loadError: "No se pudo cargar el log.",
+        },
+      },
+    },
   },
 
   layouts: {
@@ -380,6 +425,20 @@ const translation = {
         uploadDocument: "Subir Nuevo Documento",
         searchPlaceholder: "Buscar por nombre o contenido",
         showDeleted: "Mostrar Documentos Eliminados",
+      },
+      logs: {
+        title: "Registros Técnicos",
+        description: "Visualiza y filtra los registros técnicos del sistema.",
+        filters: {
+          levelPlaceholder: "Nivel",
+          sourcePlaceholder: "Filtrar por origen",
+          messagePlaceholder: "Buscar en mensajes",
+          traceIdPlaceholder: "Trace ID",
+          dateRangePlaceholderStart: "Fecha inicio",
+          dateRangePlaceholderEnd: "Fecha fin",
+          apply: "Aplicar filtros",
+          clear: "Limpiar filtros",
+        },
       },
     },
   },

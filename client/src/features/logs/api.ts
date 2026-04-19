@@ -39,4 +39,16 @@ export const logsApi = {
   },
 };
 
+export interface LogEntry {
+  _id: string;
+  date: string;
+  level: string;
+  source: string;
+  message: string;
+  traceId?: string;
+  duration?: number;
+  details?: Record<string, any>;
+  _references?: Record<string, string>;
+}
+
 export default logsApi;

@@ -206,7 +206,7 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
     },
   };
 
-  const isDark = userPreferences?.theme === "dark";
+  const isDark = true;
 
   return (
     <ConfigProvider locale={esES} theme={isDark ? darkTheme : lightTheme}>
