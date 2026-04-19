@@ -100,6 +100,16 @@ class SessionManager {
               message: `Account login for ${req.body.email}`,
               level: "info",
               source: "application",
+              traceId: req.traceId,
+              duration: 0,
+              metadata: {
+              },
+              details: {
+                accountId: account._id,
+              },
+              _references: {
+                accountId: "Account",
+              },
             });
 
             return done(null, account);

@@ -173,7 +173,6 @@ class LoggingService {
     message: string;
     details?: Record<string, any>;
     _references?: Record<string, string | undefined>; // If there's an object that needs to be referenced
-    references?: Record<string, string | undefined>; // Alias for _references
     level: LogLevel;
     source: string;
     duration?: number; // Optional duration in milliseconds
@@ -187,7 +186,6 @@ class LoggingService {
         enrichedDetails,
         {
           ...(log._references ?? {}),
-          ...(log.references ?? {}),
         },
       );
 
@@ -199,7 +197,7 @@ class LoggingService {
         level: log.level,
         source: log.source,
         duration: log.duration,
-        _references: resolvedReferences,
+        _references: log._references ? resolvedReferences : undefined,
         metadata: log.metadata,
       });
       await newLog.save();
