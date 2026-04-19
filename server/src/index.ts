@@ -10,6 +10,7 @@ import path from "path";
 import { loadEnv } from "./config/env";
 import MongoDBClient from "./config/mongodb";
 import { setupQdrant } from "./config/qdrant";
+import { setupRedis } from "./config/redis";
 
 import { registerRoutes } from "./routes";
 
@@ -74,6 +75,7 @@ export async function startServer() {
 
   registerRoutes(app);
 
+  await setupRedis();
   new MongoDBClient(process.env.MONGODB_URI!).connect();
   await setupQdrant();
 

@@ -37,6 +37,7 @@ services:
       - mongoinit
       - qdrant
       - mongo
+      - redis
     environment:
       - NODE_ENV=production
     volumes:
@@ -57,6 +58,16 @@ services:
     ports: # Just for development, remove in production
       - "6333:6333"
 
+  redis:
+    image: redis:7-alpine
+    container_name: pumai-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports: # Just for development, remove in production
+      - "6379:6379"
+
 volumes:
   mongo-data:
   qdrant-data:
+  redis-data:

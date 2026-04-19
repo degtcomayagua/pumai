@@ -15,6 +15,7 @@ export function loadEnv() {
     "OLLAMA_EMBEDDING_MODEL",
 
     "MONGODB_URI",
+    "REDIS_URL",
 
     "QDRANT_URI",
     "QDRANT_RAG_DOCS_COLLECTION",
