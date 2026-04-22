@@ -23,7 +23,7 @@ COPY . .
 RUN npm run --prefix server build
 
 # Build mobile app
-RUN NODE_OPTIONS="--max-old-space-size=4096" npm run --prefix mobile-app build
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run --prefix client build
 
 # Copy built client into server output
 RUN mkdir -p /app/server/dist/client-dist && \

@@ -1,3 +1,6 @@
+networks:
+  pumai-net:
+
 services:
   mongo:
     image: mongo:latest
@@ -6,6 +9,8 @@ services:
       - mongo-data:/data/db
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     restart: unless-stopped
+    networks:
+      - pumai-net
 
   mongoinit:
     image: mongo:latest
@@ -14,19 +19,20 @@ services:
     entrypoint: ["bash", "-c"]
     command: >
       "
-      echo 'Waiting for MongoDB to be ready...' &&
-      until mongo --host mongo --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do
-        sleep 1;
+      echo 'Waiting for MongoDB...' &&
+      until mongosh --host mongo --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do
+      sleep 1;
       done &&
-      echo 'Mongo is up. Initiating replica set...' &&
-      mongo --host mongo --eval '
-        rs.initiate({
-          _id: \"rs0\",
-          members: [{ _id: 0, host: \"mongo:27017\" }]
-        });
+      mongosh --host mongo --eval '
+      rs.initiate({
+        _id: \"rs0\",
+        members: [{ _id: 0, host: \"mongo:27017\" }]
+      });
       '
       "
     restart: "no"
+    networks:
+      - pumai-net
 
   app:
     build:
@@ -46,6 +52,8 @@ services:
       - "3000:3000"
     restart: unless-stopped
     command: ["sh", "-c", "sleep 5 && npm run start"]
+    networks:
+      - pumai-net
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -55,8 +63,10 @@ services:
     volumes:
       - qdrant-data:/data
     restart: unless-stopped
-    ports: # Just for development, remove in production
-      - "6333:6333"
+    # ports: # Just for development, remove in production
+    #   - "6333:6333"
+    networks:
+      - pumai-net
 
   redis:
     image: redis:7-alpine
@@ -64,8 +74,10 @@ services:
     restart: unless-stopped
     volumes:
       - redis-data:/data
-    ports: # Just for development, remove in production
-      - "6379:6379"
+    # ports: # Just for development, remove in production
+    #   - "6379:6379"
+    networks:
+      - pumai-net
 
 volumes:
   mongo-data:

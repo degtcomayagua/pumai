@@ -78,7 +78,7 @@ const handler = async (
           prompt: fallbackPrompt,
           chat,
           stream: false,
-          options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
+          options: { temperature: 0.7, num_gpu: 9999, main_gpu: 0 },
           tools: [],
           mcpServers: [],
         });
