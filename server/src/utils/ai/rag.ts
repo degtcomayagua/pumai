@@ -5,11 +5,13 @@ import { CampusCode, DeliveryMode, DocumentCategory } from "../../../../shared/m
 import OllamaChatService from "../../services/ollama/chat";
 import OllamaEmbeddingService from "../../services/ollama/embed";
 import { queryRagDocumentsByEmbedding } from "../../services/qdrant/rag-documents/query";
+import { RagQueryFilters } from "../../services/qdrant/rag-documents/shared"
 
 import { MCPServerConfig } from "../../types/mcp";
 
 export type AiRequestBody = {
   prompt: string;
+  workflowSessionId?: string;
   chat: Message[];
   campuses: CampusCode[];
   deliveryModes: DeliveryMode[];
@@ -18,6 +20,7 @@ export type AiRequestBody = {
   mcpServers?: MCPServerConfig[];
 };
 
+
 export type AiResponseData = {
   status: "success" | "internal-error";
   result?: string;
@@ -25,10 +28,10 @@ export type AiResponseData = {
 
 export type BuildAiPromptResult = {
   finalPrompt: string;
-  ragDocuments: Awaited<ReturnType<typeof queryRagDocumentsByEmbedding>>;
+  ragDocuments?: Awaited<ReturnType<typeof queryRagDocumentsByEmbedding>>;
 };
 
-export function buildAiFilters(request: AiRequestBody) {
+export function buildAiFilters(request: AiRequestBody): RagQueryFilters {
   return {
     campuses: request.campuses,
     deliveryModes: request.deliveryModes,
@@ -37,17 +40,30 @@ export function buildAiFilters(request: AiRequestBody) {
   };
 }
 
-export async function buildAiPrompt(request: AiRequestBody): Promise<BuildAiPromptResult> {
-  const queryEmbedding = await OllamaEmbeddingService.getInstance().embedText(request.prompt);
+export async function buildAiPrompt(prompt: string, options: {
+  rag?: boolean;
+} = {},
+  ragFilters?: RagQueryFilters
+): Promise<BuildAiPromptResult> {
+  const queryEmbedding = await OllamaEmbeddingService.getInstance().embedText(prompt);
 
+  if (options.rag === undefined || options.rag === false) {
+    return {
+      finalPrompt: OllamaChatService.getInstance().getFinalPrompt(
+        "",
+        prompt,
+      ),
+      ragDocuments: undefined,
+    };
+  }
   const ragDocuments = await queryRagDocumentsByEmbedding(queryEmbedding, {
     nResults: 3,
-    filters: buildAiFilters(request),
+    filters: ragFilters,
   });
 
   const finalPrompt = OllamaChatService.getInstance().getFinalPrompt(
     ragDocuments.documents.join("\n"),
-    request.prompt,
+    prompt,
   );
 
   return {

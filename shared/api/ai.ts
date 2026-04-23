@@ -1,54 +1,36 @@
-import { Message, Tool } from "ollama";
+import z from "zod";
+
+import { generateSchema } from "../schemas/ai";
 
 import { ResponseStatus } from "../models";
 
-export type MCPServerProtocol = "streamable-http" | "sse";
-
-export type MCPServerConfig = {
-  name: string;
-  description?: string;
-  url: string;
-  protocol?: MCPServerProtocol;
-  enabled?: boolean;
-};
-
-export type GenerateRequestBody = {
-  prompt: string;
-  chat: Message[];
-  campuses: Array<
-    | "COMAYAGUA"
-    | "TEGUCIGALPA"
-    | "SANPEDRO"
-    | "CHOLUTECA"
-    | "LA CEIBA"
-    | "DANLI"
-    | "SANTA ROSA"
-    | "GLOBAL"
-  >;
-  deliveryModes: Array<"onsite" | "online" | "hybrid">;
-  category?:
-  | "regulation"
-  | "administrative"
-  | "campus_service"
-  | "student_life"
-  | "support";
-  tools?: Tool[];
-  mcpServers?: MCPServerConfig[];
-};
-export type StreamRequestBody = GenerateRequestBody;
-
-// Response types
+export type GenerateRequestBody = z.infer<typeof generateSchema>;
 export interface GenerateResponseData {
   status: ResponseStatus;
   result?: string;
 }
 
+export type StreamRequestBody = GenerateRequestBody;
 export interface StreamResponseData {
   status: ResponseStatus;
   result?: string;
 }
-
 export type GenerateStreamOptions = {
-  onChunk?: (chunk: string, fullText: string) => void;
+  onChunk?: (chunk: StreamChunk, fullText: string) => void;
   signal?: AbortSignal;
+};
+
+export type StreamChunkEvent =
+  | "text"
+  | "tool_call"
+  | "workflow_start"
+  | "workflow_step"
+  | "image"
+  | "system"
+  | "done"
+  | (string & {});
+
+export type StreamChunk = {
+  event: StreamChunkEvent;
+  data: string;
 };

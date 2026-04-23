@@ -25,14 +25,14 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const {
-    prompt,
     chat,
     tools,
   } = req.parsedBody;
 
   try {
     const { finalPrompt, ragDocuments } = await buildAiPrompt(req.parsedBody);
-    const mcpCatalog = await resolveAiMcpCatalog(req.parsedBody.mcpServers);
+    // MCP temporarily disabled for workflow/data-extraction performance tuning.
+    // const mcpCatalog = await resolveAiMcpCatalog(req.parsedBody.mcpServers);
 
     console.log("RAG Documents retrieved for prompt:", ragDocuments);
 
@@ -48,8 +48,8 @@ const handler = async (
           chat,
           stream: false,
           options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
-          tools,
-          mcpServers: mcpCatalog.servers,
+          tools: [],
+          mcpServers: [],
         });
 
       const toolCalls = response.message.tool_calls ?? [];
@@ -60,7 +60,9 @@ const handler = async (
         break;
       }
 
-      const toolExecutions = await executeMcpToolCalls(toolCalls, mcpCatalog);
+      // MCP temporarily disabled for workflow/data-extraction performance tuning.
+      // const toolExecutions = await executeMcpToolCalls(toolCalls, mcpCatalog);
+      const toolExecutions: Awaited<ReturnType<typeof executeMcpToolCalls>> = [];
       toolContexts.push(buildToolContext(toolExecutions));
     }
 

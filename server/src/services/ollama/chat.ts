@@ -66,8 +66,9 @@ class OllamaChatService {
       options: {
         ...request.options,
         num_gpu: 9999,
-        temperature: 0.2
+        temperature: 0.2,
       },
+      think: false,
     };
   }
 

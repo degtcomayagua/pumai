@@ -1,7 +1,12 @@
 import { z } from "zod";
 
-export const aiRequestSchema = z.object({
+export const generateSchema = z.object({
   prompt: z.string().min(1, "prompt-too-short").max(5000, "prompt-too-long"),
+  workflowSessionId: z
+    .string()
+    .min(1, "workflow-session-id-too-short")
+    .max(128, "workflow-session-id-too-long")
+    .optional(),
   chat: z.array(
     z.object({
       role: z.enum(["system", "user", "assistant"]),
@@ -63,8 +68,7 @@ export const aiRequestSchema = z.object({
     .optional(),
 });
 
-export const generateSchema = aiRequestSchema;
-export const streamSchema = aiRequestSchema;
+export const streamSchema = generateSchema;
 
-export type GenerateRequestBody = z.infer<typeof aiRequestSchema>;
+export type GenerateRequestBody = z.infer<typeof generateSchema>;
 export type StreamRequestBody = GenerateRequestBody;

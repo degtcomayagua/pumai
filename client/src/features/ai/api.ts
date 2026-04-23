@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import type { AIAPITypes } from ".";
+import type { StreamChunk } from "../../../../shared/api/ai";
 
 import ApiUtils from "../../utils/api";
 
@@ -19,7 +20,7 @@ const axiosClient = axios.create({
 
 async function readStreamText(
   response: Response,
-  onChunk?: (chunk: string, fullText: string) => void,
+  onChunk?: (chunk: StreamChunk, fullText: string) => void,
 ) {
   if (!response.body) {
     throw new Error("Response body is empty");
@@ -28,6 +29,10 @@ async function readStreamText(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullText = "";
+  let buffer = "";
+
+  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+  const isSse = contentType.includes("text/event-stream");
 
   while (true) {
     const { value, done } = await reader.read();
@@ -41,11 +46,54 @@ async function readStreamText(
       continue;
     }
 
-    fullText += chunk;
-    onChunk?.(chunk, fullText);
+    if (!isSse) {
+      fullText += chunk;
+      onChunk?.({ event: "text", data: chunk }, fullText);
+      continue;
+    }
+
+    buffer += chunk;
+
+    while (true) {
+      const frameEnd = buffer.indexOf("\n\n");
+      if (frameEnd === -1) {
+        break;
+      }
+
+      const rawFrame = buffer.slice(0, frameEnd);
+      buffer = buffer.slice(frameEnd + 2);
+
+      const lines = rawFrame.replace(/\r\n/g, "\n").split("\n");
+      let eventName = "message";
+      const dataParts: string[] = [];
+
+      for (const line of lines) {
+        if (line.startsWith("event:")) {
+          eventName = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          const rawData = line.slice(5);
+          // SSE allows a single optional space after the colon; preserve all other whitespace.
+          dataParts.push(rawData.startsWith(" ") ? rawData.slice(1) : rawData);
+        }
+      }
+
+      if (eventName === "done") {
+        continue;
+      }
+
+      const data = dataParts.join("\n");
+      if (eventName === "text") {
+        fullText += data;
+      }
+
+      onChunk?.({ event: eventName, data }, fullText);
+    }
   }
 
-  fullText += decoder.decode();
+  const trailing = decoder.decode();
+  if (!isSse && trailing) {
+    fullText += trailing;
+  }
 
   return fullText;
 }

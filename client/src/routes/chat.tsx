@@ -15,6 +15,137 @@ export const Route = createFileRoute("/chat")({
   component: Page,
 });
 
+const WORKFLOW_SESSION_STORAGE_KEY = "pumai-workflow-session-id";
+
+function formatToolCallContent(name?: string, args?: unknown): string {
+  const safeName = name?.trim() || "Tool";
+
+  if (!args) {
+    return safeName;
+  }
+
+  try {
+    const serialized =
+      typeof args === "string" ? args : JSON.stringify(args, null, 2);
+    return `${safeName}\n\n\`\`\`json\n${serialized}\n\`\`\``;
+  } catch {
+    return safeName;
+  }
+}
+
+function appendOrUpdateAssistantText(
+  copy: ChatMessage[],
+  nextText: string,
+): ChatMessage[] {
+  const lastMessage = copy[copy.length - 1];
+
+  if (
+    lastMessage?.role === "assistant" &&
+    lastMessage.source === "api" &&
+    lastMessage.kind === "text"
+  ) {
+    lastMessage.content = nextText;
+    return copy;
+  }
+
+  copy.push({
+    source: "api",
+    role: "assistant",
+    kind: "text",
+    content: nextText,
+    timestamp: Date.now(),
+    activityItems: [],
+  });
+
+  return copy;
+}
+
+function appendActivityToAssistantText(
+  copy: ChatMessage[],
+  activity: {
+    kind: "tool_call" | "workflow_start" | "workflow_step";
+    title: string;
+    details?: string;
+  },
+): ChatMessage[] {
+  const lastMessage = copy[copy.length - 1];
+
+  if (
+    lastMessage?.role === "assistant" &&
+    lastMessage.source === "api" &&
+    lastMessage.kind === "text"
+  ) {
+    const existing = lastMessage.activityItems ?? [];
+    const previous = existing[existing.length - 1];
+
+    if (
+      previous &&
+      previous.kind === activity.kind &&
+      previous.title === activity.title &&
+      (previous.details ?? "") === (activity.details ?? "")
+    ) {
+      return copy;
+    }
+
+    lastMessage.activityItems = [
+      ...existing,
+      {
+        ...activity,
+        timestamp: Date.now(),
+      },
+    ];
+    return copy;
+  }
+
+  copy.push({
+    source: "api",
+    role: "assistant",
+    kind: "text",
+    content: "",
+    timestamp: Date.now(),
+    activityItems: [
+      {
+        ...activity,
+        timestamp: Date.now(),
+      },
+    ],
+  });
+
+  return copy;
+}
+
+function tryParseJson<T = Record<string, unknown>>(value: string): T | null {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "object" && parsed !== null ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildWorkflowSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `wf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getOrCreateWorkflowSessionId(): string {
+  if (typeof window === "undefined") {
+    return buildWorkflowSessionId();
+  }
+
+  const existing = window.localStorage.getItem(WORKFLOW_SESSION_STORAGE_KEY);
+  if (existing && existing.trim().length > 0) {
+    return existing;
+  }
+
+  const created = buildWorkflowSessionId();
+  window.localStorage.setItem(WORKFLOW_SESSION_STORAGE_KEY, created);
+  return created;
+}
+
 function Page() {
   const { t } = useTranslation(["pages"], {
     keyPrefix: "chat",
@@ -29,12 +160,14 @@ function Page() {
       source: "api",
       role: "assistant",
       content: `Hola ${userPreferences?.name} 👋 ¿en qué puedo ayudarte hoy?`,
+      kind: "text",
       timestamp: Date.now(),
     },
   ]);
 
   const [input, setInput] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [workflowSessionId] = React.useState<string>(() => getOrCreateWorkflowSessionId());
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -63,53 +196,93 @@ function Page() {
     setLoading(true);
 
     try {
-      setMessages((prev) => [
-        ...prev,
-        {
-          source: "api",
-          role: "assistant",
-          content: "",
-          timestamp: Date.now(),
-        },
-      ]);
-
       const result = await AIFeature.api.generateStream(
         {
           prompt: trimmed,
+          workflowSessionId,
           chat: chatHistory,
           deliveryModes: ["onsite", "online", "hybrid"],
           category: undefined,
-          campuses: ["TEGUCIGALPA"],
+          campuses: ["COMAYAGUA"],
           mcpServers: [
-            {
-              name: "Calendario Académico",
-              url: "https://n8n.asterki.xyz/mcp/a593f38e-a11d-4f90-89a6-6c10e640ff16",
-              protocol: "streamable-http",
-              enabled: true,
+            // {
+            //   name: "Calendario Académico",
+            //   url: "https://n8n.asterki.xyz/mcp/a593f38e-a11d-4f90-89a6-6c10e640ff16",
+            //   protocol: "streamable-http",
+            //   enabled: true,
 
-            }
+            // }
           ]
         },
         {
-          onChunk: (_chunk, fullText) => {
+          onChunk: (chunk, fullText) => {
             setMessages((prev) => {
+              console.log(chunk);
               const copy = [...prev];
-              const lastMessage = copy[copy.length - 1];
 
-              if (
-                lastMessage?.role === "assistant" &&
-                lastMessage.source === "api"
-              ) {
-                lastMessage.content = fullText;
-                return copy;
+              if (chunk.event === "text") {
+                return appendOrUpdateAssistantText(copy, fullText);
               }
 
-              copy.push({
-                source: "api",
-                role: "assistant",
-                content: fullText,
-                timestamp: Date.now(),
-              });
+              const appendMessage = (message: ChatMessage) => {
+                copy.push(message);
+                return copy;
+              };
+
+              const chunkData = tryParseJson<{
+                url?: string;
+                workflow?: string;
+                name?: string;
+                step?: string;
+                arguments?: unknown;
+                title?: string;
+              }>(chunk.data);
+
+              if (chunk.event === "image") {
+                return appendMessage({
+                  source: "api",
+                  role: "assistant",
+                  kind: "image",
+                  title: chunkData?.title ?? "Imagen",
+                  content: chunkData?.url ?? "",
+                  timestamp: Date.now(),
+                });
+              }
+
+              if (chunk.event === "tool_call") {
+                return appendActivityToAssistantText(copy, {
+                  kind: "tool_call",
+                  title: chunkData?.title ?? "Tool call",
+                  details: formatToolCallContent(chunkData?.name, chunkData?.arguments),
+                });
+              }
+
+              if (chunk.event === "workflow_start") {
+                return appendActivityToAssistantText(copy, {
+                  kind: "workflow_start",
+                  title: `Flujo ${chunkData?.workflow ?? ""} Iniciado`,
+                  details: chunkData?.title ?? "Iniciando flujo...",
+                });
+              }
+
+              if (chunk.event === "workflow_step") {
+                return appendActivityToAssistantText(copy, {
+                  kind: "workflow_step",
+                  title: chunkData?.step ?? "Workflow step",
+                  details: chunkData?.title ?? "Procesando paso...",
+                });
+              }
+
+              if (chunk.event === "system") {
+                return appendMessage({
+                  source: "api",
+                  role: "system",
+                  kind: "system",
+                  title: "System",
+                  content: chunk.data,
+                  timestamp: Date.now(),
+                });
+              }
 
               return copy;
             });
@@ -135,11 +308,22 @@ function Page() {
       <div className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden text-white">
         <div
           ref={containerRef}
-          className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-184px)] flex flex-col gap-4 px-6 md:px-40 py-6"
+          className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-184px)] flex flex-col px-6 md:px-40 py-6"
         >
-          {messages.map((msg, i) => (
-            <AIFeature.components.MessageComponent key={i} {...msg} />
-          ))}
+          {messages.map((msg, i) => {
+            const previous = messages[i - 1];
+            const groupedWithPrevious =
+              msg.source === "api" && previous?.source === "api";
+
+            return (
+              <AIFeature.components.MessageComponent
+                key={i}
+                {...msg}
+                showHandle={!groupedWithPrevious}
+                groupedWithPrevious={groupedWithPrevious}
+              />
+            );
+          })}
 
           {loading && (
             <div className="flex justify-center py-4">

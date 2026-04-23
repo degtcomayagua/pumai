@@ -63,8 +63,8 @@ services:
     volumes:
       - qdrant-data:/data
     restart: unless-stopped
-    # ports: # Just for development, remove in production
-    #   - "6333:6333"
+    ports: # Just for development, remove in production
+      - "6333:6333"
     networks:
       - pumai-net
 
@@ -74,8 +74,8 @@ services:
     restart: unless-stopped
     volumes:
       - redis-data:/data
-    # ports: # Just for development, remove in production
-    #   - "6379:6379"
+    ports: # Just for development, remove in production
+      - "6379:6379"
     networks:
       - pumai-net
 
