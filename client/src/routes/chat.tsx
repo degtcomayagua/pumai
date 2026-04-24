@@ -214,6 +214,7 @@ function Page() {
                 step?: string;
                 arguments?: unknown;
                 title?: string;
+                workflowSessionId?: string;
               }>(chunk.data);
 
               if (chunk.event === "image") {
@@ -236,7 +237,12 @@ function Page() {
               }
 
               if (chunk.event === "workflow_start") {
-              
+                console.log("Workflow start chunk data:", chunkData);
+                if (chunkData?.workflowSessionId) {
+                  setCurrentWorkflowSessionId(chunkData.workflowSessionId);
+                  console.log("Updated workflow session ID:", chunkData.workflowSessionId);
+                }
+
                 return appendActivityToAssistantText(copy, {
                   kind: "workflow_start",
                   title: `Flujo ${chunkData?.workflow ?? ""} Iniciado`,
@@ -268,7 +274,7 @@ function Page() {
           },
         },
       );
-      
+
 
       if (result.status !== "success") {
         setMessages((prev) => prev.slice(0, -1));

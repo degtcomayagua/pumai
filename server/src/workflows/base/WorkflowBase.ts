@@ -5,6 +5,8 @@ import { getRedisClient } from "../../config/redis";
 
 import { WorkflowSession, WorkflowStepResult, StepHandler } from "../../types/workflows";
 
+import { clearWorkflowSession, updateWorkflowSession } from "../../services/workflows/sessions";
+
 export type WorkflowExtractionResult = {
   wants_to_exit: boolean;
   next_step: string | null;
@@ -68,6 +70,9 @@ export abstract class WorkflowBase {
   /** Unique identifier — must match intent classifier output */
   abstract readonly name: string;
 
+  // Workflow description shown to the AI when deciding which workflow to use, and to users when listing workflows.
+  abstract readonly description: string;
+
   /**
    * JSON schema description for the `data` field extracted by the LLM.
    * Describe every field the workflow might need, all nullable.
@@ -94,44 +99,6 @@ export abstract class WorkflowBase {
    * return the name of the first step to run.
    */
   abstract buildInitialStep(extracted: Record<string, any>): string;
-
-  // ─── Session (Redis-backed) ───────────────────────────────────────────────
-  private getSessionKey(userId: string): string {
-    return `workflow:session:${userId}`;
-  }
-
-  async getSession(userId: string): Promise<WorkflowSession | null> {
-    const redis = getRedisClient();
-    const raw = await redis.get(this.getSessionKey(userId));
-
-    if (!raw) return null;
-
-    try {
-      const parsed = JSON.parse(raw) as Omit<WorkflowSession, "startedAt"> & { startedAt: string };
-      return {
-        ...parsed,
-        startedAt: new Date(parsed.startedAt),
-      };
-    } catch {
-      await redis.del(this.getSessionKey(userId));
-      return null;
-    }
-  }
-
-  async setSession(session: WorkflowSession): Promise<void> {
-    const redis = getRedisClient();
-    await redis.set(this.getSessionKey(session.userId), JSON.stringify({
-      ...session,
-      startedAt: session.startedAt.toISOString(),
-    }), {
-      PX: this.sessionTTLMs,
-    });
-  }
-
-  async clearSession(userId: string): Promise<void> {
-    const redis = getRedisClient();
-    await redis.del(this.getSessionKey(userId));
-  }
 
   // ─── LLM Extraction ───────────────────────────────────────────────────────
   async extractData(message: string, currentStep?: string): Promise<WorkflowExtractionResult> {
@@ -183,8 +150,8 @@ Rules:
   }
 
   // ─── Entry Points ─────────────────────────────────────────────────────────
-  async start(userId: string, message: string): Promise<string> {
-    const extraction = await this.extractData(message);
+  async start(session: WorkflowSession, prompt: string): Promise<string> {
+    const extraction = await this.extractData(prompt);
 
     if (extraction.wants_to_exit) {
       return this.cancelMessage;
@@ -195,29 +162,19 @@ Rules:
         ? extraction.next_step
         : this.buildInitialStep(extraction.data);
 
-    const session: WorkflowSession = {
-      userId,
-      activeWorkflow: this.name,
+    await updateWorkflowSession(session.sessionId, {
       currentStep: firstStep,
       data: extraction.data,
-      startedAt: new Date(),
-    };
-
-    await this.setSession(session);
+    });
 
     return this.runStep(session, extraction.data);
   }
 
-  async continue(userId: string, message: string): Promise<string> {
-    const session = await this.getSession(userId);
-    if (!session) {
-      return this.start(userId, message);
-    }
-
+  async continue(session: WorkflowSession, message: string): Promise<string> {
     const extraction = await this.extractData(message, session.currentStep);
 
     if (extraction.wants_to_exit) {
-      await this.clearSession(userId);
+      await clearWorkflowSession(session.sessionId);
       return this.cancelMessage;
     }
 
@@ -234,7 +191,10 @@ Rules:
       data: mergedData,
     };
 
-    await this.setSession(updatedSession);
+    await updateWorkflowSession(session.sessionId, {
+      currentStep,
+      data: mergedData,
+    })
 
     return this.runStep(updatedSession, extraction.data);
   }
@@ -246,16 +206,19 @@ Rules:
     const handler = this.steps[session.currentStep];
 
     if (!handler) {
-      await this.clearSession(session.userId);
+      await clearWorkflowSession(session.sessionId);
       return "Ocurrió un error interno. Por favor intenta de nuevo.";
     }
 
     const result: WorkflowStepResult = await handler(session.data, newData);
 
     if (result.nextStep === null) {
-      await this.clearSession(session.userId);
+      await clearWorkflowSession(session.sessionId);
     } else {
-      await this.setSession({ ...session, currentStep: result.nextStep });
+      await updateWorkflowSession(session.sessionId, {
+        currentStep: result.nextStep,
+        data: session.data,
+      });
     }
 
     return result.reply;

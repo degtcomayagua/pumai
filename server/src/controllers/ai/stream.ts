@@ -7,7 +7,10 @@ import OllamaChatService from "../../services/ollama/chat";
 import LoggingService from "../../services/logging";
 
 import { buildAiPrompt } from "../../utils/ai/rag";
-import { detectWorkflowIntent, getActiveWorkflowSession, getWorkflows } from "../../utils/ai/workflows";
+
+import { detectWorkflowIntent, } from "../../utils/ai/workflows";
+import { getWorkflows } from "../../services/workflows/repository";
+import { createSession, getActiveWorkflowSession } from "../../services/workflows/sessions";
 
 import { IAccount } from "../../../../shared/models/account";
 
@@ -158,9 +161,11 @@ const handler = async (
       ? await getActiveWorkflowSession(workflowSessionId)
       : null;
 
+    console.log(activeSession, workflowSessionId)
+
     if (activeSession) {
       const workflows = getWorkflows();
-      const workflow = workflows["sum_three_numbers"];
+      const workflow = workflows[activeSession.activeWorkflow];
 
       if (workflow) {
         console.log("[Workflow] Continue", {
@@ -190,25 +195,22 @@ const handler = async (
       const workflow = workflows[detectedIntent];
 
       if (workflow) {
-        console.log("[Workflow] Start", {
-          workflowUserId: account._id,
-          workflowSessionId: null,
+        const createdWorkflow = new workflow();
+        const workflowSession = createSession({
+          accountId: account._id,
           workflow: detectedIntent,
         });
 
-        const workflowReply = await workflow.start(account._id, prompt);
+        console.log(workflowSession)
+
+        const workflowReply = await createdWorkflow.start(workflowSession, prompt);
+
         writeSseEvent(res, "workflow_start", {
           title: "Workflow started",
           workflow: detectedIntent,
+          workflowSessionId: workflowSession.sessionId,
           reply: workflowReply,
         });
-
-
-        writeSseEvent(res, "workflow_step", {
-          workflow: detectedIntent,
-          step: "Paso 1: Ingresar Primer Número",
-        });
-
 
         writeSseEvent(res, "text", "Ingresa el primer número");
         endSseStream(res);

@@ -1,3 +1,6 @@
+import { workflows } from "../services/workflows/repository";
+export type WorkflowName = keyof typeof workflows;
+
 export type WorkflowStepResult = {
   reply: string;
   nextStep: string | null; // null = workflow ends
@@ -9,8 +12,9 @@ export type StepHandler = (
 ) => Promise<WorkflowStepResult>;
 
 export type WorkflowSession = {
+  sessionId: string;
   userId: string;
-  activeWorkflow: string;
+  activeWorkflow: WorkflowName;
   currentStep: string;
   data: Record<string, any>;
   startedAt: Date;

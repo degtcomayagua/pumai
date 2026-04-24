@@ -1,16 +1,11 @@
 import { ChatResponse } from "ollama";
 
-import { getRedisClient } from "../../config/redis";
 import OllamaChatService from "../../services/ollama/chat";
-import { WorkflowSession } from "../../types/workflows";
 
-import SumThreeNumbersWorkflow from "../../workflows/sumThreeNumbers";
+import { WorkflowName } from "../../types/workflows";
 
-const workflows = {
-  sum_three_numbers: new SumThreeNumbersWorkflow(),
-};
+import { getWorkflowList, getWorkflows } from "../../services/workflows/repository";
 
-export type WorkflowIntent = keyof typeof workflows;
 
 function parseJsonObject(raw: string): Record<string, any> | null {
   const content = raw.trim();
@@ -43,43 +38,10 @@ function parseJsonObject(raw: string): Record<string, any> | null {
   return null;
 }
 
-export function getWorkflowNames(): string[] {
-  return Object.keys(workflows);
-}
-
-export function getWorkflows(): Record<string, SumThreeNumbersWorkflow> {
-  return workflows;
-}
-
-export async function getActiveWorkflowSession(
-  sessionId: string,
-): Promise<WorkflowSession | null> {
-  const redis = getRedisClient();
-  const raw = await redis.get(`workflow:session:${sessionId}`);
-
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Omit<WorkflowSession, "startedAt"> & {
-      startedAt: string;
-    };
-
-    return {
-      ...parsed,
-      startedAt: new Date(parsed.startedAt),
-    };
-  } catch {
-    await redis.del(`workflow:session:${sessionId}`);
-    return null;
-  }
-}
-
 export async function detectWorkflowIntent(
   prompt: string,
-): Promise<WorkflowIntent | null> {
-  const intentList = getWorkflowNames().join(", ");
+): Promise<WorkflowName | null> {
+  const intentList = getWorkflowList().map((w) => `${w.name}: ${w.description}`).join("\n- ");
 
   try {
     const response = await OllamaChatService.getInstance().generateChat<ChatResponse>({
@@ -106,8 +68,8 @@ Do not add extra keys.`,
       return null;
     }
 
-    return parsed.intent in workflows
-      ? (parsed.intent as WorkflowIntent)
+    return parsed.intent in getWorkflows()
+      ? (parsed.intent as WorkflowName)
       : null;
   } catch (error) {
     console.error("[Workflow] detectWorkflowIntent error", {

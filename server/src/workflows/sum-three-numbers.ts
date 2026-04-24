@@ -1,4 +1,4 @@
-import { WorkflowBase } from "./base/workflow-base";
+import { WorkflowBase } from "./base/WorkflowBase";
 import { StepHandler } from "../types/workflows";
 
 function asFiniteNumber(value: unknown): number | null {
@@ -42,6 +42,9 @@ function normalizePersistedNumbers(data: Record<string, any>) {
 export class SumThreeNumbersWorkflow extends WorkflowBase {
   get name(): string {
     return "sum_three_numbers";
+  }
+  get description(): string {
+    return "Suma tres números proporcionados por el usuario.";
   }
 
   get extractionSchema(): string {
