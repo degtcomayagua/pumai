@@ -123,29 +123,7 @@ function tryParseJson<T = Record<string, unknown>>(value: string): T | null {
   }
 }
 
-function buildWorkflowSessionId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `wf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function getOrCreateWorkflowSessionId(): string {
-  if (typeof window === "undefined") {
-    return buildWorkflowSessionId();
-  }
-
-  const existing = window.localStorage.getItem(WORKFLOW_SESSION_STORAGE_KEY);
-  if (existing && existing.trim().length > 0) {
-    return existing;
-  }
-
-  const created = buildWorkflowSessionId();
-  window.localStorage.setItem(WORKFLOW_SESSION_STORAGE_KEY, created);
-  return created;
-}
-
+//#region Page
 function Page() {
   const { t } = useTranslation(["pages"], {
     keyPrefix: "chat",
@@ -154,6 +132,8 @@ function Page() {
   const { preferences: userPreferences } = useSelector(
     (state: RootState) => state.preferences,
   );
+
+  const [currentWorkflowSessionId, setCurrentWorkflowSessionId] = React.useState<string | null>(null);
 
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
@@ -167,7 +147,6 @@ function Page() {
 
   const [input, setInput] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const [workflowSessionId] = React.useState<string>(() => getOrCreateWorkflowSessionId());
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -199,7 +178,7 @@ function Page() {
       const result = await AIFeature.api.generateStream(
         {
           prompt: trimmed,
-          workflowSessionId,
+          workflowSessionId: currentWorkflowSessionId ?? undefined,
           chat: chatHistory,
           deliveryModes: ["onsite", "online", "hybrid"],
           category: undefined,
@@ -217,7 +196,6 @@ function Page() {
         {
           onChunk: (chunk, fullText) => {
             setMessages((prev) => {
-              console.log(chunk);
               const copy = [...prev];
 
               if (chunk.event === "text") {
@@ -258,6 +236,7 @@ function Page() {
               }
 
               if (chunk.event === "workflow_start") {
+              
                 return appendActivityToAssistantText(copy, {
                   kind: "workflow_start",
                   title: `Flujo ${chunkData?.workflow ?? ""} Iniciado`,
@@ -289,6 +268,7 @@ function Page() {
           },
         },
       );
+      
 
       if (result.status !== "success") {
         setMessages((prev) => prev.slice(0, -1));
