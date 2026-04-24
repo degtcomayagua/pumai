@@ -1,0 +1,35 @@
+kind: pipeline
+type: docker
+name: build
+
+trigger:
+  branch:
+    - production
+  event:
+    - push
+
+steps:
+  - name: build-docker-image
+    image: docker:dind
+    volumes:
+      - name: docker-socket
+        path: /var/run/docker.sock
+    commands:
+      - docker build -t asterki/unah-pumai:latest .
+      # - docker save --output image.tar asterki/unah-pumai:latest
+
+  # - name: upload-artifact
+  #   image: plugins/s3
+  #   settings:
+  #     bucket: your-s3-bucket
+  #     source: image.tar
+  #     target: /artifacts/
+  #     access_key:
+  #       from_secret: AWS_ACCESS_KEY
+  #     secret_key:
+  #       from_secret: AWS_SECRET_KEY
+
+volumes:
+  - name: docker-socket
+    host:
+      path: /var/run/docker.sock
