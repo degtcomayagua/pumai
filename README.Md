@@ -1,6 +1,6 @@
 # PumAI
 
-LLM- and RAG-powered AI system designed to respond to UNAH student enquiries.
+LLM, MCP, Deterministic Workflow and RAG-powered AI system designed to respond to UNAH student enquiries.
 
 ## Overview
 
