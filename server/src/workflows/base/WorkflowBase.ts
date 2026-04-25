@@ -1,7 +1,6 @@
 import { ChatResponse } from "ollama";
 
 import OllamaChatService from "../../services/ollama/chat";
-import { getRedisClient } from "../../config/redis";
 
 import { WorkflowSession, WorkflowStepResult, StepHandler } from "../../types/workflows";
 
@@ -150,32 +149,46 @@ Rules:
   }
 
   // ─── Entry Points ─────────────────────────────────────────────────────────
-  async start(session: WorkflowSession, prompt: string): Promise<string> {
+  async start(session: WorkflowSession, prompt: string): Promise<WorkflowStepResult["reply"]> {
     const extraction = await this.extractData(prompt);
 
     if (extraction.wants_to_exit) {
-      return this.cancelMessage;
+      return {
+        title: "Proceso cancelado",
+        content: this.cancelMessage,
+      };
     }
+
 
     const firstStep =
       extraction.next_step && this.steps[extraction.next_step]
         ? extraction.next_step
         : this.buildInitialStep(extraction.data);
 
+
     await updateWorkflowSession(session.sessionId, {
       currentStep: firstStep,
       data: extraction.data,
     });
 
-    return this.runStep(session, extraction.data);
+    const initializedSession: WorkflowSession = {
+      ...session,
+      currentStep: firstStep,
+      data: extraction.data,
+    };
+
+    return this.runStep(initializedSession, extraction.data);
   }
 
-  async continue(session: WorkflowSession, message: string): Promise<string> {
+  async continue(session: WorkflowSession, message: string): Promise<WorkflowStepResult["reply"]> {
     const extraction = await this.extractData(message, session.currentStep);
 
     if (extraction.wants_to_exit) {
       await clearWorkflowSession(session.sessionId);
-      return this.cancelMessage;
+      return {
+        title: "Proceso cancelado",
+        content: this.cancelMessage,
+      };
     }
 
     const mergedData = this.mergeData(session.data, extraction.data);
@@ -202,12 +215,12 @@ Rules:
   private async runStep(
     session: WorkflowSession,
     newData: Record<string, any>,
-  ): Promise<string> {
+  ): Promise<WorkflowStepResult["reply"]> {
     const handler = this.steps[session.currentStep];
 
     if (!handler) {
       await clearWorkflowSession(session.sessionId);
-      return "Ocurrió un error interno. Por favor intenta de nuevo.";
+      return { title: "Error", content: "Ocurrió un error interno. Por favor intenta de nuevo." };
     }
 
     const result: WorkflowStepResult = await handler(session.data, newData);
@@ -221,6 +234,13 @@ Rules:
       });
     }
 
-    return result.reply;
+    if (result.reply) {
+      return result.reply;
+    }
+
+    return {
+      title: "Error",
+      content: "El flujo no devolvio una respuesta valida. Intenta de nuevo.",
+    };
   }
 }

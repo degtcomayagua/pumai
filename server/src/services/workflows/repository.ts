@@ -1,8 +1,8 @@
 // Import workflows
-import { SumThreeNumbersWorkflow } from "../../workflows/sum-three-numbers"
+import { ResetPasswordWorkflow } from "../../workflows/email/reset-password"
 
 export const workflows = {
-  "sum_three_numbers": SumThreeNumbersWorkflow,
+  "reset_password_unah": ResetPasswordWorkflow,
 };
 
 export function getWorkflows() {

@@ -10,7 +10,11 @@ import { buildAiPrompt } from "../../utils/ai/rag";
 
 import { detectWorkflowIntent, } from "../../utils/ai/workflows";
 import { getWorkflows } from "../../services/workflows/repository";
-import { createSession, getActiveWorkflowSession } from "../../services/workflows/sessions";
+import {
+  clearWorkflowSession,
+  createSession,
+  getActiveWorkflowSession,
+} from "../../services/workflows/sessions";
 
 import { IAccount } from "../../../../shared/models/account";
 
@@ -161,31 +165,38 @@ const handler = async (
       ? await getActiveWorkflowSession(workflowSessionId)
       : null;
 
-    console.log(activeSession, workflowSessionId)
-
     if (activeSession) {
       const workflows = getWorkflows();
       const workflow = workflows[activeSession.activeWorkflow];
 
       if (workflow) {
-        console.log("[Workflow] Continue", {
-          workflowUserId: account._id,
-          workflowSessionId,
+        const workflowInstance = new workflow();
+        const workflowReply = await workflowInstance.continue(activeSession, prompt);
+        const updatedSession = await getActiveWorkflowSession(activeSession.sessionId);
+
+        writeSseEvent(res, "workflow_step", {
+          title: "Workflow continued",
           workflow: activeSession.activeWorkflow,
+          step: updatedSession?.currentStep ?? null,
         });
+
+        if (workflowReply?.content) {
+          writeSseEvent(res, "text", workflowReply.content);
+        }
+        if (workflowReply?.imageUrl) {
+          writeSseEvent(res, "image", {
+            title: workflowReply.title ?? "Workflow image",
+            url: workflowReply.imageUrl,
+          });
+        }
+
+        endSseStream(res);
+
+        return;
       }
 
-      // TODO: implement workflow continuation logic here, including executing the current step handler and streaming the response back to the user.
-
-      writeSseEvent(res, "workflow_step", {
-        title: "Workflow step",
-        workflow: activeSession.activeWorkflow,
-        sessionId: workflowSessionId,
-        note: "Workflow continuation is not implemented yet.",
-      });
-      endSseStream(res);
-
-      return;
+      // If workflow session exists but workflow is not found, end the session and answer regularly.
+      await clearWorkflowSession(activeSession.sessionId);
     }
 
     // 2. If no active workflow session, attempt to detect intent and start a new workflow if intent is detected.
@@ -196,12 +207,11 @@ const handler = async (
 
       if (workflow) {
         const createdWorkflow = new workflow();
-        const workflowSession = createSession({
-          accountId: account._id,
+        const workflowSession = await createSession({
+          accountId: account._id.toString(),
           workflow: detectedIntent,
         });
 
-        console.log(workflowSession)
 
         const workflowReply = await createdWorkflow.start(workflowSession, prompt);
 
@@ -212,7 +222,16 @@ const handler = async (
           reply: workflowReply,
         });
 
-        writeSseEvent(res, "text", "Ingresa el primer número");
+        if (workflowReply?.content) {
+          writeSseEvent(res, "text", workflowReply.content);
+        }
+        if (workflowReply?.imageUrl) {
+          writeSseEvent(res, "image", {
+            title: workflowReply.title ?? "Workflow image",
+            url: workflowReply.imageUrl,
+          });
+        }
+
         endSseStream(res);
         return;
       }
