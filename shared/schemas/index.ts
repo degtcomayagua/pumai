@@ -34,3 +34,27 @@ export const turnIntoNullIfEmpty = <T extends z.ZodTypeAny>(schema: T) =>
     },
     schema.nullable(), // Ensure null is accepted
   );
+
+// Each one of these fields requires a specific permission to be populated
+export const metadataPopulateFields = [
+  "metadata.createdBy",
+  "metadata.updatedBy",
+  "metadata.deletedBy",
+] as const;
+
+export const metadataFields = [
+  "metadata.documentVersion",
+  "metadata.createdAt",
+  "metadata.createdBy",
+  "metadata.updatedAt",
+  "metadata.updatedBy",
+  "metadata.updateHistory",
+  "metadata.deleted",
+  "metadata.deletedAt",
+  "metadata.deletedBy",
+  "metadata.status",
+  "metadata.source",
+  "metadata.notes",
+  "metadata.tags",
+] as const;
+
