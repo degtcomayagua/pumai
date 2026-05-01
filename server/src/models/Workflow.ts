@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import { IMCPServer } from "../../../shared/models/mcp-server";
+import { IWorkflow } from "../../../shared/models/workflow";
 import metadataSchema from "./Metadata";
 
-const mcpServerAuthSchema = new mongoose.Schema(
+const workflowAuthSchema = new mongoose.Schema(
   {
     type: {
       type: String,
@@ -22,7 +22,7 @@ const mcpServerAuthSchema = new mongoose.Schema(
   { _id: false },
 );
 
-const mcpServerSchema = new mongoose.Schema<IMCPServer>(
+const workflowSchema = new mongoose.Schema<IWorkflow>(
   {
     name: {
       type: String,
@@ -44,8 +44,14 @@ const mcpServerSchema = new mongoose.Schema<IMCPServer>(
     protocol: {
       type: String,
       required: true,
-      enum: ["streamable-http", "sse"],
-      default: "streamable-http",
+      enum: ["webhook", "websocket"],
+      default: "webhook",
+    },
+    type: {
+      type: String,
+      required: true,
+      enum: ["n8n", "custom"],
+      default: "n8n",
     },
     isRestricted: {
       type: Boolean,
@@ -65,7 +71,7 @@ const mcpServerSchema = new mongoose.Schema<IMCPServer>(
       index: true,
     },
     auth: {
-      type: mcpServerAuthSchema,
+      type: workflowAuthSchema,
       required: true,
       default: { type: "none" },
     },
@@ -75,11 +81,6 @@ const mcpServerSchema = new mongoose.Schema<IMCPServer>(
     },
     iconUrl: {
       type: String,
-      default: undefined,
-    },
-    _references: {
-      type: Map,
-      of: String,
       default: undefined,
     },
     metadata: {
@@ -93,6 +94,6 @@ const mcpServerSchema = new mongoose.Schema<IMCPServer>(
   },
 );
 
-const MCPServerModel = mongoose.model<IMCPServer>("MCPServer", mcpServerSchema);
+const WorkflowModel = mongoose.model<IWorkflow>("Workflow", workflowSchema);
 
-export default MCPServerModel;
+export default WorkflowModel;
