@@ -1,6 +1,6 @@
 import { IAccountRole } from "./account-role";
-
 import { IMetadata } from "./metadata";
+import { CampusCode } from "./";
 
 export type IAccount = {
   _id: string;
@@ -8,6 +8,7 @@ export type IAccount = {
     lastLogin: Date;
     role: IAccountRole | string;
     status: "active" | "locked";
+    campus: CampusCode
   };
   email: {
     value: string;

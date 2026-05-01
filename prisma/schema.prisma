@@ -1,0 +1,423 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+//#region AccountRole and related
+model AccountRole {
+  id                String  @id @default(cuid())
+  name              String  @unique
+  description       String? @db.VarChar(1000)
+  isSystemRole      Boolean @default(false)
+  level             Int
+  requiresTwoFactor Boolean @default(false)
+
+  permissions String?   @db.Text // comma-separated or JSON string 
+  accounts    Account[]
+
+  metadataId            String?                @unique
+  metadata              Metadata?              @relation("AccountRoleMetadata", fields: [metadataId], references: [id])
+  mcpserverAllowedRoles MCPServerAllowedRole[]
+  workflowAllowedRoles  WorkflowAllowedRole[]
+}
+
+//#endregion
+
+//#region Account
+enum CampusCode {
+  COMAYAGUA
+  YORO
+  TEGUCIGALPA
+  SANPEDRO
+  CHOLUTECA
+  OLANCHO
+  LA_CEIBA
+  DANLI
+  SANTA_ROSA
+}
+
+enum AccountStatus {
+  active
+  locked
+}
+
+model Account {
+  id String @id @default(cuid())
+
+  // data
+  lastLogin DateTime
+  roleId    String
+  role      AccountRole   @relation(fields: [roleId], references: [id])
+  status    AccountStatus @default(active)
+  campus    CampusCode
+
+  // email
+  email                         String    @unique
+  emailVerified                 Boolean   @default(false)
+  emailLastChanged              DateTime
+  emailVerificationToken        String?
+  emailVerificationTokenExpires DateTime?
+
+  // profile
+  name String
+
+  // security
+  tfaSecret                  String?
+  password                   String
+  forgotPasswordToken        String?
+  forgotPasswordTokenExpires DateTime?
+  lastPasswordChange         DateTime
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("AccountMetadata", fields: [metadataId], references: [id])
+
+  // Back-relations for Metadata authorship
+  metadataCreated         Metadata[]              @relation("MetadataCreatedBy")
+  metadataUpdated         Metadata[]              @relation("MetadataUpdatedBy")
+  metadataDeleted         Metadata[]              @relation("MetadataDeletedBy")
+  metadataUpdateHistories MetadataUpdateHistory[] @relation("MetadataUpdateHistoryUpdatedBy")
+}
+
+//#region Metadata
+enum MetadataStatus {
+  active
+  inactive
+}
+
+enum MetadataSource {
+  manual
+  imported
+}
+
+model Metadata {
+  id String @id @default(cuid())
+
+  documentVersion Int?
+  syncVersion     Int?
+
+  createdAt   DateTime?
+  createdById String?
+  createdBy   Account?  @relation("MetadataCreatedBy", fields: [createdById], references: [id])
+
+  updatedAt     DateTime?
+  updatedById   String?
+  updatedBy     Account?                @relation("MetadataUpdatedBy", fields: [updatedById], references: [id])
+  updateHistory MetadataUpdateHistory[]
+
+  deleted     Boolean?  @default(false)
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   Account?  @relation("MetadataDeletedBy", fields: [deletedById], references: [id])
+
+  status MetadataStatus?
+  source MetadataSource?
+  notes  String?         @db.VarChar(2000)
+  tags   String?         @db.Text // comma-separated or JSON string — no array type in MySQL
+
+  // Back-relations
+  account     Account?     @relation("AccountMetadata")
+  accountRole AccountRole? @relation("AccountRoleMetadata")
+  config      Config?      @relation("ConfigMetadata")
+  ragdocument RAGDocument? @relation("RAGDocumentMetadata")
+  mcpserver   MCPServer?   @relation("MCPServerMetadata")
+  workflow    Workflow?    @relation("WorkflowMetadata")
+}
+
+model MetadataUpdateHistory {
+  id String @id @default(cuid())
+
+  metadataId String
+  metadata   Metadata @relation(fields: [metadataId], references: [id], onDelete: Cascade)
+
+  updatedAt   DateTime
+  updatedById String?
+  updatedBy   Account? @relation("MetadataUpdateHistoryUpdatedBy", fields: [updatedById], references: [id])
+
+  changes Json
+}
+
+//#endregion
+
+//#region Config
+model Config {
+  id String @id @default(cuid())
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("ConfigMetadata", fields: [metadataId], references: [id])
+}
+
+//#endregion
+
+//#region File
+// TODO: We aint got no file storage yet
+//#endregion
+
+//#region Session 
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String   @db.Text
+  expiresAt DateTime
+
+  @@map("sessions")
+}
+
+//#endregion
+
+//#region Chat
+//#endregion
+
+//#region Logs
+enum LogLevel {
+  info
+  warning
+  error
+  critical
+  debug
+  important
+}
+
+model Log {
+  id         String   @id @default(cuid())
+  date       DateTime
+  source     String
+  level      LogLevel
+  message    String   @db.Text
+  duration   Int? // milliseconds
+  details    Json?
+  traceId    String?
+  references Json? // e.g. { "accountId": "Account", "roleId": "Role" }
+
+  @@index([date])
+  @@index([level])
+  @@index([traceId])
+  @@index([source])
+}
+
+//#endregion
+
+//#region Rag Documents
+enum DocumentCategory {
+  regulation
+  administrative
+  campus_service
+  student_life
+  support
+}
+
+enum SourceType {
+  official
+  approved_student
+}
+
+enum DeliveryMode {
+  onsite
+  online
+  hybrid
+}
+
+model RAGDocument {
+  id             String           @id @default(cuid())
+  title          String           @db.VarChar(200)
+  category       DocumentCategory
+  authorityLevel Int
+  sourceType     SourceType
+
+  campuses      RAGDocumentCampus[]
+  deliveryModes RAGDocumentDeliveryMode[]
+
+  effectiveFrom  DateTime
+  effectiveUntil DateTime?
+  archived       Boolean   @default(false)
+
+  warningLegal          String? @db.VarChar(500)
+  warningTimeSensitive  String? @db.VarChar(500)
+  warningCampusSpecific String? @db.VarChar(500)
+
+  summary String           @db.Text
+  tags    RAGDocumentTag[]
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("RAGDocumentMetadata", fields: [metadataId], references: [id])
+
+  @@index([category])
+  @@index([sourceType])
+  @@index([authorityLevel])
+  @@index([effectiveFrom, effectiveUntil])
+  @@index([archived])
+}
+
+model RAGDocumentCampus {
+  id            String      @id @default(cuid())
+  ragDocumentId String
+  ragDocument   RAGDocument @relation(fields: [ragDocumentId], references: [id], onDelete: Cascade)
+  campus        CampusCode
+
+  @@unique([ragDocumentId, campus])
+  @@index([campus])
+}
+
+model RAGDocumentDeliveryMode {
+  id            String       @id @default(cuid())
+  ragDocumentId String
+  ragDocument   RAGDocument  @relation(fields: [ragDocumentId], references: [id], onDelete: Cascade)
+  deliveryMode  DeliveryMode
+
+  @@unique([ragDocumentId, deliveryMode])
+}
+
+// Separating the tags into their own table because itd be hell to query them as comma separated values
+model RAGDocumentTag {
+  id            String      @id @default(cuid())
+  ragDocumentId String
+  ragDocument   RAGDocument @relation(fields: [ragDocumentId], references: [id], onDelete: Cascade)
+  tag           String      @db.VarChar(50)
+
+  @@unique([ragDocumentId, tag])
+  @@index([tag])
+}
+
+//#endregion
+
+//#region MCP Servers
+enum MCPServerProtocol {
+  streamable_http
+  sse
+}
+
+enum MCPAuthType {
+  none
+  bearer
+  api_key
+  basic
+}
+
+model MCPServer {
+  id          String            @id @default(cuid())
+  name        String            @unique @db.VarChar(200)
+  description String            @db.VarChar(1000)
+  url         String            @db.VarChar(2000)
+  protocol    MCPServerProtocol
+
+  isRestricted Boolean                @default(false)
+  allowedRoles MCPServerAllowedRole[]
+
+  isActive Boolean @default(true)
+
+  authType       MCPAuthType @default(none)
+  authToken      String? // bearer
+  authHeaderName String? // api-key
+  authKey        String? // api-key
+  authUsername   String? // basic
+  authPassword   String? // basic
+
+  tags       MCPServerTag[]
+  iconUrl    String?        @db.VarChar(2000)
+  references Json?
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("MCPServerMetadata", fields: [metadataId], references: [id])
+
+  @@index([isActive])
+  @@index([isRestricted])
+  @@index([protocol])
+}
+
+model MCPServerAllowedRole {
+  id            String      @id @default(cuid())
+  mcpServerId   String
+  mcpServer     MCPServer   @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  roleId        String
+  role          AccountRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  accountRoleId String?
+
+  @@unique([mcpServerId, roleId])
+}
+
+model MCPServerTag {
+  id          String    @id @default(cuid())
+  mcpServerId String
+  mcpServer   MCPServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  tag         String    @db.VarChar(50)
+
+  @@unique([mcpServerId, tag])
+  @@index([tag])
+}
+
+//#endregion
+
+//#region Deterministic Workflows
+enum WorkflowProtocol {
+  webhook
+  websocket
+}
+
+enum WorkflowType {
+  n8n
+  custom
+}
+
+enum WorkflowAuthType {
+  none
+  bearer
+  api_key
+  basic
+}
+
+model Workflow {
+  id          String           @id @default(cuid())
+  name        String           @unique @db.VarChar(200)
+  description String           @db.VarChar(1000)
+  url         String           @db.VarChar(2000)
+  protocol    WorkflowProtocol
+  type        WorkflowType     @default(n8n)
+
+  isRestricted Boolean               @default(false)
+  allowedRoles WorkflowAllowedRole[]
+
+  isActive Boolean @default(true)
+
+  authType       WorkflowAuthType @default(none)
+  authToken      String? // bearer
+  authHeaderName String? // api-key
+  authKey        String? // api-key
+  authUsername   String? // basic
+  authPassword   String? // basic
+
+  tags    WorkflowTag[]
+  iconUrl String?       @db.VarChar(2000)
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("WorkflowMetadata", fields: [metadataId], references: [id])
+
+  @@index([isActive])
+  @@index([isRestricted])
+  @@index([protocol])
+  @@index([type])
+}
+
+model WorkflowAllowedRole {
+  id         String      @id @default(cuid())
+  workflowId String
+  workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  roleId     String
+  role       AccountRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, roleId])
+}
+
+model WorkflowTag {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  tag        String   @db.VarChar(50)
+
+  @@unique([workflowId, tag])
+  @@index([tag])
+}
+
+//#endregion
