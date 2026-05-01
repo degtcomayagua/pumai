@@ -328,12 +328,37 @@ const translation = {
     admin: {
       sidebar: {
         title: "Panel de Administración PumAI",
-        "rag-documents": "Documentos RAG",
         dashboard: "Panel de Control",
-        chat: "Chat AI",
-        accounts: "Cuentas",
-        "account-roles": "Roles de Cuenta",
-        logs: "Registros Técnicos",
+        "chats-group": {
+          title: "Chats",
+          text: "Chat por texto",
+          voice: "Chat por voz",
+        },
+        "reports": {
+          title: "Reportes",
+          "no-reports": "No hay reportes disponibles",
+          usage: "Uso de la IA",
+          feedback: "Comentarios de los usuarios",
+        },
+        "data": {
+          title: "Datos del Sistema",
+          "mcp-servers": "Servidores MCP",
+          "deterministic-workflows": "Flujos de Trabajo Determinísticos",
+          rag: "Documentos RAG",
+        },
+        "import-export": {
+          title: "Importar/Exportar",
+          import: "Importar datos",
+          export: "Exportar datos",
+        },
+        management: {
+          title: "Gestión",
+          accounts: "Cuentas de usuario",
+          "account-roles": "Roles de cuenta",
+          "logs": "Registros técnicos",
+          config: "Configuración del sistema",
+        },
+        logout: "Cerrar sesión",
       },
     },
   },

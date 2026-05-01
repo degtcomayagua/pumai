@@ -14,7 +14,9 @@ import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AdminConfigRouteImport } from './routes/admin/config'
 import { Route as AdminRagDocumentsIndexRouteImport } from './routes/admin/rag-documents/index'
 import { Route as AdminLogsIndexRouteImport } from './routes/admin/logs/index'
 import { Route as AdminAccountsIndexRouteImport } from './routes/admin/accounts/index'
@@ -45,9 +47,19 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthLogoutRoute = AuthLogoutRouteImport.update({
+  id: '/auth/logout',
+  path: '/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminConfigRoute = AdminConfigRouteImport.update({
+  id: '/admin/config',
+  path: '/admin/config',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRagDocumentsIndexRoute = AdminRagDocumentsIndexRouteImport.update({
@@ -76,7 +88,9 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/chat': typeof ChatRoute
   '/voice-chat': typeof VoiceChatRoute
+  '/admin/config': typeof AdminConfigRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
   '/admin': typeof AdminIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts': typeof AdminAccountsIndexRoute
@@ -88,7 +102,9 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/chat': typeof ChatRoute
   '/voice-chat': typeof VoiceChatRoute
+  '/admin/config': typeof AdminConfigRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
   '/admin': typeof AdminIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts': typeof AdminAccountsIndexRoute
@@ -101,7 +117,9 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/chat': typeof ChatRoute
   '/voice-chat': typeof VoiceChatRoute
+  '/admin/config': typeof AdminConfigRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts/': typeof AdminAccountsIndexRoute
@@ -115,7 +133,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/chat'
     | '/voice-chat'
+    | '/admin/config'
     | '/auth/login'
+    | '/auth/logout'
     | '/admin'
     | '/admin/accounts/roles'
     | '/admin/accounts'
@@ -127,7 +147,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/chat'
     | '/voice-chat'
+    | '/admin/config'
     | '/auth/login'
+    | '/auth/logout'
     | '/admin'
     | '/admin/accounts/roles'
     | '/admin/accounts'
@@ -139,7 +161,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/chat'
     | '/voice-chat'
+    | '/admin/config'
     | '/auth/login'
+    | '/auth/logout'
     | '/admin/'
     | '/admin/accounts/roles'
     | '/admin/accounts/'
@@ -152,7 +176,9 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   ChatRoute: typeof ChatRoute
   VoiceChatRoute: typeof VoiceChatRoute
+  AdminConfigRoute: typeof AdminConfigRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthLogoutRoute: typeof AuthLogoutRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminAccountsRolesRoute: typeof AdminAccountsRolesRoute
   AdminAccountsIndexRoute: typeof AdminAccountsIndexRoute
@@ -197,11 +223,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/logout': {
+      id: '/auth/logout'
+      path: '/auth/logout'
+      fullPath: '/auth/logout'
+      preLoaderRoute: typeof AuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/config': {
+      id: '/admin/config'
+      path: '/admin/config'
+      fullPath: '/admin/config'
+      preLoaderRoute: typeof AdminConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/rag-documents/': {
@@ -240,7 +280,9 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   ChatRoute: ChatRoute,
   VoiceChatRoute: VoiceChatRoute,
+  AdminConfigRoute: AdminConfigRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthLogoutRoute: AuthLogoutRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminAccountsRolesRoute: AdminAccountsRolesRoute,
   AdminAccountsIndexRoute: AdminAccountsIndexRoute,

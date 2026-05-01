@@ -1,31 +1,32 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import {
   FaBars,
-  FaBug,
-  FaCube,
-  FaCubes,
-  FaInbox,
   FaFile,
-  FaProjectDiagram,
-  FaTachometerAlt,
   FaTerminal,
   FaUserShield,
   FaUsers,
   FaCompressArrowsAlt,
   FaPaperPlane,
+  FaRecycle,
+  FaMicrophone,
+  FaChartArea,
+  FaDatabase,
+  FaFileImport,
+  FaCog,
+  FaServer,
+  FaRegArrowAltCircleLeft,
 } from "react-icons/fa";
-import { IoMdCube } from "react-icons/io";
+import { FaBots, FaMessage } from "react-icons/fa6"
 
 import {
-  Button,
   ConfigProvider,
   Drawer,
   Layout,
   Menu,
+  MenuProps,
   Spin,
-  Tour,
   theme,
 } from "antd";
 import esES from "antd/locale/es_ES";
@@ -37,11 +38,8 @@ import AuthFeature from "../features/auth/";
 
 import ConfigFeature from "../features/config/";
 import type { RootState } from "../store";
-import type { TourProps } from "antd/lib";
-import type { MenuItemType } from "antd/es/menu/interface";
-import type { IAccountRole } from "../features/roles";
 
-import type { Permission } from "../../../shared/types/permissions";
+import { hasPermissions } from "../utils/permissions";
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -88,60 +86,158 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
 
   const sidebarRef = useRef(null);
 
-  const hasPermission = (permission: Permission): boolean => {
-    if (account) {
-      if (
-        (account.data.role as IAccountRole).permissions.includes(permission) ||
-        (account.data.role as IAccountRole).permissions.includes("*")
-      )
-        return true;
-      return false;
-    }
-    return false;
-  };
 
-  const menuItems: Array<MenuItemType> = [
-    // === Overview & Core ===
-    {
-      key: "dashboard",
-      label: <Link to="/admin">{t("sidebar.dashboard")}</Link>,
-      icon: <FaCompressArrowsAlt />, // Better for dashboards
-    },
+  type MenuItem = Required<MenuProps>["items"][number];
+  const menuItems = useMemo<MenuItem[]>(() => {
+    if (!account) return [];
 
-    {
-      key: "chat",
-      label: <Link to="/chat">{t("sidebar.chat")}</Link>,
-      icon: <FaPaperPlane />, // Better for dashboards
-    },
+    const userPermissions = account.data.role.permissions;
 
-    {
-      key: "rag-documents",
-      label: (
-        <Link to="/admin/rag-documents">{t("sidebar.rag-documents")}</Link>
-      ),
-      icon: <FaFile />, // Better for dashboards
-    },
+    return [
+      // === Overview & Core ===
+      {
+        key: "dashboard",
+        label: <Link to="/admin">{t("sidebar.dashboard")}</Link>,
+        icon: <FaCompressArrowsAlt />, // Better for dashboards
+      },
 
-    {
-      key: "accounts",
-      label: <Link to="/admin/accounts">{t("sidebar.accounts")}</Link>,
-      icon: <FaUsers />, // Better for dashboards
-    },
+      {
+        key: "chats-group",
+        label: t("sidebar.chats-group.title"),
+        icon: <FaPaperPlane />,
+        children: [
+          {
+            key: "text-chat",
+            label: <Link to="/chat">{t("sidebar.chats-group.text")}</Link>,
+            icon: <FaMessage />,
+          },
+          {
+            key: "voice-chat",
+            label: <Link to="/voice-chat">{t("sidebar.chats-group.voice")}</Link>,
+            icon: <FaMicrophone />,
+          },
+        ],
+      },
 
-    {
-      key: "account-roles",
-      label: (
-        <Link to="/admin/accounts/roles">{t("sidebar.account-roles")}</Link>
-      ),
-      icon: <FaUserShield />, // Better for dashboards
-    },
+      {
+        key: "reports-group",
+        label: t("sidebar.reports.title"),
+        icon: <FaChartArea />,
+        children: [
+          // Nothing in this section
+          {
+            key: "placeholder",
+            label: (
+              <span className="text-gray-500 italic">
+                {t("sidebar.reports.no-reports")}
+              </span>
+            ),
+          },
+        ],
+      },
 
-    {
-      key: "logs",
-      label: <Link to="/admin/logs">{t("sidebar.logs")}</Link>,
-      icon: <FaTerminal />, // Better for dashboards
-    },
-  ];
+      {
+        key: "system-data-group",
+        label: t("sidebar.data.title"),
+        icon: <FaDatabase />,
+        children: [
+          {
+            key: "rag-documents",
+            label: (
+              <Link to="/admin/rag-documents">{t("sidebar.data.rag")}</Link>
+            ),
+            icon: <FaFile />,
+          },
+
+          {
+            key: "mcp-servers",
+            label: (
+              <Link to="/admin/rag-documents">{t("sidebar.data.mcp-servers")}</Link>
+            ),
+            icon: <FaBots />,
+          },
+
+          {
+            key: "deterministic-workflows",
+            label: (
+              <Link to="/admin/rag-documents">{t("sidebar.data.deterministic-workflows")}</Link>
+            ),
+            icon: <FaRecycle />,
+          },
+        ],
+      },
+
+      {
+        key: "import-export-group",
+        label: t("sidebar.import-export.title"),
+        icon: <FaFileImport />,
+        children: [
+        ],
+      },
+
+      {
+        key: "management",
+        label: t("sidebar.management.title"),
+        icon: <FaCog />,
+        children: [
+          {
+            key: "accounts",
+            label: (
+              <Link to="/admin/accounts">
+                {t("sidebar.management.accounts")}
+              </Link>
+            ),
+            style: {
+              display: hasPermissions(userPermissions, ["accounts:read"]) ? "block" : "none",
+            },
+            icon: <FaUsers />, // Better for dashboards
+          },
+
+          {
+            key: "account-roles",
+            label: (
+              <Link to="/admin/accounts/roles">
+                {t("sidebar.management.account-roles")}
+              </Link>
+            ),
+            style: {
+              display: hasPermissions(userPermissions, ["account-roles:read"]) ? "block" : "none",
+            },
+            icon: <FaUserShield />,
+          },
+
+          {
+            key: "config",
+            label: (
+              <Link to="/admin/config">{t("sidebar.management.config")}</Link>
+            ),
+            style: {
+              display: hasPermissions(userPermissions, ["config:read"]) ? "block" : "none",
+            },
+            icon: <FaCog />,
+          },
+
+          {
+            key: "logs",
+            label: <Link to="/admin/logs">{t("sidebar.management.logs")}</Link>,
+            style: { display: hasPermissions(userPermissions, ["logs:read"]) ? "block" : "none" },
+            icon: <FaTerminal />,
+          },
+        ],
+      },
+
+      {
+        key: "logout",
+        label: (
+          <Link color="red" to="/auth/logout">
+            {t("sidebar.logout")}
+          </Link>
+        ),
+        danger: true,
+        icon: <FaRegArrowAltCircleLeft className="text-red-500" />,
+      },
+    ];
+  }, [account]);
 
   const darkTheme = {
     algorithm: theme.darkAlgorithm,
@@ -242,6 +338,7 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
         >
           <Menu
             mode="inline"
+            defaultOpenKeys={["chats-group", "reports-group", "system-data-group", "import-export-group", "management"]}
             defaultSelectedKeys={[selectedPage || "dashboard"]}
             items={menuItems}
             className="h-full"
