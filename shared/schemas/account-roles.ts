@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { metadataFields, metadataPopulateFields } from "."
 
 // Shared fields
 const nameSchema = z
@@ -47,19 +48,20 @@ const getSchema = z.object({
     .array(
       z.enum(
         [
-          "_id",
+          ...metadataFields,
+          "id",
           "name",
           "description",
           "isSystemRole",
           "level",
           "permissions",
           "requiresTwoFactor",
-          "metadata",
         ],
         "invalid-field",
       ),
     )
     .optional(),
+  populate: z.array(z.enum(metadataPopulateFields, "invalid-populate-path")).optional(),
 });
 
 // List
@@ -70,27 +72,27 @@ const listSchema = z.object({
   search: z
     .object({
       query: z.string().min(1, "query-too-short"),
-      searchIn: z.array(z.enum(["name"], "invalid-search-field")),
+      searchIn: z.array(z.enum(["name", "description"], "invalid-search-field")),
     })
     .optional(),
   fields: z
     .array(
       z.enum(
         [
-          "_id",
+          ...metadataFields,
+          "id",
           "name",
           "description",
           "isSystemRole",
           "level",
           "permissions",
           "requiresTwoFactor",
-          "metadata",
         ],
         "invalid-field",
       ),
     )
     .optional(),
-  populate: z.array(z.literal("metadata"), "invalid-populate-path").optional(),
+  populate: z.array(z.enum(metadataPopulateFields, "invalid-populate-path")).optional(),
 });
 
 export {

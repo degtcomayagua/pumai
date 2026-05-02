@@ -1,6 +1,3 @@
-// The purpose of this file is to manage user sessions and authentication.
-// This is a module-file that can be disabled if needed.
-
 import { Express } from "express";
 import passport from "passport";
 import passportLocal from "passport-local";
@@ -48,6 +45,9 @@ class SessionManager {
               where: {
                 email: req.body.email.toLowerCase(),
               },
+              include: {
+                role: true,
+              }
             });
 
             if (!account)

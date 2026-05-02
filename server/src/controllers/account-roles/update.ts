@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
-import { IAccount } from "../../../../shared/models/account";
-import { IAccountRole } from "../../../../shared/models/account-role";
 
 import LoggingService from "../../services/logging";
 import {
@@ -41,14 +39,13 @@ const handler = async (
   const start = performance.now();
   const { roleId, name, description, level, requiresTwoFactor, permissions } =
     req.body;
-  const adminAccount = req.user as IAccount;
+  const userAccount = req.user!;
 
   try {
-    const adminAccountLevel =
-      (adminAccount.role as IAccountRole | undefined)?.level ?? 0;
+    const userAccountRoleLevel = userAccount.role.level ?? 0;
 
     if (level !== undefined && level !== null) {
-      if (level < adminAccountLevel) {
+      if (level < userAccountRoleLevel) {
         throw new CannotUpdateRoleAtThisLevelError(
           "Cannot update a role at this level or lower than your own.",
         );
@@ -83,7 +80,7 @@ const handler = async (
       },
       {
         traceId: req.traceId,
-        userAccount: adminAccount,
+        userAccount: userAccount,
       },
     );
 
@@ -94,19 +91,19 @@ const handler = async (
       message: "Account role updated successfully",
       traceId: req.traceId,
       duration,
+      details: {
+        updatedById: userAccount.id,
+        accountRole: updatedRole.id,
+      },
       _references: {
-        adminAccountId: adminAccount?.id?.toString?.(),
-        accountRoleId: (updatedRole as any)?.id?.toString?.(),
-      },
-      metadata: {
-        createdAt: new Date(),
-        createdBy: adminAccount?.id,
-      },
+        updatedById: "Account",
+        accountRoleId: "AccountRole",
+      }
     });
 
     res.status(200).json({
       status: "success",
-      accountRole: updatedRole as unknown as IAccountRole,
+      accountRole: updatedRole,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;
@@ -134,10 +131,6 @@ const handler = async (
         traceId: req.traceId,
         details: { code: error.code, meta: error.meta },
         duration,
-        metadata: {
-          createdAt: new Date(),
-          createdBy: adminAccount?.id,
-        },
       });
     } else if (error instanceof Error) {
       LoggingService.log({
@@ -147,10 +140,6 @@ const handler = async (
         traceId: req.traceId,
         details: { error: error.message, stack: error.stack },
         duration,
-        metadata: {
-          createdAt: new Date(),
-          createdBy: adminAccount?.id,
-        },
       });
     }
 

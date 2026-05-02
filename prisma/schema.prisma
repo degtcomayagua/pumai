@@ -7,7 +7,7 @@ datasource db {
   provider = "mysql"
 }
 
-//#region AccountRole and related
+//#region AccountRole
 model AccountRole {
   id                String  @id @default(cuid())
   name              String  @unique

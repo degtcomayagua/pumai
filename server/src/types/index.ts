@@ -1,5 +1,10 @@
 import "express";
 import express from "express";
+import { Account, AccountRole } from "../../../generated/prisma/client";
+
+export type AccountWithRole = Account & {
+  role: AccountRole
+};
 
 // Optional utility type to infer types from Zod schemas
 export type TypedRequest<T> = Omit<express.Request, "body" | "parsedBody"> & {
@@ -12,5 +17,12 @@ declare module "express-serve-static-core" {
   interface Request {
     traceId: string;
     parsedBody?: unknown; // We override this using `TypedRequest<T>` where needed
+  }
+}
+
+// Add AccountWithRole to the req.user type
+declare global {
+  namespace Express {
+    interface User extends AccountWithRole { }
   }
 }

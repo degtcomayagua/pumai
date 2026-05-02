@@ -1,18 +1,16 @@
 import { Request, Response, NextFunction } from "express";
-import { Prisma } from "../../../../generated/prisma/client";
+import {
+  AccountRole,
+  Prisma,
+} from "../../../../generated/prisma/client";
 
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
-import { IAccount } from "../../../../shared/models/account";
-import { IAccountRole } from "../../../../shared/models/account-role";
 
 import LoggingService from "../../services/logging";
 import { createAccountRoleWithRetry } from "../../services/account-roles/create";
+
 import prismaClient from "../../config/prisma";
 
-/**
- * Error thrown when an admin attempts to create a role
- * at a level equal to or higher privilege than their own.
- */
 class CannotCreateRoleAtThisLevelError extends Error {
   constructor(message: string) {
     super(message);
@@ -20,27 +18,12 @@ class CannotCreateRoleAtThisLevelError extends Error {
   }
 }
 
-/**
- * Error thrown when a role level is already in use.
- */
 class LevelInUseError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "LevelInUseError";
   }
 }
-
-/**
- * Safely resolves a value into a numeric ID.
- */
-const resolveNumericId = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-};
 
 const handler = async (
   req: Request<{}, {}, AccountRolesAPITypes.CreateRequestBody>,
@@ -50,20 +33,19 @@ const handler = async (
   const start = performance.now();
   const { name, description, level } = req.body;
 
-  const adminAccount = req.user as IAccount;
+  const userAccount = req.user!; // We can assert this because the route should be protected by authentication middleware
 
   try {
-    const adminAccountLevel =
-      (adminAccount.data.role as IAccountRole | undefined)?.level ?? 0;
-    if (level <= adminAccountLevel) {
+    const userAccountRoleLevel = userAccount.role.level ?? 0;
+    if (level <= userAccountRoleLevel) {
       throw new CannotCreateRoleAtThisLevelError(
         "Cannot create a role at this level or lower than your own.",
       );
     }
 
-    if (adminAccountLevel === undefined) {
+    if (userAccountRoleLevel === undefined) {
       throw new CannotCreateRoleAtThisLevelError(
-        "Admin account does not have a valid role level.",
+        "User account does not have a valid role level.",
       );
     }
 
@@ -93,7 +75,7 @@ const handler = async (
         permissions: [],
       },
       {
-        userAccount: adminAccount,
+        userAccount,
         traceId: req.traceId,
       },
     );
@@ -106,19 +88,21 @@ const handler = async (
       message: "Account role created successfully",
       traceId: req.traceId,
       duration,
-      _references: {
-        adminAccountId: adminAccount.id,
-        accountRoleId: createdRole._id,
+      details: {
+        accountRoleId: createdRole.id,
+        createdById: userAccount.id,
+        name,
+        level
       },
-      metadata: {
-        createdAt: new Date(),
-        createdBy: adminAccount.id,
+      _references: {
+        accountRoleId: "AccountRole",
+        createdById: "Account",
       },
     });
 
     res.status(201).json({
       status: "success",
-      accountRole: createdRole as unknown as IAccountRole,
+      accountRole: createdRole as unknown as AccountRole,
     });
   } catch (error: unknown) {
     if (error instanceof LevelInUseError) {
@@ -145,10 +129,6 @@ const handler = async (
           code: error.code,
           meta: error.meta,
         },
-        metadata: {
-          createdAt: new Date(),
-          createdBy: resolveNumericId(adminAccount.id),
-        },
       });
     } else if (error instanceof Error) {
       LoggingService.log({
@@ -159,10 +139,6 @@ const handler = async (
         details: {
           error: error.message,
           stack: error.stack,
-        },
-        metadata: {
-          createdAt: new Date(),
-          createdBy: resolveNumericId(adminAccount.id),
         },
       });
     }

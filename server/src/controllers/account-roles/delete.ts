@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
-import { IAccount } from "../../../../shared/models/account";
+
 import LoggingService from "../../services/logging";
+
 import {
   AccountRoleNotFoundError,
   deleteAccountRoleWithRetry,
 } from "../../services/account-roles/delete";
+
 import { Prisma } from "../../../../generated/prisma/client";
-import { IAccountRole } from "../../../../shared/models/account-role";
 
 const handler = async (
   req: Request<{}, {}, AccountRolesAPITypes.DeleteRequestBody>,
@@ -16,12 +17,12 @@ const handler = async (
 ) => {
   const start = performance.now();
   const { roleId } = req.body;
-  const adminAccount = req.user as IAccount;
+  const userAccount = req.user!;
 
   try {
     const deletedRole = await deleteAccountRoleWithRetry(roleId, {
       traceId: req.traceId,
-      userAccount: adminAccount,
+      userAccount: userAccount,
     });
 
     const duration = performance.now() - start;
@@ -31,19 +32,19 @@ const handler = async (
       message: "Account role deleted successfully",
       traceId: req.traceId,
       duration,
-      _references: {
-        adminAccountId: adminAccount?.id?.toString?.(),
-        accountRoleId: (deletedRole as any)?.id?.toString?.(),
+      details: {
+        deletedById: userAccount.id,
+        accountRoleId: roleId,
       },
-      metadata: {
-        createdAt: new Date(),
-        createdBy: adminAccount?.id,
+      _references: {
+        deletedById: "Account",
+        accountRoleId: "AccountRole",
       },
     });
 
     res.status(200).json({
       status: "success",
-      accountRole: deletedRole as unknown as IAccountRole,
+      accountRole: deletedRole,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;
@@ -66,10 +67,6 @@ const handler = async (
           meta: error.meta,
         },
         duration,
-        metadata: {
-          createdAt: new Date(),
-          createdBy: adminAccount?.id,
-        },
       });
     } else if (error instanceof Error) {
       LoggingService.log({
@@ -82,10 +79,6 @@ const handler = async (
           stack: error.stack,
         },
         duration,
-        metadata: {
-          createdAt: new Date(),
-          createdBy: adminAccount?.id,
-        },
       });
     }
 
