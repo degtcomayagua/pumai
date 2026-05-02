@@ -25,23 +25,6 @@ const handler = async (
       userAccount: userAccount,
     });
 
-    const duration = performance.now() - start;
-    LoggingService.log({
-      source: "api:account-roles:delete",
-      level: "info",
-      message: "Account role deleted successfully",
-      traceId: req.traceId,
-      duration,
-      details: {
-        deletedById: userAccount.id,
-        accountRoleId: roleId,
-      },
-      _references: {
-        deletedById: "Account",
-        accountRoleId: "AccountRole",
-      },
-    });
-
     res.status(200).json({
       status: "success",
       accountRole: deletedRole,

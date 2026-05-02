@@ -42,9 +42,6 @@ export async function createRagDocChunk(
       chunkIndex: parameters.chunkIndex,
       category: parameters.category,
     },
-    metadata: {
-      createdAt: new Date(),
-    },
   });
 }
 

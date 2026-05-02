@@ -1,12 +1,7 @@
-import {
-  DocumentCategory,
-  DeliveryMode,
-  CampusCode,
-  SourceType,
-} from "../index";
+import { CampusCode, DocumentCategory, DeliveryMode } from "../../../generated/prisma/enums"
 
 export interface IRAGChunk {
-  docId: string; // Reference to MongoDB _id of the parent document
+  docId: string; // Reference to DBs id of the parent document
 
   // General chunk info
   chunkIndex: number;

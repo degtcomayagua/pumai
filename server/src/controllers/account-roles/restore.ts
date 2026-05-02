@@ -25,23 +25,6 @@ const handler = async (
       userAccount,
     });
 
-    const duration = performance.now() - start;
-    LoggingService.log({
-      source: "api:account-roles:restore",
-      level: "info",
-      message: "Account role restored successfully",
-      traceId: req.traceId,
-      duration,
-      details: {
-        restoredById: userAccount.id,
-        accountRoleId: roleId,
-      },
-      _references: {
-        restoredById: "Account",
-        accountRoleId: "AccountRole",
-      },
-    });
-
     res.status(200).json({
       status: "success",
       accountRole: restoredRole,

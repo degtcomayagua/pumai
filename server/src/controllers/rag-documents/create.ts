@@ -1,9 +1,6 @@
-import mongoose from "mongoose";
-import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from "express";
 
 import * as RagDocumentsAPITypes from "../../../../shared/api/rag-documents";
-import { IAccount } from "../../../../shared/models/account";
 
 import LoggingService from "../../services/logging";
 import { createRagDocChunkWithRetry } from "../../services/qdrant/rag-documents/create";
@@ -14,13 +11,14 @@ import { buildTextChunks } from "../../utils/ai/chunking";
 
 import { APIError } from "../../errors/api";
 
+import { CampusCode } from "../../../../generated/prisma/enums";
+
 const handler = async (
   req: Request<{}, {}, RagDocumentsAPITypes.CreateRequestBody>,
   res: Response<RagDocumentsAPITypes.CreateResponseData>,
   _next: NextFunction,
 ) => {
-  const session = await mongoose.startSession();
-  const adminAccount = req.user as IAccount;
+  const userAccount = req.user!;
 
   const {
     sourceType,
@@ -38,20 +36,16 @@ const handler = async (
   } = req.body;
 
   try {
-    session.startTransaction();
 
     // We use a generated document ID because of limitations of Qdrant's upsert 
     // MongoDB IDs are not allowed by Qdrant as point IDs, therefore we generate a separate UUID for the document and use that as the point ID in Qdrant.
-    const documentId = uuidv4()
-
     const ragDocument = await createRAGDocumentWithRetry(
       {
         sourceType,
         archived: false,
         deliveryModes,
-        documentId,
         title,
-        campuses,
+        campuses: campuses as CampusCode[], // Enforced via zod
         authorityLevel,
         warnings: warnings || {},
         summary,
@@ -61,9 +55,8 @@ const handler = async (
         tags: tags || [],
       },
       {
-        session,
         traceId: req.traceId,
-        adminAccount,
+        userAccount,
       },
     );
 
@@ -81,7 +74,6 @@ const handler = async (
       await createRagDocChunkWithRetry(
         {
           archived: false,
-          docId: documentId,
           chunkIndex: index,
           content: chunk,
           sourceType,
@@ -92,8 +84,9 @@ const handler = async (
           warnings: {
             ...warnings,
           },
+          docId: ragDocument.id,
           deliveryModes: deliveryModes,
-          campuses: campuses,
+          campuses: campuses as CampusCode[],
           authorityLevel,
           category,
           embedding,
@@ -104,15 +97,11 @@ const handler = async (
       );
     }
 
-    await session.commitTransaction();
-
     // Respond with created document (no logging here, service already logged)
     res.status(201).json({
       status: "success",
     });
   } catch (error: unknown) {
-    console.log(error);
-    await session.abortTransaction();
     if (error instanceof APIError) {
       res.status(error.httpStatus).send({ status: error.status });
       return;
@@ -128,17 +117,11 @@ const handler = async (
           error: error.message,
           stack: error.stack,
         },
-        metadata: {
-          createdBy: adminAccount?._id,
-          createdAt: new Date(),
-        },
       });
       res.status(500).json({
         status: "internal-error",
       });
     }
-  } finally {
-    await session.endSession();
   }
 };
 

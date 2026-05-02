@@ -1,64 +1,75 @@
 import { Request, Response, NextFunction } from "express";
+
+import { Prisma } from "../../../../generated/prisma/client";
+
 import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents";
 
-import RAGDocumentsModel from "../../models/RAGDocument";
-import { IAccount } from "../../../../shared/models/account";
+import prismaClient from "../../config/prisma";
 
 import LoggingService from "../../services/logging";
+import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma";
+import {
+  RAGDocumentInclude,
+  RAGDocumentSelect,
+} from "../../../../generated/prisma/models";
 
 const handler = async (
   req: Request<{}, {}, RAGDocumentsAPITypes.ListRequestBody>,
   res: Response<RAGDocumentsAPITypes.ListResponseData>,
   _next: NextFunction,
 ) => {
+  const start = performance.now();
   const { page, count, fields, populate, search, includeDeleted } = req.body;
-  const adminAccount = req.user as IAccount;
 
   try {
-    let queryFilters: Record<string, any> = {};
+    const where: Prisma.RAGDocumentWhereInput = {};
+    const fieldsToSelect = getFieldsToSelect<RAGDocumentSelect>(fields, {
+      id: true,
+      title: true,
+    });
+    const fieldsToPopulate = populate
+      ? getFieldsToPopulate<
+        RAGDocumentInclude,
+        NonNullable<RAGDocumentsAPITypes.ListRequestBody["populate"]>
+      >(populate, {
+        "metadata.createdBy": ["id", "name"],
+        "metadata.updatedBy": ["id", "name"],
+        "metadata.deletedBy": ["id", "name"],
+      })
+      : {};
 
     if (search && search.query.length > 0 && search.searchIn.length > 0) {
-      const searchRegex = new RegExp(search.query, "i");
-      queryFilters = {
-        ...queryFilters,
-        $or: search.searchIn.map((field) => ({
-          [field]: searchRegex,
-        })),
+      where.OR = search.searchIn.map((field) => ({
+        [field]: {
+          contains: search.query,
+        },
+      })) as Prisma.RAGDocumentWhereInput[];
+    }
+
+    if (!includeDeleted) {
+      where.metadata = {
+        is: {
+          deleted: {
+            not: true, // Could be undefined
+          },
+        },
       };
     }
 
-    // if (filters) {
-    //   if (filters.role) {
-    //     queryFilters = {
-    //       ...queryFilters,
-    //       "data.role": filters.role,
-    //     };
-    //   }
-    // }
-
-    if (!includeDeleted) {
-      queryFilters["metadata.deleted"] = { $ne: true };
-    }
-
-    let cursor = RAGDocumentsModel.find(queryFilters)
-      .skip(page * count)
-      .limit(count)
-      .sort({ "metadata.createdAt": -1 });
-
-    if (fields?.length) {
-      cursor = cursor.select(fields.join(" "));
-    }
-
-    // Conditionally populate specified relations
-    if (Array.isArray(populate)) {
-      for (const relation of populate) {
-        cursor = cursor.populate(relation);
-      }
-    }
-
     const [ragDocuments, totalRagDocuments] = await Promise.all([
-      cursor.lean().exec(),
-      RAGDocumentsModel.countDocuments(queryFilters),
+      prismaClient.rAGDocument.findMany({
+        where,
+        skip: page * count,
+        take: count,
+        orderBy: {
+          authorityLevel: "asc",
+        },
+        select: {
+          ...fieldsToSelect,
+          ...fieldsToPopulate,
+        },
+      }),
+      prismaClient.rAGDocument.count({ where }),
     ]);
 
     res.status(200).json({
@@ -67,17 +78,17 @@ const handler = async (
       totalRagDocuments,
     });
   } catch (error: unknown) {
+    console.log(error);
+    const duration = performance.now() - start;
+
     if (error instanceof Error) {
       LoggingService.log({
         source: "api:rag-documents:list",
         level: "error",
         traceId: req.traceId,
-        message: "Unexpected error during rag document listing",
+        message: "Unexpected error during rag documents listing",
         details: { error: error.message, stack: error.stack },
-        metadata: {
-          createdBy: adminAccount?._id,
-          createdAt: new Date(),
-        },
+        duration,
       });
     }
 

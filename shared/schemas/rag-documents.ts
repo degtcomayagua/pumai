@@ -1,5 +1,26 @@
 import { z } from "zod";
-import { isoDateString } from ".";
+import { campuses, isoDateString, metadataFields, metadataPopulateFields } from ".";
+
+const ragDocumentFields = z.enum([
+  "_id",
+  "title",
+  "category",
+  "authorityLevel",
+  "sourceType",
+  "campuses",
+  "deliveryModes",
+  "effectiveFrom",
+  "effectiveUntil",
+  "archived",
+  "warnings",
+  "summary",
+  "tags",
+  ...metadataFields,
+])
+
+const ragDocumentPopulateFields = z.enum([
+  ...metadataPopulateFields,
+]);
 
 // Create
 const createSchema = z
@@ -27,16 +48,7 @@ const createSchema = z
 
     campuses: z
       .array(
-        z.enum([
-          "COMAYAGUA",
-          "TEGUCIGALPA",
-          "SANPEDRO",
-          "CHOLUTECA",
-          "LA CEIBA",
-          "DANLI",
-          "SANTA ROSA",
-          "GLOBAL",
-        ]),
+        z.enum(campuses)
       )
       .min(1, "at-least-one-campus-required"),
 
@@ -101,7 +113,8 @@ const restoreSchema = z.object({
 // Get
 const getSchema = z.object({
   ragDocumentIds: z.array(z.cuid("invalid-rag-document-id")),
-  fields: z.array(z.enum(["_id"], "invalid-field")).optional(),
+  fields: z.array(ragDocumentFields, "invalid-field").optional(),
+  populate: z.array(ragDocumentPopulateFields, "invalid-populate-path").optional(),
 });
 
 // List
@@ -115,30 +128,8 @@ const listSchema = z.object({
       searchIn: z.array(z.enum(["name"], "invalid-search-field")),
     })
     .optional(),
-  fields: z
-    .array(
-      z.enum(
-        [
-          "_id",
-          "title",
-          "category",
-          "authorityLevel",
-          "sourceType",
-          "campuses",
-          "deliveryModes",
-          "effectiveFrom",
-          "effectiveUntil",
-          "archived",
-          "warnings",
-          "summary",
-          "tags",
-          "metadata",
-        ],
-        "invalid-field",
-      ),
-    )
-    .optional(),
-  populate: z.array(z.literal("metadata"), "invalid-populate-path").optional(),
+  fields: z.array(ragDocumentFields, "invalid-field").optional(),
+  populate: z.array(ragDocumentPopulateFields, "invalid-populate-path").optional(),
 });
 
 export {
