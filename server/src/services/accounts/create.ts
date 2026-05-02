@@ -33,7 +33,7 @@ export class EmailInUseError extends Error {
   }
 }
 
-export async function createUserAccount(
+export async function createAccount(
   parameters: CreateUserParameters,
   options: CreateUserOptions = {},
 ): Promise<Account> {
@@ -51,9 +51,9 @@ export async function createUserAccount(
       data: {
         documentVersion: 1,
         createdAt: now,
-        createdById: createdById ?? null,
+        createdById: createdById,
         updatedAt: now,
-        updatedById: createdById ?? null,
+        updatedById: createdById,
         deleted: false,
         deletedAt: null,
         deletedById: null,
@@ -85,9 +85,9 @@ export async function createUserAccount(
       message: "User account created successfully",
       traceId: options.traceId,
       details: {
-        accountId: String((account as any).id),
-        createdBy: createdById ? String(createdById) : null,
-        roleId: String(roleId),
+        accountId: account.id,
+        createdBy: createdById ? createdById : null,
+        roleId: roleId,
         email,
         name,
       },
@@ -115,7 +115,7 @@ export async function createUserAccount(
 }
 
 // Retry wrapper
-export async function createUserAccountWithRetry(
+export async function createAccountWithRetry(
   parameters: CreateUserParameters,
   options: CreateUserOptions = {},
 ): Promise<Account> {
@@ -123,7 +123,7 @@ export async function createUserAccountWithRetry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await createUserAccount(parameters, options);
+        return await createAccount(parameters, options);
       } catch (error: any) {
         if (error instanceof EmailInUseError) {
           bail(error);

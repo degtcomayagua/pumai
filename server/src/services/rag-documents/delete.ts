@@ -1,15 +1,21 @@
-import mongoose from "mongoose";
-import RAGDocumentModel from "../../models/RAGDocument";
-import LoggingService from "../logging";
-import { IAccount } from "../../../../shared/models/account";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
-import { IRAGDocument } from "../../../../shared/models/rag-document";
+
+import prismaClient from "../../config/prisma";
+import {
+  Account,
+  RAGDocument,
+  MetadataSource,
+  MetadataStatus,
+  Prisma,
+} from "../../../../generated/prisma/client";
+import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models";
+
+import LoggingService from "../../services/logging";
 
 type DeleteRAGDocumentOptions = {
-  session?: mongoose.ClientSession;
   traceId?: string;
-  adminAccount?: IAccount;
+  userAccount?: Account;
 };
 
 export class RAGDocumentNotFoundError extends Error {
@@ -23,103 +29,113 @@ export class RAGDocumentNotFoundError extends Error {
 export async function deleteRAGDocument(
   ragDocumentId: string,
   options: DeleteRAGDocumentOptions = {},
-): Promise<IRAGDocument> {
+): Promise<RAGDocument> {
   const startTime = performance.now();
-  const adminAccount = options.adminAccount ?? undefined;
+  const userAccountId = options.userAccount?.id;
 
-  let session = options.session;
-  let sessionCreatedWithinService = false;
+  // fetch RAG Document with metadata + updateHistory
+  const existingRAGDocument = await prismaClient.rAGDocument.findUnique({
+    where: {
+      id: ragDocumentId,
+      metadata: {
+        is: {
+          deleted: false,
+        },
+      },
+    },
+    include: {
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
+    },
+  });
 
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    sessionCreatedWithinService = true;
+  if (!existingRAGDocument) {
+    throw new RAGDocumentNotFoundError("RAG document not found or already deleted");
   }
 
-  try {
-    const ragDocument = await RAGDocumentModel.findOne({
-      _id: ragDocumentId,
-      "metadata.deleted": { $ne: true },
-    }).session(session);
+  const now = new Date();
 
-    if (!ragDocument) {
-      throw new RAGDocumentNotFoundError(
-        "RAG Document not found or already deleted",
-      );
-    }
+  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    changes: {
+      "metadata.deleted": true,
+      "metadata.deletedAt": now.toISOString(),
+      ...(userAccountId && { "metadata.deletedById": userAccountId }),
+    },
+  };
 
-    const now = new Date();
+  const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
+    deleted: true,
+    deletedAt: now,
+    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updateHistory: { create: historyEntry },
+  };
 
-    const updateHistoryEntry = {
-      updatedAt: now,
-      updatedBy: adminAccount?._id,
-      changes: {
-        "metadata.deleted": true,
-        "metadata.deletedAt": now,
-        ...(adminAccount && {
-          "metadata.deletedBy": adminAccount._id,
-        }),
+  let updatePayload: Prisma.RAGDocumentUpdateInput;
+
+  // Update the metadata
+  if (existingRAGDocument.metadata) {
+    updatePayload = { metadata: { update: metadataUpdatePayload } };
+  } else {
+    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
+    updatePayload = {
+      metadata: {
+        create: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccountId ?? null,
+          updatedAt: now,
+          updatedById: userAccountId ?? null,
+          deleted: true,
+          deletedAt: now,
+          deletedById: userAccountId ?? null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+          updateHistory: { create: historyEntry },
+        },
       },
     };
-
-    ragDocument.metadata.deleted = true;
-    ragDocument.metadata.deletedAt = now;
-    if (adminAccount) ragDocument.metadata.deletedBy = adminAccount._id;
-    ragDocument.metadata.updatedAt = now;
-    if (adminAccount) ragDocument.metadata.updatedBy = adminAccount._id;
-    ragDocument.metadata.updateHistory =
-      ragDocument.metadata.updateHistory || [];
-    ragDocument.metadata.updateHistory.push(updateHistoryEntry);
-
-    await ragDocument.save({ session });
-
-    const durationMs = Number((performance.now() - startTime).toFixed(3));
-
-    LoggingService.log({
-      source: "api:rag-documents:delete",
-      level: "important",
-      message: "Rag document deleted",
-      traceId: options.traceId,
-      details: {
-        ragDocumentId: ragDocument._id.toString(),
-        ...(adminAccount && {
-          deletedBy: adminAccount._id.toString(),
-        }),
-      },
-      duration: durationMs,
-      _references: {
-        ragDocumentId: "RAGDocument",
-        ...(adminAccount && { deletedBy: "Account" }),
-      },
-      metadata: {
-        createdAt: now,
-        updateHistory: [updateHistoryEntry],
-        ...(adminAccount && {
-          createdBy: adminAccount._id,
-        }),
-        documentVersion: ragDocument.metadata.documentVersion || 1,
-      },
-    });
-
-    if (sessionCreatedWithinService) {
-      await session.commitTransaction();
-      session.endSession();
-    }
-
-    return ragDocument;
-  } catch (err) {
-    if (sessionCreatedWithinService) {
-      await session.abortTransaction();
-      session.endSession();
-    }
-    throw err;
   }
+
+  // perform update: set metadata.deleted = true and append updateHistory
+  const deleted = await prismaClient.rAGDocument.update({
+    where: { id: ragDocumentId },
+    data: updatePayload,
+    include: { metadata: { include: { updateHistory: true } } },
+  });
+
+  const durationMs = Number((performance.now() - startTime).toFixed(3));
+
+  LoggingService.log({
+    source: "services:rag-documents:delete",
+    level: "important",
+    message: "RAG document deleted",
+    traceId: options.traceId,
+    details: {
+      ragDocumentId: String(deleted.id),
+      ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
+    },
+    duration: durationMs,
+    _references: {
+      ragDocumentId: "RAGDocument",
+    },
+  });
+
+  return deleted;
 }
 
 export async function deleteRAGDocumentWithRetry(
   ragDocumentId: string,
   options: DeleteRAGDocumentOptions = {},
-): Promise<IRAGDocument> {
+): Promise<RAGDocument> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
@@ -131,12 +147,15 @@ export async function deleteRAGDocumentWithRetry(
         }
 
         LoggingService.log({
-          source: "api:rag-documents:delete:retry",
+          source: "services:rag-documents:delete:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during rag document deletion (attempt ${attempt})`,
-          details: { error: error.message, stack: error.stack },
+          message: `Retryable error during RAG document deletion (attempt ${attempt})`,
+          details: {
+            error: error?.message,
+            stack: error?.stack,
+          },
         });
 
         throw error;

@@ -6,21 +6,26 @@ import {
   MetadataSource,
   MetadataStatus,
   Account,
+  MetadataUpdateHistory,
 } from "../../../../generated/prisma/client";
+import {
+  AccountUpdateInput,
+  MetadataUpdateHistoryCreateWithoutMetadataInput,
+} from "../../../../generated/prisma/models";
 
 import prismaClient from "../../config/prisma";
 import LoggingService from "../../services/logging";
 
-type UpdateUserOptions = {
+type UpdateAccountOptions = {
   traceId?: string;
-  adminAccount?: Account;
+  userAccount?: Account;
 };
 
-interface UpdateUserParameters {
+interface UpdateAccountParameters {
   accountId: string;
   email?: string;
   name?: string;
-  roleId?: number;
+  roleId?: string;
   campus?: Account["campus"];
   password?: string;
 }
@@ -41,23 +46,30 @@ export class AccountNotFoundError extends Error {
   }
 }
 
-export async function updateUserAccount(
-  params: UpdateUserParameters,
-  options: UpdateUserOptions = {},
+export async function updateAccount(
+  params: UpdateAccountParameters,
+  options: UpdateAccountOptions = {},
 ): Promise<Account> {
   const startTime = performance.now();
-  const adminAccountId = options.adminAccount?.id;
+  const userAccountId = options.userAccount?.id;
 
   const existing = await prismaClient.account.findUnique({
-    where: { id: params.accountId },
+    where: {
+      id: params.accountId,
+      metadata: {
+        is: {
+          deleted: false,
+        },
+      },
+    },
     include: { metadata: { include: { updateHistory: true } } },
   });
 
   if (!existing) throw new AccountNotFoundError();
 
   const now = new Date();
-  const changes: Record<string, any> = {};
-  const updatePayload: any = {};
+  const changes: MetadataUpdateHistory["changes"] = {};
+  const updatePayload: AccountUpdateInput = {};
 
   if (typeof params.email !== "undefined") {
     const emailLower = params.email.toLowerCase();
@@ -75,12 +87,8 @@ export async function updateUserAccount(
   }
 
   if (typeof params.roleId !== "undefined") {
-    const roleIdNum = params.roleId === null ? null : Number(params.roleId);
-    if (roleIdNum !== null && Number.isNaN(roleIdNum)) {
-      throw new Error("Invalid role id");
-    }
-    updatePayload.role = { connect: { id: roleIdNum } };
-    changes["roleId"] = roleIdNum;
+    updatePayload.role = { connect: { id: params.roleId } };
+    changes["roleId"] = params.roleId;
   }
 
   if (typeof params.campus !== "undefined") {
@@ -94,16 +102,15 @@ export async function updateUserAccount(
     changes["preferences.security.password"] = "[REDACTED]";
   }
 
-  const historyEntry = {
+  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
-    updatedById: adminAccountId,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes,
-    accountId: adminAccountId,
   };
 
-  const metadataUpdatePayload: any = {
+  const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     updatedAt: now,
-    updatedById: adminAccountId ?? null,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     updateHistory: { create: historyEntry },
   };
 
@@ -114,16 +121,16 @@ export async function updateUserAccount(
       create: {
         documentVersion: 1,
         createdAt: now,
-        createdById: adminAccountId,
+        createdById: userAccountId,
         updatedAt: now,
-        updatedById: adminAccountId,
+        updatedById: userAccountId,
         deleted: false,
         deletedAt: null,
         deletedById: null,
         status: MetadataStatus.active,
         source: MetadataSource.manual,
         notes: "",
-        tags: [],
+        tags: "",
         updateHistory: { create: historyEntry },
       },
     };
@@ -143,8 +150,8 @@ export async function updateUserAccount(
       traceId: options.traceId,
       duration: Number((performance.now() - startTime).toFixed(3)),
       details: {
-        accountId: String(updated.id),
-        updatedBy: adminAccountId != null ? String(adminAccountId) : undefined,
+        accountId: updated.id,
+        updatedBy: userAccountId != null ? userAccountId : undefined,
       },
       _references: {
         accountId: "Account",
@@ -165,15 +172,15 @@ export async function updateUserAccount(
   }
 }
 
-export async function updateUserAccountWithRetry(
-  params: UpdateUserParameters,
-  options: UpdateUserOptions = {},
+export async function updateAccountWithRetry(
+  params: UpdateAccountParameters,
+  options: UpdateAccountOptions = {},
 ): Promise<Account> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await updateUserAccount(params, options);
+        return await updateAccount(params, options);
       } catch (err: any) {
         if (
           err instanceof AccountNotFoundError ||

@@ -2,13 +2,19 @@ import retry from "async-retry";
 import { performance } from "perf_hooks";
 
 import prismaClient from "../../config/prisma";
-import LoggingService from "../../services/logging";
+import {
+  Account,
+  MetadataSource,
+  MetadataStatus,
+  Prisma,
+} from "../../../../generated/prisma/client";
+import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models";
 
-import { Account } from "../../../../generated/prisma/client";
+import LoggingService from "../../services/logging";
 
 type RestoreAccountOptions = {
   traceId?: string;
-  adminAccount?: Account;
+  userAccount?: Account;
 };
 
 export class AccountNotFoundError extends Error {
@@ -24,11 +30,18 @@ export async function restoreAccount(
   options: RestoreAccountOptions = {},
 ): Promise<Account> {
   const startTime = performance.now();
-  const restoredById = options.adminAccount ? options.adminAccount.id : null;
+  const userAccountId = options.userAccount?.id;
 
-  // load the account with metadata so we can confirm it's deleted and append history
-  const account = await prismaClient.account.findUnique({
-    where: { id: accountId },
+  // fetch account with metadata + updateHistory
+  const existingAccount = await prismaClient.account.findUnique({
+    where: {
+      id: accountId,
+      metadata: {
+        is: {
+          deleted: true,
+        },
+      },
+    },
     include: {
       metadata: {
         include: {
@@ -38,46 +51,64 @@ export async function restoreAccount(
     },
   });
 
-  if (!account || !account.metadata || account.metadata.deleted !== true) {
+  if (!existingAccount) {
     throw new AccountNotFoundError("Account not found or already restored");
   }
 
   const now = new Date();
 
-  const updateHistoryChanges = {
-    "metadata.deleted": false,
-    "metadata.deletedAt": null,
-    "metadata.deletedById": null,
+  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    changes: {
+      "metadata.deleted": false,
+      "metadata.deletedAt": null,
+      ...(userAccountId && { "metadata.deletedById": null }),
+    },
   };
 
-  // Perform the update: unset deleted flags and push a metadata updateHistory entry
-  const updated = await prismaClient.account.update({
-    where: { id: accountId },
-    data: {
+  const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
+    deleted: false,
+    deletedAt: null,
+    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updateHistory: { create: historyEntry },
+  };
+
+  let updatePayload: Prisma.AccountUpdateInput;
+
+  // Update the metadata
+  if (existingAccount.metadata) {
+    updatePayload = { metadata: { update: metadataUpdatePayload } };
+  } else {
+    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
+    updatePayload = {
       metadata: {
-        update: {
+        create: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccountId ?? null,
+          updatedAt: now,
+          updatedById: userAccountId ?? null,
           deleted: false,
           deletedAt: null,
-          deletedById: null,
-          updatedAt: now,
-          updatedById: restoredById,
-          updateHistory: {
-            create: {
-              updatedAt: now,
-              updatedById: restoredById,
-              changes: updateHistoryChanges,
-            },
-          },
+          deletedById: userAccountId ?? null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+          updateHistory: { create: historyEntry },
         },
       },
-    },
-    include: {
-      metadata: {
-        include: {
-          updateHistory: true,
-        },
-      },
-    },
+    };
+  }
+
+  // perform update: set metadata.deleted = false and append updateHistory
+  const restored = await prismaClient.account.update({
+    where: { id: accountId },
+    data: updatePayload,
+    include: { metadata: { include: { updateHistory: true } } },
   });
 
   const durationMs = Number((performance.now() - startTime).toFixed(3));
@@ -88,29 +119,29 @@ export async function restoreAccount(
     message: "Account restored",
     traceId: options.traceId,
     details: {
-      accountId: String(updated.id),
-      restoredBy: restoredById !== null ? String(restoredById) : undefined,
-      name: updated.name,
+      accountId: String(restored.id),
+      name: restored.name,
+      ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       accountId: "Account",
-      restoredBy: restoredById !== null ? "Account" : undefined,
+      ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
     },
   });
 
-  return updated;
+  return restored;
 }
 
-export async function restoreAccountWithRetry(
-  accountId: string,
+export async function restoreAccountRoleWithRetry(
+  roleId: string,
   options: RestoreAccountOptions = {},
 ): Promise<Account> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await restoreAccount(accountId, options);
+        return await restoreAccount(roleId, options);
       } catch (error: any) {
         if (error instanceof AccountNotFoundError) {
           bail(error);
@@ -121,8 +152,11 @@ export async function restoreAccountWithRetry(
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account restore (attempt ${attempt})`,
-          details: { error: error?.message, stack: error?.stack },
+          message: `Retryable error during account restoration (attempt ${attempt})`,
+          details: {
+            error: error?.message,
+            stack: error?.stack,
+          },
         });
 
         throw error;

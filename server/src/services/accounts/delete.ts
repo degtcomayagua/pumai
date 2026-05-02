@@ -2,14 +2,19 @@ import retry from "async-retry";
 import { performance } from "perf_hooks";
 
 import prismaClient from "../../config/prisma";
+import {
+  Account,
+  MetadataSource,
+  MetadataStatus,
+  Prisma,
+} from "../../../../generated/prisma/client";
+import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models";
+
 import LoggingService from "../../services/logging";
 
-import { Account } from "../../../../generated/prisma/client";
-
-type DeleteUserOptions = {
+type DeleteAccountRoleOptions = {
   traceId?: string;
   userAccount?: Account;
-  allowDeleteSelf?: boolean;
 };
 
 export class AccountNotFoundError extends Error {
@@ -20,25 +25,23 @@ export class AccountNotFoundError extends Error {
   }
 }
 
-export class CannotDeleteSelfError extends Error {
-  retryable = false;
-  constructor(message: string) {
-    super(message);
-    this.name = "CannotDeleteSelfError";
-  }
-}
-
-export async function deleteUserAccount(
-  accountId: string,
-  options: DeleteUserOptions = {},
+export async function deleteAccount(
+  accountToDeleteId: string,
+  options: DeleteAccountRoleOptions = {},
 ): Promise<Account> {
   const startTime = performance.now();
-  const userAccount = options.userAccount;
-  const deletedById = userAccount ? userAccount.id : null;
+  const userAccountId = options.userAccount?.id;
 
-  // fetch account with metadata + updateHistory so we can reference current state
-  const account = await prismaClient.account.findUnique({
-    where: { id: accountId },
+  // fetch role with metadata + updateHistory
+  const existingAccount = await prismaClient.account.findUnique({
+    where: {
+      id: accountToDeleteId,
+      metadata: {
+        is: {
+          deleted: false,
+        }
+      }
+    },
     include: {
       metadata: {
         include: {
@@ -48,132 +51,104 @@ export async function deleteUserAccount(
     },
   });
 
-  if (!account) {
-    throw new AccountNotFoundError("not-found");
-  }
-
-  // check self-delete guard
-  if (
-    deletedById !== null &&
-    accountId === deletedById &&
-    !options.allowDeleteSelf
-  ) {
-    throw new CannotDeleteSelfError("cannot-delete-self");
+  if (!existingAccount) {
+    throw new AccountNotFoundError(
+      "Account not found or already deleted",
+    );
   }
 
   const now = new Date();
 
-  // build the updateHistory entry (JSON-compatible)
-  const updateHistoryEntry = {
+  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
-    updatedById: deletedById,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes: {
       "metadata.deleted": true,
-      "metadata.deletedAt": now,
-      "metadata.deletedById": deletedById,
+      "metadata.deletedAt": now.toISOString(),
+      ...(userAccountId && { "metadata.deletedById": userAccountId }),
     },
-    accountId: deletedById,
   };
 
-  // compute a safe "deleted" email
-  const deletedEmail = `${now.getTime()}-${Math.random().toString(36).slice(2, 15)}@deleted.com`;
+  const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
+    deleted: true,
+    deletedAt: now,
+    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updateHistory: { create: historyEntry },
+  };
 
-  // Perform the update: set emailValue and update related metadata (soft-delete + create updateHistory)
-  const updatedAccount = await prismaClient.account.update({
-    where: { id: accountId },
-    data: {
-      emailValue: deletedEmail,
-      // update metadata relation (metadataId exists or not — use update if exists, otherwise create)
-      metadata: account.metadata
-        ? {
-          update: {
-            deleted: true,
-            deletedAt: now,
-            deletedById: deletedById,
-            updatedAt: now,
-            updatedById: deletedById,
-            updateHistory: {
-              create: {
-                updatedAt: now,
-                updatedById: deletedById,
-                changes: updateHistoryEntry.changes,
-              },
-            },
-          },
-        }
-        : {
-          // If account had no metadata, create one and append the history
-          create: {
-            documentVersion: 1,
-            createdAt: now,
-            createdById: deletedById,
-            updatedAt: now,
-            updatedById: deletedById,
-            deleted: true,
-            deletedAt: now,
-            deletedById: deletedById,
-            status: "active",
-            source: "manual",
-            notes: "",
-            tags: "",
-            updateHistory: {
-              create: {
-                updatedAt: now,
-                updatedById: deletedById,
-                changes: updateHistoryEntry.changes,
-                accountId: deletedById,
-              },
-            },
-          },
-        },
-    },
-    include: {
+  let updatePayload: Prisma.AccountUpdateInput;
+
+  // Update the metadata
+  if (existingAccount.metadata) {
+    updatePayload = { metadata: { update: metadataUpdatePayload } };
+  } else {
+    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
+    updatePayload = {
       metadata: {
-        include: {
-          updateHistory: true,
+        create: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccountId ?? null,
+          updatedAt: now,
+          updatedById: userAccountId ?? null,
+          deleted: true,
+          deletedAt: now,
+          deletedById: userAccountId ?? null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+          updateHistory: { create: historyEntry },
         },
       },
-    },
+    };
+  }
+
+  // Change the email to prevent conflicts with unique constraint and to indicate that the account is deleted
+  updatePayload.email = `deleted_${existingAccount.id}_${now.getTime()}@example.com`;
+
+  // perform update: set metadata.deleted = true and append updateHistory
+  const deleted = await prismaClient.account.update({
+    where: { id: accountToDeleteId },
+    data: updatePayload,
+    include: { metadata: { include: { updateHistory: true } } },
   });
 
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
-  // Logging
   LoggingService.log({
     source: "services:accounts:delete",
     level: "important",
-    message: "Admin deleted a user account",
+    message: "Account deleted",
     traceId: options.traceId,
     details: {
-      accountId: String(updatedAccount.id),
-      deletedBy: deletedById !== null ? String(deletedById) : undefined,
-      email: updatedAccount.email,
-      name: updatedAccount.name,
+      accountId: String(deleted.id),
+      name: deleted.name,
+      email: deleted.email,
+      ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       accountId: "Account",
-      deletedBy: deletedById !== null ? "Account" : undefined,
     },
   });
 
-  return updatedAccount;
+  return deleted;
 }
 
-export async function deleteUserAccountWithRetry(
+export async function deleteAccountWithRetry(
   accountId: string,
-  options: DeleteUserOptions = {},
+  options: DeleteAccountRoleOptions = {},
 ): Promise<Account> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await deleteUserAccount(accountId, options);
+        return await deleteAccount(accountId, options);
       } catch (error: any) {
-        if (
-          error instanceof AccountNotFoundError ||
-          error instanceof CannotDeleteSelfError
-        ) {
+        if (error instanceof AccountNotFoundError) {
           bail(error);
         }
 
@@ -183,7 +158,10 @@ export async function deleteUserAccountWithRetry(
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
           message: `Retryable error during account deletion (attempt ${attempt})`,
-          details: { error: error?.message, stack: error?.stack },
+          details: {
+            error: error?.message,
+            stack: error?.stack,
+          },
         });
 
         throw error;

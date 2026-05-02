@@ -1,54 +1,47 @@
-import { performance } from "perf_hooks";
 import retry from "async-retry";
+import { performance } from "perf_hooks";
 
 import prismaClient from "../../config/prisma";
-
-import LoggingService from "../../services/logging";
-
 import {
   Account,
   AccountRole,
+  MetadataSource,
+  MetadataStatus,
+  Prisma,
 } from "../../../../generated/prisma/client";
+
+import LoggingService from "../../services/logging";
+import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models";
 
 type RestoreAccountRoleOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-/**
- * AccountRoleNotFoundError indicates the requested account role was not found or not eligible for restore.
- */
 export class AccountRoleNotFoundError extends Error {
   retryable = false;
-  /** @param message Error message */
   constructor(message: string) {
     super(message);
     this.name = "AccountRoleNotFoundError";
   }
 }
 
-/**
- * Restore a previously-deleted account role by clearing metadata.deleted and appending an updateHistory entry.
- * @param roleId Role id (string)
- * @param options traceId and userAccount
- * @returns restored IAccountRole
- */
 export async function restoreAccountRole(
   roleId: string,
   options: RestoreAccountRoleOptions = {},
 ): Promise<AccountRole> {
   const startTime = performance.now();
-  const userAccount = options.userAccount;
-  const now = new Date();
+  const userAccountId = options.userAccount?.id;
 
-  // Find the role where metadata.deleted != false (preserve original behavior)
-  const existingRole = await prismaClient.accountRole.findFirst({
+  // fetch role with metadata + updateHistory
+  const existingRole = await prismaClient.accountRole.findUnique({
     where: {
       id: roleId,
       metadata: {
-        // metadata.deleted !== false
-        deleted: { not: false },
-      },
+        is: {
+          deleted: true,
+        }
+      }
     },
     include: {
       metadata: {
@@ -65,89 +58,84 @@ export async function restoreAccountRole(
     );
   }
 
-  const accountId = userAccount?.id;
+  const now = new Date();
 
-  // Build change record using the original external-facing keys
-  const changes = {
-    "metadata.deleted": false,
-    "metadata.deletedAt": null,
-    "metadata.deletedByTerminal": null,
-    "metadata.deletedBy": null,
+  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    changes: {
+      "metadata.deleted": false,
+      "metadata.deletedAt": null,
+      ...(userAccountId && { "metadata.deletedById": null }),
+    },
   };
 
-  try {
-    // Update metadata first and append updateHistory entry
-    await prismaClient.metadata.update({
-      where: { id: existingRole.metadataId! },
-      data: {
-        deleted: false,
-        deletedAt: null,
-        // deletedById cleared
-        deletedById: null,
-        updatedAt: now,
-        updatedById: accountId,
-        updateHistory: {
-          create: {
-            updatedAt: now,
-            updatedById: accountId,
-            changes,
-            // If the update history model expects an accountId or similar, Prisma will map relations.
-            // No explicit accountId provided here since it may not exist on role update history.
-          },
+  const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
+    deleted: false,
+    deletedAt: null,
+    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updateHistory: { create: historyEntry },
+  };
+
+  let updatePayload: Prisma.AccountRoleUpdateInput;
+
+  // Update the metadata
+  if (existingRole.metadata) {
+    updatePayload = { metadata: { update: metadataUpdatePayload } };
+  } else {
+    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
+    updatePayload = {
+      metadata: {
+        create: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccountId ?? null,
+          updatedAt: now,
+          updatedById: userAccountId ?? null,
+          deleted: false,
+          deletedAt: null,
+          deletedById: userAccountId ?? null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+          updateHistory: { create: historyEntry },
         },
       },
-    });
-
-    // Re-fetch the role with metadata and updateHistory for return value
-    const updatedRole = await prismaClient.accountRole.findUnique({
-      where: { id: roleId },
-      include: {
-        metadata: {
-          include: {
-            updateHistory: true,
-          },
-        },
-      },
-    });
-
-    const durationMs = Number((performance.now() - startTime).toFixed(3));
-
-    LoggingService.log({
-      source: "services:account-roles:restore",
-      level: "important",
-      message: "Account role restored",
-      traceId: options.traceId,
-      details: {
-        accountRoleId: String(roleId),
-        name: updatedRole?.name,
-      },
-      duration: durationMs,
-      _references: {
-        accountRoleId: "AccountRole",
-      },
-    });
-
-    if (!updatedRole) {
-      // This should be unlikely; treat as not found to match domain semantics
-      throw new AccountRoleNotFoundError(
-        "Account role not found after restore",
-      );
-    }
-
-    return updatedRole;
-  } catch (err: any) {
-    // Re-throw after (no transaction-management here per migration rules)
-    throw err;
+    };
   }
+
+  // perform update: set metadata.deleted = true and append updateHistory
+  const deleted = await prismaClient.accountRole.update({
+    where: { id: roleId },
+    data: updatePayload,
+    include: { metadata: { include: { updateHistory: true } } },
+  });
+
+  const durationMs = Number((performance.now() - startTime).toFixed(3));
+
+  LoggingService.log({
+    source: "services:account-roles:restore",
+    level: "important",
+    message: "Account role restored",
+    traceId: options.traceId,
+    details: {
+      accountRoleId: String(deleted.id),
+      name: deleted.name,
+      ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
+    },
+    duration: durationMs,
+    _references: {
+      accountRoleId: "AccountRole",
+      ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
+    },
+  });
+
+  return deleted;
 }
 
-/**
-
-* Wrapper that retries restoreAccountRole on retryable errors, bails on not-found.
-* @param roleId Role id
-* @param options Restore options
-* @returns restored IAccountRole
-  */
 export async function restoreAccountRoleWithRetry(
   roleId: string,
   options: RestoreAccountRoleOptions = {},
@@ -159,7 +147,6 @@ export async function restoreAccountRoleWithRetry(
         return await restoreAccountRole(roleId, options);
       } catch (error: any) {
         if (error instanceof AccountRoleNotFoundError) {
-          // Non-retryable: bail out of retry loop
           bail(error);
         }
 
@@ -168,8 +155,11 @@ export async function restoreAccountRoleWithRetry(
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role restore (attempt ${attempt})`,
-          details: { error: error?.message, stack: error?.stack },
+          message: `Retryable error during account role restoration (attempt ${attempt})`,
+          details: {
+            error: error?.message,
+            stack: error?.stack,
+          },
         });
 
         throw error;

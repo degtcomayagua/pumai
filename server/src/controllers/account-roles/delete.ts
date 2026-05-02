@@ -21,7 +21,7 @@ const handler = async (
   try {
     const deletedRole = await deleteAccountRoleWithRetry(roleId, {
       traceId: req.traceId,
-      adminAccount,
+      userAccount: adminAccount,
     });
 
     const duration = performance.now() - start;

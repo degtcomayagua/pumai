@@ -6,7 +6,7 @@ import { IAccount } from "../../../../shared/models/account";
 import LoggingService from "../../services/logging";
 
 import prismaClient from "../../config/prisma";
-import { createUserAccountWithRetry } from "../../services/accounts/create";
+import { createAccountWithRetry } from "../../services/accounts/create";
 
 import { APIError } from "../../errors/api";
 
@@ -60,7 +60,7 @@ const handler = async (
       );
     }
 
-    const createdAccount = await createUserAccountWithRetry(
+    const createdAccount = await createAccountWithRetry(
       {
         name,
         email,

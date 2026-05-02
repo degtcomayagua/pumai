@@ -58,9 +58,9 @@ export async function createAccountRole(
       data: {
         documentVersion: 1,
         createdAt: now,
-        createdById: userAccount?.id ?? null,
+        createdById: userAccount?.id,
         updatedAt: now,
-        updatedById: userAccount?.id ?? null,
+        updatedById: userAccount?.id,
         deleted: false,
         deletedAt: null,
         deletedById: null,

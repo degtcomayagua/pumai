@@ -1,28 +1,29 @@
-import mongoose from "mongoose";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import RAGDocumentModel from "../../models/RAGDocument";
-import { IRAGDocument } from "../../../../shared/models/rag-document";
-import { IAccount } from "../../../../shared/models/account";
+import prismaClient from "../../config/prisma";
 import {
-  CampusCode,
-  SourceType,
-  DeliveryMode,
+  Account,
+  RAGDocument,
+  MetadataSource,
+  MetadataStatus,
+  Prisma,
   DocumentCategory,
-} from "../../../../shared/models/index";
+  CampusCode,
+  DeliveryMode,
+  SourceType,
+} from "../../../../generated/prisma/client";
 
-import LoggingService from "../logging";
+import LoggingService from "../../services/logging";
 
 type CreateRAGDocumentParameters = {
   title: string;
   category: DocumentCategory;
-  documentId: string; // separate from MongoDB _id, used for Qdrant point ID
 
-  authorityLevel: number; // higher = stronger authority
+  authorityLevel: number;
   sourceType: SourceType;
 
-  campuses: CampusCode[]; // ["GLOBAL"] or specific campuses
+  campuses: CampusCode[];
   deliveryModes: DeliveryMode[];
 
   effectiveFrom: Date;
@@ -40,126 +41,163 @@ type CreateRAGDocumentParameters = {
 };
 
 type CreateRAGDocumentOptions = {
-  session?: mongoose.ClientSession;
   traceId?: string;
-  adminAccount?: IAccount;
+  userAccount?: Account;
 };
+
+export class RAGDocumentAlreadyExistsError extends Error {
+  retryable = false;
+  constructor(message = "rag-document-title-in-use") {
+    super(message);
+    this.name = "RAGDocumentAlreadyExistsError";
+  }
+}
 
 export async function createRAGDocument(
   params: CreateRAGDocumentParameters,
   options: CreateRAGDocumentOptions = {},
-): Promise<IRAGDocument> {
+): Promise<RAGDocument> {
   const startTime = performance.now();
 
-  let session = options.session;
-  let sessionCreatedHere = false;
+  const {
+    archived,
+    authorityLevel,
+    category,
+    effectiveFrom,
+    effectiveUntil,
+    sourceType,
+    summary,
+    title,
+    warnings,
+  } = params;
 
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    sessionCreatedHere = true;
-  }
+  const now = new Date();
+  const userAccount = options.userAccount;
 
   try {
-    const {
-      title,
-      category,
-      authorityLevel,
-      sourceType,
-      campuses,
-      documentId,
-      deliveryModes,
-      effectiveFrom = new Date(),
-      effectiveUntil = null,
-      archived = false,
-      warnings = {},
-      summary = "",
-      tags = [],
-    } = params;
-    const adminAccount = options.adminAccount;
-    const now = new Date();
-
-    const ragDocument = new RAGDocumentModel({
-      title,
-      category,
-      authorityLevel,
-      sourceType,
-      documentId,
-      campuses,
-      deliveryModes,
-      effectiveFrom,
-      effectiveUntil,
-      archived,
-      warnings,
-      summary,
-      tags,
-
-      metadata: {
+    // create metadata first
+    const metadata = await prismaClient.metadata.create({
+      data: {
         documentVersion: 1,
         createdAt: now,
-        createdBy: adminAccount?._id,
+        createdById: userAccount?.id ?? null,
         updatedAt: now,
-        updatedBy: adminAccount?._id,
-        updateHistory: [],
+        updatedById: userAccount?.id ?? null,
+        deleted: false,
+        deletedAt: null,
+        deletedById: null,
+        status: MetadataStatus.active,
+        source: MetadataSource.manual,
+        notes: "",
+        tags: "",
       },
     });
 
-    await ragDocument.save({ session });
+    const uniqueCampuses = [...new Set(params.campuses)];
+    const uniqueDeliveryModes = [...new Set(params.deliveryModes)];
+    const uniqueTags = [...new Set(params.tags.map((tag) => tag.trim()).filter(Boolean))];
 
-    if (sessionCreatedHere) {
-      await session.commitTransaction();
-      await session.endSession();
-    }
+    // create account role referencing metadataId
+    const ragDocument = await prismaClient.rAGDocument.create({
+      data: {
+        archived,
+        authorityLevel,
+        category,
+        effectiveFrom,
+        effectiveUntil,
+        warningLegal: warnings.legal,
+        warningTimeSensitive: warnings.timeSensitive,
+        warningCampusSpecific: warnings.campusSpecific,
+        sourceType,
+        summary,
+        title,
+        metadataId: metadata.id,
+        campuses: {
+          createMany: {
+            data: uniqueCampuses.map((campus) => ({
+              campus,
+            })),
+            skipDuplicates: true,
+          },
+        },
+        deliveryModes: {
+          createMany: {
+            data: uniqueDeliveryModes.map((deliveryMode) => ({
+              deliveryMode,
+            })),
+            skipDuplicates: true,
+          },
+        },
+        tags: {
+          createMany: {
+            data: uniqueTags.map((tag) => ({
+              tag,
+            })),
+            skipDuplicates: true,
+          },
+        },
+      },
+    });
+
+    const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
       source: "services:rag-documents:create",
       level: "important",
-      message: "RAG Document created successfully",
+      message: "RAG Document created in database successfully",
       traceId: options.traceId,
-      duration: Number((performance.now() - startTime).toFixed(3)),
+      duration,
       details: {
-        ragDocumentId: ragDocument._id.toString(),
+        ragDocumentId: ragDocument.id,
+        name: ragDocument.title,
       },
       _references: {
         ragDocumentId: "RAGDocument",
       },
-      metadata: {
-        createdBy: adminAccount?._id.toString(),
-        createdAt: now,
-      },
     });
 
     return ragDocument;
-  } catch (error) {
-    if (sessionCreatedHere) {
-      await session.abortTransaction();
-      await session.endSession();
+  } catch (err: any) {
+    // handle unique constraint on name (P2002)
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      if ((err.meta as any)?.target?.includes?.("name")) {
+        throw new RAGDocumentAlreadyExistsError();
+      }
     }
-    throw error;
+    throw err;
   }
 }
 
 export async function createRAGDocumentWithRetry(
   params: CreateRAGDocumentParameters,
   options: CreateRAGDocumentOptions = {},
-): Promise<IRAGDocument> {
+): Promise<RAGDocument> {
   return retry(
-    async (_, attempt) => {
+    async (bail, attempt) => {
       const startTime = performance.now();
       try {
         return await createRAGDocument(params, options);
       } catch (error: any) {
+        // non-retryable
+        if (error instanceof RAGDocumentAlreadyExistsError) {
+          bail(error);
+        }
+
         LoggingService.log({
           source: "services:rag-documents:create:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during rag document creation (attempt ${attempt})`,
+          message: `Retryable error during RAG document creation (attempt ${attempt})`,
           details: {
-            error: error.message,
-            stack: error.stack,
+            error: error?.message,
+            stack: error?.stack,
           },
         });
+
         throw error;
       }
     },

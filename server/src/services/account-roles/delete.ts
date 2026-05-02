@@ -7,13 +7,14 @@ import {
   AccountRole,
   MetadataSource,
   MetadataStatus,
+  Prisma,
 } from "../../../../generated/prisma/client";
 
 import LoggingService from "../../services/logging";
 
 type DeleteAccountRoleOptions = {
   traceId?: string;
-  adminAccount?: Account;
+  userAccount?: Account;
 };
 
 export class AccountRoleNotFoundError extends Error {
@@ -29,11 +30,18 @@ export async function deleteAccountRole(
   options: DeleteAccountRoleOptions = {},
 ): Promise<AccountRole> {
   const startTime = performance.now();
-  const accountId = options.adminAccount?.id;
+  const userAccountId = options.userAccount?.id;
 
   // fetch role with metadata + updateHistory
   const existingRole = await prismaClient.accountRole.findUnique({
-    where: { id: roleId },
+    where: {
+      id: roleId,
+      metadata: {
+        is: {
+          deleted: false,
+        }
+      }
+    },
     include: {
       metadata: {
         include: {
@@ -49,75 +57,61 @@ export async function deleteAccountRole(
     );
   }
 
-  // if metadata.deleted === true then treat as not found/already deleted
-  if (existingRole.metadata?.deleted === true) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already deleted",
-    );
-  }
-
   const now = new Date();
 
-  const updateHistoryChanges = {
-    "metadata.deleted": true,
-    "metadata.deletedAt": now,
-    ...(accountId !== null ? { "metadata.deletedById": accountId } : {}),
+  const historyEntry = {
+    updatedAt: now,
+    updatedById: userAccountId ?? null,
+    changes: {
+      "metadata.deleted": true,
+      "metadata.deletedAt": now.toISOString(),
+      ...(userAccountId && { "metadata.deletedById": userAccountId }),
+    },
+    accountId: userAccountId ?? null,
   };
 
-  // perform update: set metadata.deleted = true and append updateHistory
-  const updatedRole = await prismaClient.accountRole.update({
-    where: { id: roleId },
-    data: {
-      metadata: existingRole.metadata
-        ? {
-          update: {
-            deleted: true,
-            deletedAt: now,
-            deletedById: accountId,
-            updatedAt: now,
-            updatedById: accountId,
-            updateHistory: {
-              create: {
-                updatedAt: now,
-                updatedById: accountId,
-                changes: updateHistoryChanges,
-              },
-            },
-          },
-        }
-        : {
-          // if no metadata exists, create one and mark deleted
-          create: {
-            documentVersion: 1,
-            createdAt: now,
-            createdById: accountId,
-            updatedAt: now,
-            updatedById: accountId,
-            deleted: true,
-            deletedAt: now,
-            deletedById: accountId,
-            status: MetadataStatus.active,
-            source: MetadataSource.manual,
-            notes: "",
-            tags: "",
-            updateHistory: {
-              create: {
-                updatedAt: now,
-                updatedById: accountId,
-                changes: updateHistoryChanges,
-                accountId: accountId,
-              },
-            },
-          },
-        },
-    },
-    include: {
+  const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
+    deleted: true,
+    deletedAt: now,
+    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedAt: now,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updateHistory: { create: historyEntry },
+  };
+
+  let updatePayload: Prisma.AccountRoleUpdateInput;
+
+  // Update the metadata
+  if (existingRole.metadata) {
+    updatePayload = { metadata: { update: metadataUpdatePayload } };
+  } else {
+    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
+    updatePayload = {
       metadata: {
-        include: {
-          updateHistory: true,
+        create: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccountId ?? null,
+          updatedAt: now,
+          updatedById: userAccountId ?? null,
+          deleted: true,
+          deletedAt: now,
+          deletedById: userAccountId ?? null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+          updateHistory: { create: historyEntry },
         },
       },
-    },
+    };
+  }
+
+  // perform update: set metadata.deleted = true and append updateHistory
+  const deleted = await prismaClient.accountRole.update({
+    where: { id: roleId },
+    data: updatePayload,
+    include: { metadata: { include: { updateHistory: true } } },
   });
 
   const durationMs = Number((performance.now() - startTime).toFixed(3));
@@ -128,17 +122,18 @@ export async function deleteAccountRole(
     message: "Account role deleted",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(updatedRole.id),
-      name: updatedRole.name,
-      ...(accountId !== null ? { deletedBy: String(accountId) } : {}),
+      accountRoleId: String(deleted.id),
+      name: deleted.name,
+      ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       accountRoleId: "AccountRole",
+      ...(userAccountId !== null ? { deletedBy: "Account" } : {}),
     },
   });
 
-  return updatedRole;
+  return deleted;
 }
 
 export async function deleteAccountRoleWithRetry(

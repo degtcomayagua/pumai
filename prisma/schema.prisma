@@ -221,7 +221,7 @@ enum DeliveryMode {
 }
 
 model RAGDocument {
-  id             String           @id @default(cuid())
+  id             String           @id @default(uuid()) // UUID specifically for referencing in QDrant DB
   title          String           @db.VarChar(200)
   category       DocumentCategory
   authorityLevel Int

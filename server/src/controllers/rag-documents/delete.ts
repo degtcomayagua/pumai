@@ -21,7 +21,7 @@ const handler = async (
   try {
     const deletedRAGDocument = await deleteRAGDocumentWithRetry(ragDocumentId, {
       traceId: req.traceId,
-      adminAccount,
+      userAccount: adminAccount,
     });
 
     await deleteRagChunksByDocId(ragDocumentId);

@@ -4,7 +4,7 @@ import * as AccountAPITypes from "../../../../shared/api/accounts";
 import { IAccount } from "../../../../shared/models/account";
 import { IAccountRole } from "../../../../shared/models/account-role";
 
-import { updateUserAccountWithRetry } from "../../services/accounts/update";
+import { updateAccountWithRetry } from "../../services/accounts/update";
 import LoggingService from "../../services/logging";
 import { APIError } from "../../errors/api";
 
@@ -42,7 +42,7 @@ const handler = async (
       );
     }
 
-    const updatedAccount = await updateUserAccountWithRetry(
+    const updatedAccount = await updateAccountWithRetry(
       {
         accountId,
         roleId: roleId,
@@ -53,7 +53,7 @@ const handler = async (
       },
       {
         traceId: req.traceId,
-        adminAccount,
+        userAccount: adminAccount,
       },
     );
 
