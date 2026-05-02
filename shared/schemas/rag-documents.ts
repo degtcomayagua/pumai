@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zObjectId, isoDateString } from ".";
+import { isoDateString } from ".";
 
 // Create
 const createSchema = z
@@ -85,22 +85,22 @@ const createSchema = z
 
 // Update
 const updateSchema = z.object({
-  ragDocumentId: zObjectId,
+  ragDocumentId: z.cuid("invalid-rag-document-id"),
 });
 
 // Delete
 const deleteSchema = z.object({
-  ragDocumentId: zObjectId,
+  ragDocumentId: z.cuid("invalid-rag-document-id"),
 });
 
 // Restore
 const restoreSchema = z.object({
-  ragDocumentId: zObjectId,
+  ragDocumentId: z.cuid("invalid-rag-document-id"),
 });
 
 // Get
 const getSchema = z.object({
-  ragDocumentIds: z.array(zObjectId),
+  ragDocumentIds: z.array(z.cuid("invalid-rag-document-id")),
   fields: z.array(z.enum(["_id"], "invalid-field")).optional(),
 });
 

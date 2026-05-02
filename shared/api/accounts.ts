@@ -1,4 +1,4 @@
-import type { IAccount } from "../models/account";
+import { Account } from "../../generated/prisma/client";
 import { ResponseStatus } from ".";
 import { z } from "zod";
 
@@ -22,44 +22,44 @@ export type RestoreRequestBody = z.infer<typeof deleteSchema>;
 
 export interface GetResponseData {
   status: ResponseStatus;
-  accounts?: IAccount[];
+  accounts?: Account[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  accounts?: IAccount[];
+  accounts?: Account[];
   totalAccounts?: number;
 }
 
 export interface DeleteResponseData {
   status:
-    | ResponseStatus
-    | "account-not-found"
-    | "cannot-delete-self"
-    | "cannot-delete-due-to-role-level";
-  account?: IAccount;
+  | ResponseStatus
+  | "account-not-found"
+  | "cannot-delete-self"
+  | "cannot-delete-due-to-role-level";
+  account?: Account;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "account-not-found";
-  account?: IAccount;
+  account?: Account;
 }
 
 export interface CreateResponseData {
   status:
-    | ResponseStatus
-    | "role-not-found"
-    | "email-in-use"
-    | "role-cannot-be-assigned";
-  account?: IAccount;
+  | ResponseStatus
+  | "role-not-found"
+  | "email-in-use"
+  | "role-cannot-be-assigned";
+  account?: Account;
 }
 
 export interface UpdateResponseData {
   status:
-    | ResponseStatus
-    | "account-not-found"
-    | "role-not-found"
-    | "role-cannot-be-assigned"
-    | "email-in-use";
-  account?: IAccount;
+  | ResponseStatus
+  | "account-not-found"
+  | "role-not-found"
+  | "role-cannot-be-assigned"
+  | "email-in-use";
+  account?: Account;
 }

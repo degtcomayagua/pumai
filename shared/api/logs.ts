@@ -1,4 +1,4 @@
-import { ILog } from "../models/log";
+import { Log } from "../../generated/prisma/client";
 import { ResponseStatus } from ".";
 
 import { z } from "zod";
@@ -10,13 +10,13 @@ import {
 export type GetRequestBody = z.infer<typeof getSchema>;
 export interface GetResponseData {
   status: ResponseStatus;
-  logs?: ILog[];
+  logs?: Log[];
 }
 
 export type ListRequestBody = z.infer<typeof listSchema>;
 export interface ListResponseData {
   status: ResponseStatus;
-  logs?: ILog[];
+  logs?: Log[];
   totalLogs?: number;
 }
 

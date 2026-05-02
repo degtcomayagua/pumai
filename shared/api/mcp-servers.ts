@@ -1,4 +1,4 @@
-import type { IMCPServer } from "../models/mcp-server";
+import { MCPServer } from "../../generated/prisma/client";
 import { ResponseStatus } from ".";
 import { z } from "zod";
 
@@ -22,31 +22,31 @@ export type ListRequestBody = z.infer<typeof listSchema>;
 // Response types
 export interface GetResponseData {
   status: ResponseStatus;
-  mcpServers?: IMCPServer[];
+  mcpServers?: MCPServer[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  mcpServers?: IMCPServer[];
+  mcpServers?: MCPServer[];
   totalMcpServers?: number;
 }
 
 export interface CreateResponseData {
   status: ResponseStatus;
-  mcpServer?: IMCPServer;
+  mcpServer?: MCPServer;
 }
 
 export interface UpdateResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: IMCPServer;
+  mcpServer?: MCPServer;
 }
 
 export interface DeleteResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: IMCPServer;
+  mcpServer?: MCPServer;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: IMCPServer;
+  mcpServer?: MCPServer;
 }

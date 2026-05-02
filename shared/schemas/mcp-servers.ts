@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { metadataFields, metadataPopulateFields, zObjectId } from ".";
+import { metadataFields, metadataPopulateFields } from ".";
 
 // Shared
 const mcpServerFields = z.enum(
@@ -43,7 +43,7 @@ const createSchema = z.object({
 
   isRestricted: z.boolean().default(false),
 
-  allowedRoles: z.array(zObjectId).default([]),
+  allowedRoles: z.array(z.cuid("invalid-role-id")).default([]),
 
   isActive: z.boolean().default(true),
 
@@ -79,22 +79,22 @@ const createSchema = z.object({
 
 // Update
 const updateSchema = z
-  .object({ mcpServerId: zObjectId })
+  .object({ mcpServerId: z.cuid("invalid-mcp-server-id") })
   .merge(createSchema.partial());
 
 // Delete
 const deleteSchema = z.object({
-  mcpServerId: zObjectId,
+  mcpServerId: z.cuid("invalid-mcp-server-id"),
 });
 
 // Restore
 const restoreSchema = z.object({
-  mcpServerId: zObjectId,
+  mcpServerId: z.cuid("invalid-mcp-server-id"),
 });
 
 // Get
 const getSchema = z.object({
-  mcpServerIds: z.array(zObjectId),
+  mcpServerIds: z.array(z.cuid("invalid-mcp-server-id")),
   fields: z.array(mcpServerFields).optional(),
   populate: z.array(mcpServerPopulate).optional(),
 });

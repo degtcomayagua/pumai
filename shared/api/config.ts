@@ -1,15 +1,15 @@
-import { IConfig } from "../models/config";
+import { Config } from "../../generated/prisma/client";
 
 import { z } from "zod";
 import { updateConfigSchema } from "../schemas/config";
 
 export interface GetConfigResponseData {
   status: "success" | "internal-error";
-  config?: IConfig;
+  config?: Config;
 }
 
 export type UpdateConfigRequestBody = z.infer<typeof updateConfigSchema>;
 export type UpdateResponseData =
-  | { status: "success"; config: IConfig }
+  | { status: "success"; config: Config }
   | { status: "not-found" }
   | { status: "internal-error" };

@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { zObjectId } from "."
-
 const fieldsEnum = z.enum([
   "_id",
   "date",
@@ -35,7 +33,7 @@ export const listSchema = z.object({
 })
 
 export const getSchema = z.object({
-  logIds: z.array(zObjectId).min(1).max(100),
+  logIds: z.array(z.cuid("invalid-log-id")).min(1).max(100),
   fields: z.array(fieldsEnum).optional(),
   populate: z.array(z.string()).optional(),
 });

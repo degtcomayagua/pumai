@@ -1,4 +1,4 @@
-import type { IRAGDocument } from "../models/rag-document";
+import { RAGDocument } from "../../generated/prisma/client";
 import { ResponseStatus } from ".";
 import { z } from "zod";
 
@@ -22,31 +22,31 @@ export type ListRequestBody = z.infer<typeof listSchema>;
 // Response types
 export interface GetResponseData {
   status: ResponseStatus;
-  ragDocuments?: IRAGDocument[];
+  ragDocuments?: RAGDocument[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  ragDocuments?: IRAGDocument[];
+  ragDocuments?: RAGDocument[];
   totalRagDocuments?: number;
 }
 
 export interface DeleteResponseData {
   status: ResponseStatus | "rag-document-not-found";
-  ragDocument?: IRAGDocument;
+  ragDocument?: RAGDocument;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "rag-document-not-found";
-  ragDocument?: IRAGDocument;
+  ragDocument?: RAGDocument;
 }
 
 export interface CreateResponseData {
   status: ResponseStatus;
-  ragDocument?: IRAGDocument;
+  ragDocument?: RAGDocument;
 }
 
 export interface UpdateResponseData {
   status: ResponseStatus | "rag-document-not-found";
-  ragDocument?: IRAGDocument;
+  ragDocument?: RAGDocument;
 }

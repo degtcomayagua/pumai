@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zObjectId, zObjectIdWithMessage, turnIntoUndefinedIfEmpty } from ".";
+import { turnIntoUndefinedIfEmpty } from ".";
 
 const createSchema = z.object({
   email: z.email("invalid-email"),
@@ -8,17 +8,17 @@ const createSchema = z.object({
     .string()
     .min(8, "password-too-short")
     .max(256, "password-too-long"),
-  roleId: zObjectIdWithMessage("role-required"),
+  roleId: z.cuid("invalid-role-id"),
   notify: z.boolean().optional(),
   locale: z.enum(["en", "de", "fr", "es"], "invalid-locale").optional(),
 });
 
 const deleteSchema = z.object({
-  accountId: zObjectId,
+  accountId: z.cuid("invalid-account-id"),
 });
 
 const updateSchema = z.object({
-  accountId: zObjectId,
+  accountId: z.cuid("invalid-account-id"),
   name: z
     .string()
     .min(2, "name-too-short")
@@ -34,13 +34,13 @@ const updateSchema = z.object({
       { message: "password-optional" },
     ),
   ),
-  roleId: zObjectId.optional(),
+  roleId: z.cuid("invalid-role-id").optional(),
   notify: z.boolean().optional(),
   disableTwoFactor: z.boolean().optional(),
 });
 
 const getSchema = z.object({
-  accountIds: z.array(zObjectId),
+  accountIds: z.array(z.cuid("invalid-account-id")),
   fields: z
     .array(
       z.enum(
@@ -56,7 +56,7 @@ const listSchema = z.object({
   page: z.number().nonnegative("page-too-low"),
   filters: z
     .object({
-      role: zObjectId.optional(),
+      role: z.cuid("invalid-role-id").optional(),
     })
     .optional(),
   search: z

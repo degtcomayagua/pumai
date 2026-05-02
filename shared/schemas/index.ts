@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-export const zObjectId = z.string().length(24, "invalid-object-id");
-
 export const zObjectIdWithMessage = (message: string) =>
   z.string().refine((val) => val.length == 24, {
     message,

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { zObjectId } from ".";
 
 // Shared fields
 const nameSchema = z
@@ -23,7 +22,7 @@ const createSchema = z.object({
 
 // Update (cannot update `isSystemRole`)
 const updateSchema = z.object({
-  roleId: zObjectId,
+  roleId: z.cuid("invalid-role-id"),
   name: nameSchema.optional(),
   description: descSchema,
   level: levelSchema.optional(),
@@ -33,17 +32,17 @@ const updateSchema = z.object({
 
 // Delete
 const deleteSchema = z.object({
-  roleId: zObjectId,
+  roleId: z.cuid("invalid-role-id"),
 });
 
 // Restore
 const restoreSchema = z.object({
-  roleId: zObjectId,
+  roleId: z.cuid("invalid-role-id"),
 });
 
 // Get
 const getSchema = z.object({
-  roleIds: z.array(zObjectId),
+  roleIds: z.array(z.cuid()),
   fields: z
     .array(
       z.enum(

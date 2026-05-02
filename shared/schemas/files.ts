@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { zObjectId } from ".";
 
 const deleteFileSchema = z.object({
-	fileId: zObjectId,
+	fileId: z.cuid("invalid-file-id"),
 });
 
 const uploadFileSchema = z.object({
@@ -23,4 +22,4 @@ const uploadFileSchema = z.object({
 	size: z.number().min(1, "file-size-too-small"),
 });
 
-export { zObjectId, deleteFileSchema, uploadFileSchema };
+export { deleteFileSchema, uploadFileSchema };

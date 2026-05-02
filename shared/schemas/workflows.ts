@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { metadataFields, metadataPopulateFields, zObjectId } from ".";
+import { metadataFields, metadataPopulateFields } from ".";
 
 // Shared
 const workflowFields = z.enum(
@@ -35,7 +35,7 @@ const createSchema = z.object({
     .max(1000, "description-too-long")
     .trim(),
 
-  url: z.string().url("invalid-url").trim(),
+  url: z.url("invalid-url").trim(),
 
   protocol: z.enum(["webhook", "websocket"], {
     message: "invalid-protocol",
@@ -47,7 +47,7 @@ const createSchema = z.object({
 
   isRestricted: z.boolean().default(false),
 
-  allowedRoles: z.array(zObjectId).default([]),
+  allowedRoles: z.array(z.cuid("invalid-role-id")).default([]),
 
   isActive: z.boolean().default(true),
 
@@ -81,22 +81,22 @@ const createSchema = z.object({
 
 // Update
 const updateSchema = z
-  .object({ workflowId: zObjectId })
+  .object({ workflowId: z.cuid("invalid-workflow-id") })
   .merge(createSchema.partial());
 
 // Delete
 const deleteSchema = z.object({
-  workflowId: zObjectId,
+  workflowId: z.cuid("invalid-workflow-id"),
 });
 
 // Restore
 const restoreSchema = z.object({
-  workflowId: zObjectId,
+  workflowId: z.cuid("invalid-workflow-id"),
 });
 
 // Get
 const getSchema = z.object({
-  workflowIds: z.array(zObjectId),
+  workflowIds: z.array(z.cuid("invalid-workflow-id")),
   fields: z.array(workflowFields).optional(),
   populate: z.array(workflowPopulate).optional(),
 });

@@ -1,4 +1,4 @@
-import type { IWorkflow } from "../models/workflow";
+import { Workflow } from "../../generated/prisma/client";
 import { ResponseStatus } from ".";
 import { z } from "zod";
 
@@ -22,31 +22,31 @@ export type ListRequestBody = z.infer<typeof listSchema>;
 // Response types
 export interface GetResponseData {
   status: ResponseStatus;
-  workflows?: IWorkflow[];
+  workflows?: Workflow[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  workflows?: IWorkflow[];
+  workflows?: Workflow[];
   totalWorkflows?: number;
 }
 
 export interface CreateResponseData {
   status: ResponseStatus;
-  workflow?: IWorkflow;
+  workflow?: Workflow;
 }
 
 export interface UpdateResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: IWorkflow;
+  workflow?: Workflow;
 }
 
 export interface DeleteResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: IWorkflow;
+  workflow?: Workflow;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: IWorkflow;
+  workflow?: Workflow;
 }
