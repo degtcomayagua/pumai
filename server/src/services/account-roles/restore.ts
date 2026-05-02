@@ -1,77 +1,114 @@
-import mongoose from "mongoose";
-import AccountRoleModel from "../../models/AccountRole";
-import LoggingService from "../../services/logging";
-import retry from "async-retry";
 import { performance } from "perf_hooks";
-import { IAccount } from "../../../../shared/models/account";
-import { IAccountRole } from "../../../../shared/models/account-role";
+import retry from "async-retry";
+
+import prismaClient from "../../config/prisma";
+
+import LoggingService from "../../services/logging";
+
+import {
+  Account,
+  AccountRole,
+} from "../../../../generated/prisma/client";
 
 type RestoreAccountRoleOptions = {
-  session?: mongoose.ClientSession;
   traceId?: string;
-  adminAccount?: IAccount;
+  userAccount?: Account;
 };
 
+/**
+ * AccountRoleNotFoundError indicates the requested account role was not found or not eligible for restore.
+ */
 export class AccountRoleNotFoundError extends Error {
   retryable = false;
+  /** @param message Error message */
   constructor(message: string) {
     super(message);
     this.name = "AccountRoleNotFoundError";
   }
 }
 
+/**
+ * Restore a previously-deleted account role by clearing metadata.deleted and appending an updateHistory entry.
+ * @param roleId Role id (string)
+ * @param options traceId and userAccount
+ * @returns restored IAccountRole
+ */
 export async function restoreAccountRole(
   roleId: string,
   options: RestoreAccountRoleOptions = {},
-): Promise<IAccountRole> {
+): Promise<AccountRole> {
   const startTime = performance.now();
-  const adminAccount = options.adminAccount;
+  const userAccount = options.userAccount;
+  const now = new Date();
 
-  let session = options.session;
-  let sessionCreatedWithinService = false;
+  // Find the role where metadata.deleted != false (preserve original behavior)
+  const existingRole = await prismaClient.accountRole.findFirst({
+    where: {
+      id: roleId,
+      metadata: {
+        // metadata.deleted !== false
+        deleted: { not: false },
+      },
+    },
+    include: {
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
+    },
+  });
 
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    sessionCreatedWithinService = true;
+  if (!existingRole) {
+    throw new AccountRoleNotFoundError(
+      "Account role not found or already restored",
+    );
   }
 
+  const accountId = userAccount?.id;
+
+  // Build change record using the original external-facing keys
+  const changes = {
+    "metadata.deleted": false,
+    "metadata.deletedAt": null,
+    "metadata.deletedByTerminal": null,
+    "metadata.deletedBy": null,
+  };
+
   try {
-    const role = await AccountRoleModel.findOne({
-      _id: roleId,
-      "metadata.deleted": { $ne: false },
-    }).session(session);
-
-    if (!role) {
-      throw new AccountRoleNotFoundError(
-        "Account role not found or already restored",
-      );
-    }
-
-    const now = new Date();
-
-    const updateHistoryEntry = {
-      updatedAt: now,
-      updatedBy: adminAccount?._id ?? undefined,
-      changes: {
-        "metadata.deleted": false,
-        "metadata.deletedAt": undefined,
-        "metadata.deletedByTerminal": undefined,
-        "metadata.deletedBy": undefined,
+    // Update metadata first and append updateHistory entry
+    await prismaClient.metadata.update({
+      where: { id: existingRole.metadataId! },
+      data: {
+        deleted: false,
+        deletedAt: null,
+        // deletedById cleared
+        deletedById: null,
+        updatedAt: now,
+        updatedById: accountId,
+        updateHistory: {
+          create: {
+            updatedAt: now,
+            updatedById: accountId,
+            changes,
+            // If the update history model expects an accountId or similar, Prisma will map relations.
+            // No explicit accountId provided here since it may not exist on role update history.
+          },
+        },
       },
-    };
+    });
 
-    role.metadata.deleted = false;
-    role.metadata.deletedAt = undefined;
-    role.metadata.deletedByTerminal = undefined;
-    role.metadata.deletedBy = undefined;
-
-    role.metadata.updatedAt = now;
-    role.metadata.updatedBy = adminAccount?._id ?? undefined;
-
-    (role.metadata.updateHistory ?? []).push(updateHistoryEntry);
-
-    await role.save({ session });
+    // Re-fetch the role with metadata and updateHistory for return value
+    const updatedRole = await prismaClient.accountRole.findUnique({
+      where: { id: roleId },
+      include: {
+        metadata: {
+          include: {
+            updateHistory: true,
+          },
+        },
+      },
+    });
 
     const durationMs = Number((performance.now() - startTime).toFixed(3));
 
@@ -81,39 +118,40 @@ export async function restoreAccountRole(
       message: "Account role restored",
       traceId: options.traceId,
       details: {
-        roleId: role._id.toString(),
-        name: role.name,
+        accountRoleId: String(roleId),
+        name: updatedRole?.name,
       },
       duration: durationMs,
       _references: {
         accountRoleId: "AccountRole",
       },
-      metadata: {
-        createdAt: now,
-        createdBy: adminAccount?._id,
-        documentVersion: role.metadata.documentVersion || 1,
-      },
     });
 
-    if (sessionCreatedWithinService) {
-      await session.commitTransaction();
-      session.endSession();
+    if (!updatedRole) {
+      // This should be unlikely; treat as not found to match domain semantics
+      throw new AccountRoleNotFoundError(
+        "Account role not found after restore",
+      );
     }
 
-    return role;
-  } catch (err) {
-    if (sessionCreatedWithinService) {
-      await session.abortTransaction();
-      session.endSession();
-    }
+    return updatedRole;
+  } catch (err: any) {
+    // Re-throw after (no transaction-management here per migration rules)
     throw err;
   }
 }
 
+/**
+
+* Wrapper that retries restoreAccountRole on retryable errors, bails on not-found.
+* @param roleId Role id
+* @param options Restore options
+* @returns restored IAccountRole
+  */
 export async function restoreAccountRoleWithRetry(
   roleId: string,
   options: RestoreAccountRoleOptions = {},
-): Promise<IAccountRole> {
+): Promise<AccountRole> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
@@ -121,6 +159,7 @@ export async function restoreAccountRoleWithRetry(
         return await restoreAccountRole(roleId, options);
       } catch (error: any) {
         if (error instanceof AccountRoleNotFoundError) {
+          // Non-retryable: bail out of retry loop
           bail(error);
         }
 
@@ -130,7 +169,7 @@ export async function restoreAccountRoleWithRetry(
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
           message: `Retryable error during account role restore (attempt ${attempt})`,
-          details: { error: error.message, stack: error.stack },
+          details: { error: error?.message, stack: error?.stack },
         });
 
         throw error;

@@ -1,21 +1,28 @@
 import bcrypt from "bcrypt";
-import mongoose from "mongoose";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
+import {
+  Prisma,
+  MetadataSource,
+  MetadataStatus,
+  Account,
+} from "../../../../generated/prisma/client";
 
-import AccountsModel from "../../models/Account";
+import prismaClient from "../../config/prisma";
 import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../shared/models/account";
-import { DeepPartial } from "../../../../shared/types/custom";
 
 type UpdateUserOptions = {
-  session?: mongoose.ClientSession;
   traceId?: string;
-  adminAccount?: IAccount;
+  adminAccount?: Account;
 };
 
-interface UpdateUserParameters extends DeepPartial<IAccount> {
+interface UpdateUserParameters {
   accountId: string;
+  email?: string;
+  name?: string;
+  roleId?: number;
+  campus?: Account["campus"];
+  password?: string;
 }
 
 export class EmailInUseError extends Error {
@@ -37,159 +44,122 @@ export class AccountNotFoundError extends Error {
 export async function updateUserAccount(
   params: UpdateUserParameters,
   options: UpdateUserOptions = {},
-): Promise<IAccount> {
+): Promise<Account> {
   const startTime = performance.now();
+  const adminAccountId = options.adminAccount?.id;
 
-  let session = options.session;
-  let sessionCreatedWithinService = false;
+  const existing = await prismaClient.account.findUnique({
+    where: { id: params.accountId },
+    include: { metadata: { include: { updateHistory: true } } },
+  });
 
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    sessionCreatedWithinService = true;
+  if (!existing) throw new AccountNotFoundError();
+
+  const now = new Date();
+  const changes: Record<string, any> = {};
+  const updatePayload: any = {};
+
+  if (typeof params.email !== "undefined") {
+    const emailLower = params.email.toLowerCase();
+    const conflict = await prismaClient.account.findFirst({
+      where: { email: emailLower, NOT: { id: params.accountId } },
+    });
+    if (conflict) throw new EmailInUseError();
+    updatePayload.email = emailLower;
+    changes["email"] = emailLower;
+  }
+
+  if (typeof params.name !== "undefined") {
+    updatePayload.name = params.name;
+    changes["name"] = params.name;
+  }
+
+  if (typeof params.roleId !== "undefined") {
+    const roleIdNum = params.roleId === null ? null : Number(params.roleId);
+    if (roleIdNum !== null && Number.isNaN(roleIdNum)) {
+      throw new Error("Invalid role id");
+    }
+    updatePayload.role = { connect: { id: roleIdNum } };
+    changes["roleId"] = roleIdNum;
+  }
+
+  if (typeof params.campus !== "undefined") {
+    updatePayload.campus = params.campus;
+    changes["campus"] = params.campus;
+  }
+
+  if (typeof params.password !== "undefined") {
+    const hashed = await bcrypt.hash(params.password, 10);
+    updatePayload.password = hashed;
+    changes["preferences.security.password"] = "[REDACTED]";
+  }
+
+  const historyEntry = {
+    updatedAt: now,
+    updatedById: adminAccountId,
+    changes,
+    accountId: adminAccountId,
+  };
+
+  const metadataUpdatePayload: any = {
+    updatedAt: now,
+    updatedById: adminAccountId ?? null,
+    updateHistory: { create: historyEntry },
+  };
+
+  if (existing.metadata) {
+    updatePayload.metadata = { update: metadataUpdatePayload };
+  } else {
+    updatePayload.metadata = {
+      create: {
+        documentVersion: 1,
+        createdAt: now,
+        createdById: adminAccountId,
+        updatedAt: now,
+        updatedById: adminAccountId,
+        deleted: false,
+        deletedAt: null,
+        deletedById: null,
+        status: MetadataStatus.active,
+        source: MetadataSource.manual,
+        notes: "",
+        tags: [],
+        updateHistory: { create: historyEntry },
+      },
+    };
   }
 
   try {
-    const { accountId, data, email, profile, preferences } = params;
-    const adminAccount = options.adminAccount;
-
-    const account = await AccountsModel.findById(accountId).session(session);
-    if (!account) throw new AccountNotFoundError();
-
-    const accountUpdatedBy = adminAccount || account;
-
-    const now = new Date();
-    const changes: Record<string, any> = {};
-
-    if (email) {
-      if (email.value) {
-        const exists = await AccountsModel.exists({
-          _id: { $ne: accountId },
-          "email.value": email.value.toLowerCase(),
-        });
-        if (exists) throw new EmailInUseError();
-        account.email.value = email.value.toLowerCase();
-        account.email.lastChanged = now;
-        account.email.verified = false;
-        changes["email"] = email.value.toLowerCase();
-      }
-      if (email.verified) {
-        account.email.verified = email.verified;
-        changes["email.verified"] = email.verified;
-      }
-      if (email.verificationToken) {
-        account.email.verificationToken = email.verificationToken;
-        changes["email.verificationToken"] = email.verificationToken;
-      }
-      if (email.verificationTokenExpires) {
-        account.email.verificationTokenExpires = email.verificationTokenExpires;
-        changes["email.verificationTokenExpires"] =
-          email.verificationTokenExpires;
-      }
-    }
-
-    if (profile) {
-      if (profile.name) {
-        account.profile.name = profile.name;
-        changes["profile.name"] = profile.name;
-      }
-    }
-
-    if (data) {
-      if (data.role) {
-        account.data.role = data.role;
-        changes["data.role"] = data.role;
-      }
-    }
-
-    if (preferences) {
-      if (preferences.security) {
-        if (
-          preferences.security.tfaSecret &&
-          preferences.security.tfaSecret !== undefined
-        ) {
-          account.preferences.security.tfaSecret =
-            preferences.security.tfaSecret == ""
-              ? null
-              : preferences.security.tfaSecret;
-          changes["preferences.security.tfaSecret"] =
-            preferences.security.tfaSecret == ""
-              ? null
-              : preferences.security.tfaSecret;
-        }
-        if (preferences.security.password) {
-          account.preferences.security.password = await bcrypt.hash(
-            preferences.security.password,
-            10,
-          );
-          account.preferences.security.lastPasswordChange = new Date();
-          changes["preferences.security.password"] = "[REDACTED]";
-        }
-        if (preferences.security.forgotPasswordToken) {
-          account.preferences.security.forgotPasswordToken =
-            preferences.security.forgotPasswordToken == ""
-              ? null
-              : preferences.security.forgotPasswordToken;
-          changes["preferences.security.forgotPasswordToken"] =
-            preferences.security.forgotPasswordToken == ""
-              ? null
-              : preferences.security.forgotPasswordToken;
-        }
-
-        if (preferences.security.forgotPasswordTokenExpires) {
-          account.preferences.security.forgotPasswordTokenExpires =
-            preferences.security.forgotPasswordTokenExpires;
-          changes["preferences.security.forgotPasswordTokenExpires"] =
-            preferences.security.forgotPasswordTokenExpires;
-        }
-      }
-    }
-
-    account.metadata.updatedAt = now;
-    account.metadata.updatedBy = accountUpdatedBy._id;
-    account.metadata.updateHistory = account.metadata.updateHistory || [];
-    account.metadata.updateHistory.push({
-      updatedAt: now,
-      updatedBy: accountUpdatedBy._id,
-      changes,
+    const updated = await prismaClient.account.update({
+      where: { id: params.accountId },
+      data: updatePayload,
+      include: { metadata: { include: { updateHistory: true } } },
     });
-
-    await account.save({ session });
-
-    const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
       source: "services:accounts:update",
       level: "important",
       message: "Admin updated user account",
       traceId: options.traceId,
-      duration,
+      duration: Number((performance.now() - startTime).toFixed(3)),
       details: {
-        accountId: account._id.toString(),
-        updatedBy: accountUpdatedBy._id.toString(),
+        accountId: String(updated.id),
+        updatedBy: adminAccountId != null ? String(adminAccountId) : undefined,
       },
       _references: {
         accountId: "Account",
         updatedBy: "Account",
       },
-      metadata: {
-        createdAt: now,
-        updateHistory: [],
-        createdBy: accountUpdatedBy._id,
-        documentVersion: account.metadata.documentVersion || 1,
-      },
     });
 
-    if (sessionCreatedWithinService) {
-      await session.commitTransaction();
-      session.endSession();
-    }
-
-    return account;
-  } catch (err) {
-    if (sessionCreatedWithinService) {
-      await session.abortTransaction();
-      session.endSession();
+    return updated;
+  } catch (err: any) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002" &&
+      (err.meta as any)?.target?.includes?.("emailValue")
+    ) {
+      throw new EmailInUseError();
     }
     throw err;
   }
@@ -198,14 +168,17 @@ export async function updateUserAccount(
 export async function updateUserAccountWithRetry(
   params: UpdateUserParameters,
   options: UpdateUserOptions = {},
-): Promise<IAccount> {
+): Promise<Account> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
         return await updateUserAccount(params, options);
       } catch (err: any) {
-        if (err.message === "not-found" || err instanceof EmailInUseError) {
+        if (
+          err instanceof AccountNotFoundError ||
+          err instanceof EmailInUseError
+        ) {
           bail(err);
         }
 
@@ -216,19 +189,14 @@ export async function updateUserAccountWithRetry(
           duration: Number((performance.now() - startTime).toFixed(3)),
           message: `Retryable error during account update (attempt ${attempt})`,
           details: {
-            error: err.message,
-            stack: err.stack,
+            error: err?.message,
+            stack: err?.stack,
           },
         });
 
         throw err;
       }
     },
-    {
-      retries: 3,
-      minTimeout: 1000,
-      maxTimeout: 5000,
-      factor: 2,
-    },
+    { retries: 3, minTimeout: 1000, maxTimeout: 5000, factor: 2 },
   );
 }

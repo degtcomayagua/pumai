@@ -1,8 +1,7 @@
-import mongoose from "mongoose";
 import { IMetadata } from "../schemas/metadata";
 
 export type ILog = {
-	_id: mongoose.Types.ObjectId;
+	id: string;
 	date: Date;
 	source: string;
 	level: "info" | "warning" | "error" | "critical" | "debug" | "important";

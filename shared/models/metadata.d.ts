@@ -2,6 +2,7 @@ import { IAccount } from "../models/account";
 // import { ITerminal } from "../models/terminal";
 
 export type IMetadata = {
+  id: string;
   documentVersion?: number; // Version of the document schema
   syncVersion?: number; // Version for synchronization purposes
 

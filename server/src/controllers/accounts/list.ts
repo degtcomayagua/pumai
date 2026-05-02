@@ -1,73 +1,139 @@
 import { Request, Response, NextFunction } from "express";
+import { Prisma } from "../../../generated/prisma/client";
 import * as AccountsAPITypes from "../../../../shared/api/accounts";
-
-import AccountsModel from "../../models/Account";
+import prismaClient from "../../config/prisma";
 import { IAccount } from "../../../../shared/models/account";
-
 import LoggingService from "../../services/logging";
+
+/**
+ * Builds Prisma query args
+ */
+const buildQueryArgs = (
+  fields?: string[],
+  populate?: string[],
+): {
+  select?: Prisma.AccountSelect;
+  include?: Prisma.AccountInclude;
+} => {
+  const hasFields = Array.isArray(fields) && fields.length > 0;
+  const hasPopulate = Array.isArray(populate) && populate.length > 0;
+
+  if (hasFields) {
+    const select: Prisma.AccountSelect = {
+      id: true,
+    };
+
+    for (const field of fields!) {
+      if (field === "role" || field === "metadata") continue;
+      (select as any)[field] = true;
+    }
+
+    if (hasPopulate) {
+      for (const relation of populate!) {
+        if (relation === "role") {
+          select.role = true;
+        }
+        if (relation === "metadata") {
+          select.metadata = true;
+        }
+      }
+    }
+
+    return { select };
+  }
+
+  if (hasPopulate) {
+    const include: Prisma.AccountInclude = {};
+
+    for (const relation of populate!) {
+      if (relation === "role") include.role = true;
+      if (relation === "metadata") include.metadata = true;
+    }
+
+    return { include };
+  }
+
+  return {};
+};
 
 const handler = async (
   req: Request<{}, {}, AccountsAPITypes.ListRequestBody>,
   res: Response<AccountsAPITypes.ListResponseData>,
   _next: NextFunction,
 ) => {
+  const start = performance.now();
   const { page, count, filters, fields, populate, search, includeDeleted } =
     req.body;
   const adminAccount = req.user as IAccount;
 
   try {
-    let queryFilters: Record<string, any> = {};
+    const where: Prisma.AccountWhereInput = {};
 
     if (search && search.query.length > 0 && search.searchIn.length > 0) {
-      const searchRegex = new RegExp(search.query, "i");
-      queryFilters = {
-        ...queryFilters,
-        $or: search.searchIn.map((field) => ({
-          [field]: searchRegex,
-        })),
-      };
+      where.OR = search.searchIn.map((field) => ({
+        [field]: {
+          contains: search.query,
+        },
+      })) as Prisma.AccountWhereInput[];
     }
 
     if (filters) {
       if (filters.role) {
-        queryFilters = {
-          ...queryFilters,
-          "data.role": filters.role,
-        };
+        where.roleId = filters.role;
+      }
+      if (filters.campus) {
+        where.campus = filters.campus as any;
       }
     }
 
     if (!includeDeleted) {
-      queryFilters["metadata.deleted"] = { $ne: true };
+      where.metadata = {
+        deleted: false,
+      };
     }
-
-    let cursor = AccountsModel.find(queryFilters)
-      .skip(page * count)
-      .limit(count)
-      .sort({ "metadata.createdAt": -1 });
-
-    if (fields?.length) {
-      cursor = cursor.select(fields.join(" "));
-    }
-
-    // Conditionally populate specified relations
-    if (Array.isArray(populate)) {
-      for (const relation of populate) {
-        cursor = cursor.populate(relation);
-      }
-    }
+    const queryArgs = buildQueryArgs(fields, populate);
 
     const [accounts, totalAccounts] = await Promise.all([
-      cursor.lean().exec(),
-      AccountsModel.countDocuments(queryFilters),
+      prismaClient.account.findMany({
+        where,
+        skip: page * count,
+        take: count,
+        orderBy: {
+          metadata: {
+            createdAt: "desc",
+          },
+        },
+        ...queryArgs,
+      }),
+      prismaClient.account.count({ where }),
     ]);
+
+    const duration = performance.now() - start;
+
+    LoggingService.log({
+      source: "api:accounts:list",
+      level: "info",
+      traceId: req.traceId,
+      message: "Accounts listed successfully",
+      duration,
+      _references: {
+        adminAccountId: adminAccount?.id?.toString?.(),
+      },
+      metadata: {
+        createdBy: adminAccount?.id,
+        createdAt: new Date(),
+      },
+    });
 
     res.status(200).json({
       status: "success",
-      accounts,
+      accounts: accounts as unknown as IAccount[],
       totalAccounts,
     });
   } catch (error: unknown) {
+    const duration = performance.now() - start;
+    console.log(error);
+
     if (error instanceof Error) {
       LoggingService.log({
         source: "api:accounts:list",
@@ -75,8 +141,12 @@ const handler = async (
         traceId: req.traceId,
         message: "Unexpected error during account listing",
         details: { error: error.message, stack: error.stack },
+        duration,
+        _references: {
+          adminAccountId: adminAccount?.id?.toString?.(),
+        },
         metadata: {
-          createdBy: adminAccount?._id,
+          createdBy: adminAccount?.id,
           createdAt: new Date(),
         },
       });

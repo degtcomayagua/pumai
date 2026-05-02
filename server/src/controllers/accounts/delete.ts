@@ -1,10 +1,8 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 import * as AccountsAPITypes from "../../../../shared/api/accounts";
 
 import { IAccount } from "../../../../shared/models/account";
-import { IAccountRole } from "../../../../shared/models/account-role";
-import AccountModel from "../../models/Account";
+import prismaClient from "../../config/prisma";
 
 import LoggingService from "../../services/logging";
 import {
@@ -20,26 +18,36 @@ const handler = async (
   res: Response<AccountsAPITypes.DeleteResponseData>,
   _next: NextFunction,
 ) => {
-  const session = await mongoose.startSession();
   const adminAccount = req.user as IAccount;
   const { accountId } = req.body;
 
   try {
-    session.startTransaction();
+    const adminId = adminAccount.id;
 
-    if (adminAccount._id.toString() === accountId)
+    if (adminId === accountId) {
       throw new CannotDeleteSelfError("Cannot delete your own account");
+    }
 
-    const accountToBeDeleted = await AccountModel.findById(
-      new mongoose.Types.ObjectId(accountId),
-    )
-      .populate("data.role", "level")
-      .select("data.role");
-    if (!accountToBeDeleted)
+    const accountToBeDeleted = await prismaClient.account.findUnique({
+      where: { id: accountId },
+      include: {
+        role: {
+          select: { level: true },
+        },
+      },
+    });
+
+    if (!accountToBeDeleted) {
       throw new AccountNotFoundError("Account not found");
+    }
+
+    const targetRoleLevel = accountToBeDeleted.role?.level;
+    const adminRoleLevel = adminAccount.role?.level;
+
     if (
-      (accountToBeDeleted.data.role as IAccountRole).level <=
-      (adminAccount.data.role as IAccountRole).level
+      typeof targetRoleLevel === "number" &&
+      typeof adminRoleLevel === "number" &&
+      targetRoleLevel <= adminRoleLevel
     ) {
       throw new APIError<AccountsAPITypes.DeleteResponseData["status"]>(
         "cannot-delete-due-to-role-level",
@@ -48,17 +56,12 @@ const handler = async (
     }
 
     await deleteUserAccountWithRetry(accountId, {
-      session,
-      adminAccount,
+      userAccount: adminAccount,
       traceId: req.traceId,
     });
 
-    await session.commitTransaction();
-
     res.status(200).json({ status: "success" });
   } catch (error: unknown) {
-    await session.abortTransaction();
-
     if (error instanceof APIError) {
       res.status(error.httpStatus).send({ status: error.status });
       return;
@@ -75,7 +78,7 @@ const handler = async (
           traceId: req.traceId,
         },
         metadata: {
-          createdBy: adminAccount?._id,
+          createdBy: (adminAccount as any)?._id,
           createdAt: new Date(),
         },
       });
@@ -83,8 +86,6 @@ const handler = async (
 
     res.status(500).json({ status: "internal-error" });
     return;
-  } finally {
-    await session.endSession();
   }
 };
 

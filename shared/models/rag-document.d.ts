@@ -8,7 +8,7 @@ import {
 } from "./index";
 
 export interface IRAGDocument {
-  _id: string; // database internal ID
+  id: string;
   title: string;
   category: DocumentCategory;
 

@@ -24,7 +24,9 @@
   "dependencies": {
     "@chroma-core/ollama": "^0.1.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@prisma/adapter-mariadb": "^7.8.0",
     "@qdrant/js-client-rest": "^1.17.0",
+    "@quixo3/prisma-session-store": "^3.1.19",
     "@reduxjs/toolkit": "^2.9.1",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/nitro-v2-vite-plugin": "^1.132.31",
@@ -94,6 +96,7 @@
     "jsdom": "^27.0.0",
     "module-alias": "^2.2.3",
     "nodemon": "^3.1.11",
+    "prisma": "^7.8.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.7",
     "vitest": "^3.0.5",

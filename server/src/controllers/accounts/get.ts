@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import * as AccountsAPITypes from "../../../../shared/api/accounts";
 
-import AccountsModel from "../../models/Account";
 import { IAccount } from "../../../../shared/models/account";
+import prismaClient from "../../config/prisma";
 
 import LoggingService from "../../services/logging";
 
@@ -15,25 +15,23 @@ const handler = async (
   const adminAccount = req.user as IAccount;
 
   try {
-    const projection = fields?.reduce(
-      (acc, field) => {
-        acc[field] = 1;
-        return acc;
-      },
-      {} as Record<string, 1>,
-    );
+    const select = fields?.reduce<Record<string, boolean>>((acc, field) => {
+      acc[field] = true;
+      return acc;
+    }, {});
 
-    const accounts = await AccountsModel.find(
-      {
-        _id: { $in: accountIds },
-        deleted: false,
+    const accounts = await prismaClient.account.findMany({
+      where: {
+        id: { in: accountIds },
+        metadata: { deleted: false },
       },
-      projection,
-    );
+      ...(select ? { select } : {}),
+    });
 
     res.status(200).send({
       status: "success",
-      accounts,
+      accounts:
+        accounts as unknown as AccountsAPITypes.GetResponseData["accounts"],
     });
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -51,7 +49,7 @@ const handler = async (
           accountIds: "Account",
         },
         metadata: {
-          createdBy: adminAccount?._id,
+          createdBy: (adminAccount as any)?._id,
           createdAt: new Date(),
         },
       });

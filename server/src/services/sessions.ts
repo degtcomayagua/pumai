@@ -5,16 +5,13 @@ import { Express } from "express";
 import passport from "passport";
 import passportLocal from "passport-local";
 import session from "express-session";
-
-import LoggingService from "./logging";
+import { PrismaSessionStore } from "@quixo3/prisma-session-store";
 
 import bcrypt from "bcrypt";
-import speakeasy from "speakeasy";
-import MongoStore from "connect-mongo";
 
-import AccountsModel from "../models/Account";
+import LoggingService from "./logging";
+import prismaClient from "../config/prisma";
 
-import type { IAccount } from "../../../shared/models/account";
 class SessionManager {
   authStrategies: { [key: string]: passportLocal.Strategy };
   private instance: SessionManager | null = null;
@@ -29,10 +26,10 @@ class SessionManager {
       sameSite: "lax",
       httpOnly: false,
     },
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI as string,
-      collectionName: process.env.SESSION_COLLECTION_NAME as string,
-      dbName: process.env.DATABASE_NAME as string,
+    store: new PrismaSessionStore(prismaClient as any, {
+      checkPeriod: 2 * 60 * 1000, // Prune expired sessions every 2 minutes
+      dbRecordIdIsSessionId: true,
+      dbRecordIdFunction: undefined,
     }),
   });
 
@@ -47,69 +44,34 @@ class SessionManager {
         },
         async (req: any, _email: string, _password: string, done) => {
           try {
-            const account: IAccount | null = await AccountsModel.findOne({
-              "email.value": req.body.email.toLowerCase(),
-              deleted: false,
+            const account = await prismaClient.account.findFirst({
+              where: {
+                email: req.body.email.toLowerCase(),
+              },
             });
+
             if (!account)
               return done(null, false, {
                 message: "invalid-credentials",
               });
 
             // Verify password and TFA code
-            if (
-              !bcrypt.compareSync(
-                req.body.password,
-                account.preferences.security.password,
-              )
-            )
+            if (!bcrypt.compareSync(req.body.password, account.password))
               return done(null, false, {
                 message: "invalid-credentials",
               });
 
             // Check the account status
-            if (account.data.status == "locked")
+            if (account.status == "locked")
               return done(null, false, {
                 message: "account-locked",
               });
-
-            if (
-              account.preferences.security.tfaSecret !== null &&
-              account.preferences.security.tfaSecret !== "" &&
-              account.preferences.security.tfaSecret !== undefined
-            ) {
-              if (!req.body.tfaCode)
-                return done(null, false, {
-                  message: "requires-tfa",
-                });
-
-              const verified = speakeasy.totp.verify({
-                secret: account.preferences.security.tfaSecret as string,
-                encoding: "base32",
-                token: req.body.tfaCode,
-              });
-
-              if (verified == false)
-                return done(null, false, {
-                  message: "invalid-tfa-code",
-                });
-            }
 
             // Log the account creation
             LoggingService.log({
               message: `Account login for ${req.body.email}`,
               level: "info",
               source: "application",
-              traceId: req.traceId,
-              duration: 0,
-              metadata: {
-              },
-              details: {
-                accountId: account._id,
-              },
-              _references: {
-                accountId: "Account",
-              },
             });
 
             return done(null, account);
@@ -135,15 +97,16 @@ class SessionManager {
 
   private loadStrategies() {
     passport.serializeUser((user: any, done) => {
-      done(null, user._id);
+      done(null, user.id);
     });
 
     passport.deserializeUser(async (id: string, done) => {
-      const user = await AccountsModel.findOne({
-        _id: id,
-        "metadata.deleted": { $ne: true },
-        // "metadata.status": { $ne: false },
-      }).populate("data.role");
+      const user = await prismaClient.account.findUnique({
+        where: { id: id },
+        include: {
+          role: true,
+        },
+      });
       if (user == null) {
         done(null, null);
         return;

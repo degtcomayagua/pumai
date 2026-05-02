@@ -1,5 +1,3 @@
-// types/mcp-server.ts
-import mongoose from "mongoose";
 import { IMetadata } from "../schemas/metadata";
 import { IAccountRole } from "./account-role";
 
@@ -12,7 +10,7 @@ export type IMCPServerAuth =
   | { type: "basic"; username: string; password: string };
 
 export type IMCPServer = {
-  _id: mongoose.Types.ObjectId;
+  id: string;
   name: string;
   description: string;
   url: string;

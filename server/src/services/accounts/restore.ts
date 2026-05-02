@@ -1,144 +1,138 @@
-import mongoose from "mongoose";
-import AccountModel from "../../models/Account";
-import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../shared/models/account";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
+import prismaClient from "../../config/prisma";
+import LoggingService from "../../services/logging";
+
+import { Account } from "../../../../generated/prisma/client";
+
 type RestoreAccountOptions = {
-	session?: mongoose.ClientSession;
-	traceId?: string;
-	adminAccount?: IAccount;
+  traceId?: string;
+  adminAccount?: Account;
 };
 
 export class AccountNotFoundError extends Error {
-	retryable = false;
-	constructor(message: string) {
-		super(message);
-		this.name = "AccountNotFoundError";
-	}
+  retryable = false;
+  constructor(message: string) {
+    super(message);
+    this.name = "AccountNotFoundError";
+  }
 }
 
 export async function restoreAccount(
-	accountId: string,
-	options: RestoreAccountOptions = {},
-): Promise<IAccount> {
-	const startTime = performance.now();
-	const adminAccount = options.adminAccount ?? undefined;
+  accountId: string,
+  options: RestoreAccountOptions = {},
+): Promise<Account> {
+  const startTime = performance.now();
+  const restoredById = options.adminAccount ? options.adminAccount.id : null;
 
-	let session = options.session;
-	let sessionCreatedWithinService = false;
+  // load the account with metadata so we can confirm it's deleted and append history
+  const account = await prismaClient.account.findUnique({
+    where: { id: accountId },
+    include: {
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
+    },
+  });
 
-	if (!session) {
-		session = await mongoose.startSession();
-		session.startTransaction();
-		sessionCreatedWithinService = true;
-	}
+  if (!account || !account.metadata || account.metadata.deleted !== true) {
+    throw new AccountNotFoundError("Account not found or already restored");
+  }
 
-	try {
-		const account = await AccountModel.findOne({
-			_id: accountId,
-			"metadata.deleted": { $ne: false },
-		}).session(session);
+  const now = new Date();
 
-		if (!account) {
-			throw new AccountNotFoundError("Account not found or already restored");
-		}
+  const updateHistoryChanges = {
+    "metadata.deleted": false,
+    "metadata.deletedAt": null,
+    "metadata.deletedById": null,
+  };
 
-		const now = new Date();
+  // Perform the update: unset deleted flags and push a metadata updateHistory entry
+  const updated = await prismaClient.account.update({
+    where: { id: accountId },
+    data: {
+      metadata: {
+        update: {
+          deleted: false,
+          deletedAt: null,
+          deletedById: null,
+          updatedAt: now,
+          updatedById: restoredById,
+          updateHistory: {
+            create: {
+              updatedAt: now,
+              updatedById: restoredById,
+              changes: updateHistoryChanges,
+            },
+          },
+        },
+      },
+    },
+    include: {
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
+    },
+  });
 
-		const updateHistoryEntry = {
-			updatedAt: now,
-			updatedBy: adminAccount?._id ?? undefined,
-			changes: {
-				"metadata.deleted": false,
-				"metadata.deletedAt": undefined,
-				"metadata.deletedByTerminal": undefined,
-				"metadata.deletedBy": undefined,
-			},
-		};
+  const durationMs = Number((performance.now() - startTime).toFixed(3));
 
-		account.metadata.deleted = false;
-		account.metadata.deletedAt = undefined;
+  LoggingService.log({
+    source: "services:accounts:restore",
+    level: "important",
+    message: "Account restored",
+    traceId: options.traceId,
+    details: {
+      accountId: String(updated.id),
+      restoredBy: restoredById !== null ? String(restoredById) : undefined,
+      name: updated.name,
+    },
+    duration: durationMs,
+    _references: {
+      accountId: "Account",
+      restoredBy: restoredById !== null ? "Account" : undefined,
+    },
+  });
 
-		account.metadata.updatedAt = now;
-		(account.metadata.updateHistory ?? []).push(updateHistoryEntry);
-
-		account.metadata.deletedBy = undefined;
-		if (adminAccount) {
-			account.metadata.updatedBy = adminAccount._id;
-		}
-
-		await account.save({ session });
-
-		const durationMs = Number((performance.now() - startTime).toFixed(3));
-
-		LoggingService.log({
-			source: "services:accounts:restore",
-			level: "important",
-			message: "Account restored",
-			traceId: options.traceId,
-			details: {
-				accountId: account._id.toString(),
-				name: account.profile.name,
-			},
-			duration: durationMs,
-			_references: {
-				accountId: "Account",
-			},
-			metadata: {
-				createdAt: now,
-				createdBy: adminAccount ? adminAccount._id : undefined,
-				documentVersion: account.metadata.documentVersion || 1,
-			},
-		});
-
-		if (sessionCreatedWithinService) {
-			await session.commitTransaction();
-			session.endSession();
-		}
-
-		return account;
-	} catch (err) {
-		if (sessionCreatedWithinService) {
-			await session.abortTransaction();
-			session.endSession();
-		}
-		throw err;
-	}
+  return updated;
 }
 
 export async function restoreAccountWithRetry(
-	accountId: string,
-	options: RestoreAccountOptions = {},
-): Promise<IAccount> {
-	return retry(
-		async (bail, attempt) => {
-			const startTime = performance.now();
-			try {
-				return await restoreAccount(accountId, options);
-			} catch (error: any) {
-				if (error instanceof AccountNotFoundError) {
-					bail(error);
-				}
+  accountId: string,
+  options: RestoreAccountOptions = {},
+): Promise<Account> {
+  return retry(
+    async (bail, attempt) => {
+      const startTime = performance.now();
+      try {
+        return await restoreAccount(accountId, options);
+      } catch (error: any) {
+        if (error instanceof AccountNotFoundError) {
+          bail(error);
+        }
 
-				LoggingService.log({
-					source: "services:accounts:restore:retry",
-					level: "warning",
-					traceId: options.traceId,
-					duration: Number((performance.now() - startTime).toFixed(3)),
-					message: `Retryable error during account restore (attempt ${attempt})`,
-					details: { error: error.message, stack: error.stack },
-				});
+        LoggingService.log({
+          source: "services:accounts:restore:retry",
+          level: "warning",
+          traceId: options.traceId,
+          duration: Number((performance.now() - startTime).toFixed(3)),
+          message: `Retryable error during account restore (attempt ${attempt})`,
+          details: { error: error?.message, stack: error?.stack },
+        });
 
-				throw error;
-			}
-		},
-		{
-			retries: 3,
-			minTimeout: 1000,
-			maxTimeout: 5000,
-			factor: 2,
-		},
-	);
+        throw error;
+      }
+    },
+    {
+      retries: 3,
+      minTimeout: 1000,
+      maxTimeout: 5000,
+      factor: 2,
+    },
+  );
 }

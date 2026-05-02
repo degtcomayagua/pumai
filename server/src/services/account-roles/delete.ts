@@ -1,15 +1,19 @@
-import mongoose from "mongoose";
-import AccountRoleModel from "../../models/AccountRole";
-import LoggingService from "../../services/logging";
-import { IAccount } from "../../../../shared/models/account";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
-import { IAccountRole } from "../../../../shared/models/account-role";
+
+import prismaClient from "../../config/prisma";
+import {
+  Account,
+  AccountRole,
+  MetadataSource,
+  MetadataStatus,
+} from "../../../../generated/prisma/client";
+
+import LoggingService from "../../services/logging";
 
 type DeleteAccountRoleOptions = {
-  session?: mongoose.ClientSession;
   traceId?: string;
-  adminAccount?: IAccount;
+  adminAccount?: Account;
 };
 
 export class AccountRoleNotFoundError extends Error {
@@ -23,98 +27,124 @@ export class AccountRoleNotFoundError extends Error {
 export async function deleteAccountRole(
   roleId: string,
   options: DeleteAccountRoleOptions = {},
-): Promise<IAccountRole> {
+): Promise<AccountRole> {
   const startTime = performance.now();
-  const adminAccount = options.adminAccount;
+  const accountId = options.adminAccount?.id;
 
-  let session = options.session;
-  let sessionCreatedHere = false;
-
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    sessionCreatedHere = true;
-  }
-
-  try {
-    const accountRole = await AccountRoleModel.findOne({
-      _id: roleId,
-      "metadata.deleted": { $ne: true },
-    }).session(session);
-
-    if (!accountRole) {
-      throw new AccountRoleNotFoundError(
-        "Account role not found or already deleted",
-      );
-    }
-
-    const now = new Date();
-
-    const updateHistoryEntry = {
-      updatedAt: now,
-      updatedBy: adminAccount?._id,
-      changes: {
-        "metadata.deleted": true,
-        "metadata.deletedAt": now,
-        ...(adminAccount && {
-          "metadata.deletedBy": adminAccount._id,
-        }),
-      },
-    };
-
-    accountRole.metadata.deleted = true;
-    accountRole.metadata.deletedAt = now;
-
-    accountRole.metadata.updatedAt = now;
-    accountRole.metadata.updatedBy = adminAccount?._id;
-    accountRole.metadata.deletedBy = adminAccount?._id;
-
-    (accountRole.metadata.updateHistory ?? []).push(updateHistoryEntry);
-
-    await accountRole.save({ session });
-
-    const durationMs = Number((performance.now() - startTime).toFixed(3));
-
-    LoggingService.log({
-      source: "services:account-roles:delete",
-      level: "important",
-      message: "Account role deleted",
-      traceId: options.traceId,
-      details: {
-        accountRoleId: accountRole._id.toString(),
-        name: accountRole.name,
-        ...(adminAccount && { deletedBy: adminAccount._id.toString() }),
-      },
-      duration: durationMs,
-      _references: {
-        accountRoleId: "AccountRole",
-      },
+  // fetch role with metadata + updateHistory
+  const existingRole = await prismaClient.accountRole.findUnique({
+    where: { id: roleId },
+    include: {
       metadata: {
-        createdAt: now,
-        createdBy: adminAccount?._id,
-        documentVersion: accountRole.metadata.documentVersion || 1,
+        include: {
+          updateHistory: true,
+        },
       },
-    });
+    },
+  });
 
-    if (sessionCreatedHere) {
-      await session.commitTransaction();
-      await session.endSession();
-    }
-
-    return accountRole;
-  } catch (err) {
-    if (sessionCreatedHere) {
-      await session.abortTransaction();
-      await session.endSession();
-    }
-    throw err;
+  if (!existingRole) {
+    throw new AccountRoleNotFoundError(
+      "Account role not found or already deleted",
+    );
   }
+
+  // if metadata.deleted === true then treat as not found/already deleted
+  if (existingRole.metadata?.deleted === true) {
+    throw new AccountRoleNotFoundError(
+      "Account role not found or already deleted",
+    );
+  }
+
+  const now = new Date();
+
+  const updateHistoryChanges = {
+    "metadata.deleted": true,
+    "metadata.deletedAt": now,
+    ...(accountId !== null ? { "metadata.deletedById": accountId } : {}),
+  };
+
+  // perform update: set metadata.deleted = true and append updateHistory
+  const updatedRole = await prismaClient.accountRole.update({
+    where: { id: roleId },
+    data: {
+      metadata: existingRole.metadata
+        ? {
+          update: {
+            deleted: true,
+            deletedAt: now,
+            deletedById: accountId,
+            updatedAt: now,
+            updatedById: accountId,
+            updateHistory: {
+              create: {
+                updatedAt: now,
+                updatedById: accountId,
+                changes: updateHistoryChanges,
+              },
+            },
+          },
+        }
+        : {
+          // if no metadata exists, create one and mark deleted
+          create: {
+            documentVersion: 1,
+            createdAt: now,
+            createdById: accountId,
+            updatedAt: now,
+            updatedById: accountId,
+            deleted: true,
+            deletedAt: now,
+            deletedById: accountId,
+            status: MetadataStatus.active,
+            source: MetadataSource.manual,
+            notes: "",
+            tags: "",
+            updateHistory: {
+              create: {
+                updatedAt: now,
+                updatedById: accountId,
+                changes: updateHistoryChanges,
+                accountId: accountId,
+              },
+            },
+          },
+        },
+    },
+    include: {
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
+    },
+  });
+
+  const durationMs = Number((performance.now() - startTime).toFixed(3));
+
+  LoggingService.log({
+    source: "services:account-roles:delete",
+    level: "important",
+    message: "Account role deleted",
+    traceId: options.traceId,
+    details: {
+      accountRoleId: String(updatedRole.id),
+      name: updatedRole.name,
+      ...(accountId !== null ? { deletedBy: String(accountId) } : {}),
+    },
+    duration: durationMs,
+    _references: {
+      accountRoleId: "AccountRole",
+    },
+  });
+
+  return updatedRole;
 }
 
 export async function deleteAccountRoleWithRetry(
   roleId: string,
   options: DeleteAccountRoleOptions = {},
-): Promise<IAccountRole> {
+): Promise<AccountRole> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
@@ -132,8 +162,8 @@ export async function deleteAccountRoleWithRetry(
           duration: Number((performance.now() - startTime).toFixed(3)),
           message: `Retryable error during account role deletion (attempt ${attempt})`,
           details: {
-            error: error.message,
-            stack: error.stack,
+            error: error?.message,
+            stack: error?.stack,
           },
         });
 

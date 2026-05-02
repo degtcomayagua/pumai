@@ -1,7 +1,6 @@
 import passport from "passport";
 
 import LoggingService from "../../services/logging";
-import EmailService from "../../services/email";
 
 import AccountUtils from "../../utils/accounts";
 
@@ -34,21 +33,6 @@ const handler = (
             if (err) {
               next(err);
               return;
-            }
-
-            // Alert the user of their successful login
-            if (
-              process.env.NODE_ENV === "production" &&
-              process.env.EMAIL_SERVICE_ENABLED === "true"
-            ) {
-              //const emailToSend = await EmailService.getEmailHTMLTemplate(
-              //	"email-verification",
-              //	account.preferences.general.language,
-              //	{
-              //		emailVerificationURL: `${process.env.WEB_URL}/verify-email?token=${verificationToken}`,
-              //	},
-              //);
-              //EmailService.sendEmail(newEmail, "Verify your email", emailToSend);
             }
 
             res.status(200).send({

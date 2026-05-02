@@ -3,7 +3,7 @@ import { IMetadata } from "./metadata";
 import { CampusCode } from "./";
 
 export type IAccount = {
-  _id: string;
+  id: string;
   data: {
     lastLogin: Date;
     role: IAccountRole | string;

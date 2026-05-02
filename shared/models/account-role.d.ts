@@ -2,7 +2,7 @@ import { IMetadata } from "../types/metadata";
 import { Permission } from "../types/permissions";
 
 export type IAccountRole = {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   isSystemRole: boolean;

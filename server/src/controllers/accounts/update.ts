@@ -1,100 +1,89 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
-import * as AccountAPITypes from "../../../../shared/api/accounts";
 
+import * as AccountAPITypes from "../../../../shared/api/accounts";
 import { IAccount } from "../../../../shared/models/account";
 import { IAccountRole } from "../../../../shared/models/account-role";
 
 import { updateUserAccountWithRetry } from "../../services/accounts/update";
-
 import LoggingService from "../../services/logging";
-import AccountRoleModel from "../../models/AccountRole";
-
 import { APIError } from "../../errors/api";
+
+import { Prisma } from "../../../generated/prisma/client";
+import prismaClient from "../../config/prisma";
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.UpdateRequestBody>,
   res: Response<AccountAPITypes.UpdateResponseData>,
   _next: NextFunction,
 ) => {
-  const session = await mongoose.startSession();
+  const start = performance.now();
   const adminAccount = req.user as IAccount;
-  const { accountId, email, notify, name, roleId, password, disableTwoFactor } =
-    req.body;
+  const { accountId, email, name, roleId, password, campus } = req.body;
 
   try {
-    session.startTransaction();
+    // Validate the role exists and admin can assign it
+    const role = await prismaClient.accountRole.findUnique({
+      where: { id: roleId },
+      include: { metadata: true },
+    });
 
-    const role = await AccountRoleModel.findById(
-      new mongoose.Types.ObjectId(roleId),
-    );
-    if (!role)
+    if (!role || role.metadata?.deleted) {
       throw new APIError<AccountAPITypes.UpdateResponseData["status"]>(
         "role-not-found",
         404,
       );
-    if (role.level <= (adminAccount.data.role as IAccountRole).level) {
+    }
+
+    const adminRoleLevel = (adminAccount.role as IAccountRole)?.level ?? 0;
+    if (role.level <= adminRoleLevel) {
       throw new APIError<AccountAPITypes.UpdateResponseData["status"]>(
         "role-cannot-be-assigned",
         401,
       );
     }
 
-    const account = await updateUserAccountWithRetry(
+    const updatedAccount = await updateUserAccountWithRetry(
       {
         accountId,
-        data: {
-          role: role._id.toString(),
-        },
-        email: {
-          value: email?.toLowerCase(),
-        },
-        profile: {
-          name: name?.trim(),
-        },
-        preferences: {
-          security: {
-            password,
-            ...(disableTwoFactor ? { tfaSecret: null } : {}),
-          },
-        },
+        roleId: roleId,
+        campus: campus,
+        email: email?.toLowerCase(),
+        name: name?.trim(),
+        securityPassword: password,
       },
       {
-        session,
         traceId: req.traceId,
         adminAccount,
       },
     );
 
-    await session.commitTransaction();
-    await session.endSession();
+    const duration = performance.now() - start;
+    LoggingService.log({
+      source: "api:accounts:update",
+      level: "info",
+      message: "User account updated successfully",
+      traceId: req.traceId,
+      duration,
+      _references: {
+        accountId: updatedAccount.id.toString(),
+        adminAccountId: adminAccount?.id?.toString?.(),
+      },
+      metadata: {
+        createdBy: adminAccount?.id,
+        createdAt: new Date(),
+      },
+    });
 
-    if (
-      notify &&
-      process.env.NODE_ENV === "production" &&
-      process.env.EMAIL_SERVICE_ENABLED === "true"
-    ) {
-      // Notify user about the update via email
-      //await EmailService.send({
-      //	to: account.email.value,
-      //	subject: "Your account has been updated",
-      //	template: "account-updated",
-      //	context: {
-      //		name: account.name,
-      //		email: account.email.value,
-      //		role: account.roleId,
-      //		avatarUrl: account.avatarUrl,
-      //	},
-      //});
-    }
-
-    res.status(200).json({ status: "success", account });
-  } catch (error: any) {
-    await session.abortTransaction();
-    await session.endSession();
+    res.status(200).json({
+      status: "success",
+      account: updatedAccount as unknown as IAccount,
+    });
+  } catch (error: unknown) {
+    const duration = performance.now() - start;
+    console.log(error);
 
     if (error instanceof APIError) {
-      res.status(error.httpStatus).send({ status: error.status });
+      res.status(error.httpStatus).json({ status: error.status });
       return;
     }
 
@@ -103,13 +92,14 @@ const handler = async (
       level: "error",
       message: "Unexpected error during user update",
       traceId: req.traceId,
+      duration,
       details: {
-        error: error?.message,
-        stack: error?.stack,
-        accountId: accountId,
+        error: (error as any)?.message,
+        stack: (error as any)?.stack,
+        accountId,
       },
       metadata: {
-        createdBy: adminAccount?._id,
+        createdBy: adminAccount?.id,
         createdAt: new Date(),
       },
       _references: {

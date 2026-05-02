@@ -176,7 +176,6 @@ class LoggingService {
     level: LogLevel;
     source: string;
     duration?: number; // Optional duration in milliseconds
-    metadata?: IMetadata;
     traceId?: string; // Optional trace ID for correlation
   }): Promise<boolean> {
     try {
@@ -198,7 +197,6 @@ class LoggingService {
         source: log.source,
         duration: log.duration,
         _references: log._references ? resolvedReferences : undefined,
-        metadata: log.metadata,
       });
       await newLog.save();
       return true;

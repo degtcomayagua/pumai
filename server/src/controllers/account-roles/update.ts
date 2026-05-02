@@ -1,8 +1,7 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
-
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
 import { IAccount } from "../../../../shared/models/account";
+import { IAccountRole } from "../../../../shared/models/account-role";
 
 import LoggingService from "../../services/logging";
 import {
@@ -10,16 +9,23 @@ import {
   updateAccountRole,
 } from "../../services/account-roles/update";
 
-import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../shared/models/account-role";
+import { Prisma } from "../../../../generated/prisma/client";
+import prismaClient from "../../config/prisma";
 
+/**
+ * Error thrown when an admin attempts to update a role
+ * below their own privilege level.
+ */
 class CannotUpdateRoleAtThisLevelError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "CannotCreateRoleAtThisLevelError";
+    this.name = "CannotUpdateRoleAtThisLevelError";
   }
 }
 
+/**
+ * Error thrown when the requested role level is already in use.
+ */
 class LevelInUseError extends Error {
   constructor(message: string) {
     super(message);
@@ -32,30 +38,38 @@ const handler = async (
   res: Response<AccountRolesAPITypes.UpdateResponseData>,
   _next: NextFunction,
 ) => {
-  const session = await mongoose.startSession();
+  const start = performance.now();
   const { roleId, name, description, level, requiresTwoFactor, permissions } =
     req.body;
   const adminAccount = req.user as IAccount;
 
   try {
-    session.startTransaction();
-
-    // Validate that the level is unique and that the account can update roles at this level
     const adminAccountLevel =
-      (adminAccount.data.role as IAccountRole).level || 0;
-    if (level) {
-      if (level < adminAccountLevel)
-        throw new CannotUpdateRoleAtThisLevelError(
-          "Cannot create a role at this level or lower than your own.",
-        );
+      (adminAccount.role as IAccountRole | undefined)?.level ?? 0;
 
-      const existingRole = await AccountRoleModel.exists({
-        level,
-        _id: { $ne: roleId },
-        "metadata.deleted": { $ne: true },
+    if (level !== undefined && level !== null) {
+      if (level < adminAccountLevel) {
+        throw new CannotUpdateRoleAtThisLevelError(
+          "Cannot update a role at this level or lower than your own.",
+        );
+      }
+
+      const existingRole = await prismaClient.accountRole.findFirst({
+        where: {
+          level,
+          id: { not: roleId },
+          metadata: {
+            is: {
+              deleted: false,
+            },
+          },
+        },
+        select: { id: true },
       });
-      if (existingRole)
+
+      if (existingRole) {
         throw new LevelInUseError(`A role with level ${level} already exists.`);
+      }
     }
 
     const updatedRole = await updateAccountRole(
@@ -66,66 +80,81 @@ const handler = async (
         level,
         requiresTwoFactor,
         permissions,
-        // isSystemRole is deliberately not updateable
       },
       {
-        session,
         traceId: req.traceId,
-        adminAccount,
+        userAccount: adminAccount,
       },
     );
 
-    await session.commitTransaction();
+    const duration = performance.now() - start;
+    LoggingService.log({
+      source: "api:account-roles:update",
+      level: "info",
+      message: "Account role updated successfully",
+      traceId: req.traceId,
+      duration,
+      _references: {
+        adminAccountId: adminAccount?.id?.toString?.(),
+        accountRoleId: (updatedRole as any)?.id?.toString?.(),
+      },
+      metadata: {
+        createdAt: new Date(),
+        createdBy: adminAccount?.id,
+      },
+    });
 
     res.status(200).json({
       status: "success",
-      accountRole: updatedRole,
+      accountRole: updatedRole as unknown as IAccountRole,
     });
   } catch (error: unknown) {
-    await session.abortTransaction();
+    const duration = performance.now() - start;
 
     if (error instanceof AccountRoleNotFoundError) {
-      res.status(404).json({
-        status: "role-not-found",
-      });
+      res.status(404).json({ status: "role-not-found" });
+      return;
     }
 
     if (error instanceof LevelInUseError) {
-      res.status(409).json({
-        status: "level-in-use",
-      });
+      res.status(409).json({ status: "level-in-use" });
       return;
     }
 
     if (error instanceof CannotUpdateRoleAtThisLevelError) {
-      res.status(403).json({
-        status: "level-too-high",
-      });
+      res.status(403).json({ status: "level-too-high" });
       return;
     }
 
-    if (error instanceof Error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      LoggingService.log({
+        source: "api:account-roles:update",
+        level: "error",
+        message: "Prisma error during account role update",
+        traceId: req.traceId,
+        details: { code: error.code, meta: error.meta },
+        duration,
+        metadata: {
+          createdAt: new Date(),
+          createdBy: adminAccount?.id,
+        },
+      });
+    } else if (error instanceof Error) {
       LoggingService.log({
         source: "api:account-roles:update",
         level: "error",
         message: "Error during account role update",
         traceId: req.traceId,
-        details: {
-          error: error.message,
-          stack: error.stack,
-        },
+        details: { error: error.message, stack: error.stack },
+        duration,
         metadata: {
           createdAt: new Date(),
-          createdBy: adminAccount._id,
+          createdBy: adminAccount?.id,
         },
       });
     }
 
-    res.status(500).json({
-      status: "internal-error",
-    });
-  } finally {
-    await session.endSession();
+    res.status(500).json({ status: "internal-error" });
   }
 };
 

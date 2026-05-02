@@ -1,25 +1,28 @@
 import bcrypt from "bcrypt";
-import mongoose from "mongoose";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import AccountsModel from "../../models/Account";
-import { IAccount } from "../../../../shared/models/account";
+import prismaClient from "../../config/prisma";
+import {
+  MetadataSource,
+  MetadataStatus,
+  Account,
+  Prisma,
+} from "../../../../generated/prisma/client";
 
 import LoggingService from "../../services/logging";
 
 type CreateUserOptions = {
-  session?: mongoose.ClientSession;
   traceId?: string; // Unique identifier for tracing requests
-  adminAccount?: IAccount; // The account that is creating the user, if applicable
+  userAccount?: Account; // The account that is creating the user, if applicable
 };
 
 type CreateUserParameters = {
   name: string;
   email: string;
+  campus: Account["campus"];
   password: string;
   roleId: string;
-  locale?: "en" | "es" | "fr" | "de"; // Language for the welcome email and user interface
 };
 
 export class EmailInUseError extends Error {
@@ -33,64 +36,48 @@ export class EmailInUseError extends Error {
 export async function createUserAccount(
   parameters: CreateUserParameters,
   options: CreateUserOptions = {},
-): Promise<IAccount> {
+): Promise<Account> {
   const startTime = performance.now();
+  const { name, email, password, campus, roleId } = parameters;
 
-  let session = options.session;
-  let sessionCreatedWithinService = false;
-
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    sessionCreatedWithinService = true;
-  }
+  const now = new Date();
+  const createdById = options.userAccount?.id;
 
   try {
-    const adminAccount = options.adminAccount;
-    const { name, email, password, roleId } = parameters;
+    const saltRounds = 10;
+    const hashed = await bcrypt.hash(password, saltRounds);
 
-    const now = new Date();
-    const createdAccount = new AccountsModel({
-      email: {
-        value: email.toLowerCase(),
-      },
+    const metadata = await prismaClient.metadata.create({
       data: {
-        // We don't validate roleId here, Role Service should handle it before this point
-        role: roleId,
-      },
-      profile: {
-        name,
-      },
-      preferences: {
-        general: {
-          language: parameters.locale, // Default to English if not provided
-        },
-        security: {
-          password: await bcrypt.hash(password, 10),
-        },
-      },
-      metadata: {
-        documentVersion: 1, // Manually set version for new documents in this context
-        updateHistory: [],
+        documentVersion: 1,
         createdAt: now,
+        createdById: createdById ?? null,
         updatedAt: now,
+        updatedById: createdById ?? null,
+        deleted: false,
+        deletedAt: null,
+        deletedById: null,
+        status: MetadataStatus.active,
+        source: MetadataSource.manual,
+        notes: "",
+        tags: "",
       },
     });
-    const accountCreatedBy = adminAccount || createdAccount;
-    const updateHistoryEntry = {
-      updatedAt: now,
-      updatedBy: accountCreatedBy._id,
-      changes: {
-        email: email.toLowerCase(),
-        profile: { name },
-        role: roleId,
-      },
-    };
-    createdAccount.metadata.updateHistory!.push(updateHistoryEntry);
-    createdAccount.metadata.createdBy = accountCreatedBy._id;
-    createdAccount.metadata.updatedBy = accountCreatedBy._id;
 
-    await createdAccount.save({ session });
+    const account = await prismaClient.account.create({
+      data: {
+        name: name,
+        lastLogin: now,
+        roleId: roleId,
+        status: "active",
+        campus,
+        email: email.toLowerCase(),
+        emailLastChanged: now,
+        lastPasswordChange: now,
+        password: hashed,
+        metadataId: metadata.id, // assign foreign key
+      },
+    });
 
     LoggingService.log({
       source: "services:accounts:create",
@@ -98,37 +85,31 @@ export async function createUserAccount(
       message: "User account created successfully",
       traceId: options.traceId,
       details: {
-        accountId: createdAccount._id.toString(),
-        createdBy: accountCreatedBy._id.toString(),
-        roleId: roleId,
-        email: email,
-        name: name,
+        accountId: String((account as any).id),
+        createdBy: createdById ? String(createdById) : null,
+        roleId: String(roleId),
+        email,
+        name,
       },
       duration: Number((performance.now() - startTime).toFixed(3)),
       _references: {
         accountId: "Account",
         createdBy: "Account",
-        roleId: "Role",
-      },
-      metadata: {
-        createdAt: now,
-        updateHistory: [updateHistoryEntry],
-        createdBy: accountCreatedBy._id,
-        documentVersion: createdAccount.metadata.documentVersion || 1,
+        roleId: "AccountRole",
       },
     });
 
-    if (sessionCreatedWithinService) {
-      await session.commitTransaction();
-      session.endSession();
+    return account;
+  } catch (err: any) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      if ((err.meta as any)?.target?.includes?.("emailValue")) {
+        throw new EmailInUseError("Email already in use");
+      }
     }
 
-    return createdAccount;
-  } catch (err) {
-    if (sessionCreatedWithinService) {
-      await session.abortTransaction();
-      session.endSession();
-    }
     throw err;
   }
 }
@@ -137,7 +118,7 @@ export async function createUserAccount(
 export async function createUserAccountWithRetry(
   parameters: CreateUserParameters,
   options: CreateUserOptions = {},
-): Promise<IAccount> {
+): Promise<Account> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
@@ -155,8 +136,8 @@ export async function createUserAccountWithRetry(
           duration: Number((performance.now() - startTime).toFixed(3)),
           message: `Retryable error during account creation (attempt ${attempt})`,
           details: {
-            error: error.message,
-            stack: error.stack,
+            error: error?.message,
+            stack: error?.stack,
           },
         });
 

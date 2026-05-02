@@ -1,10 +1,14 @@
-import mongoose from "mongoose";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../shared/models/account-role";
-import { IAccount } from "../../../../shared/models/account";
+import prismaClient from "../../config/prisma";
+import {
+  Account,
+  AccountRole,
+  MetadataSource,
+  MetadataStatus,
+  Prisma,
+} from "../../../../generated/prisma/client";
 
 import LoggingService from "../../services/logging";
 
@@ -18,101 +22,115 @@ type CreateAccountRoleParameters = {
 };
 
 type CreateAccountRoleOptions = {
-  session?: mongoose.ClientSession;
   traceId?: string;
-  adminAccount?: IAccount;
+  userAccount?: Account;
 };
+
+export class AccountRoleExistsError extends Error {
+  retryable = false;
+  constructor(message = "role-name-in-use") {
+    super(message);
+    this.name = "AccountRoleExistsError";
+  }
+}
 
 export async function createAccountRole(
   params: CreateAccountRoleParameters,
   options: CreateAccountRoleOptions = {},
-): Promise<IAccountRole> {
+): Promise<AccountRole> {
   const startTime = performance.now();
 
-  let session = options.session;
-  let sessionCreatedHere = false;
+  const {
+    name,
+    description = "",
+    level,
+    isSystemRole = false,
+    requiresTwoFactor = false,
+    permissions = [],
+  } = params;
 
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    sessionCreatedHere = true;
-  }
+  const now = new Date();
+  const userAccount = options.userAccount;
 
   try {
-    const {
-      name,
-      description = "",
-      level,
-      isSystemRole = false,
-      requiresTwoFactor = false,
-      permissions = [],
-    } = params;
-    const adminAccount = options.adminAccount;
-    const now = new Date();
-
-    const role = new AccountRoleModel({
-      name,
-      description,
-      level,
-      isSystemRole,
-      requiresTwoFactor,
-      permissions,
-      metadata: {
+    // create metadata first
+    const metadata = await prismaClient.metadata.create({
+      data: {
         documentVersion: 1,
         createdAt: now,
-        createdBy: adminAccount?._id,
+        createdById: userAccount?.id ?? null,
         updatedAt: now,
-        updatedBy: adminAccount?._id,
-        updateHistory: [],
+        updatedById: userAccount?.id ?? null,
+        deleted: false,
+        deletedAt: null,
+        deletedById: null,
+        status: MetadataStatus.active,
+        source: MetadataSource.manual,
+        notes: "",
+        tags: "",
       },
     });
 
-    await role.save({ session });
+    // create account role referencing metadataId
+    const role = await prismaClient.accountRole.create({
+      data: {
+        name,
+        description,
+        level,
+        isSystemRole,
+        requiresTwoFactor,
+        permissions: permissions as any, // Prisma Json field
+        metadataId: metadata.id,
+      },
+    });
 
-    if (sessionCreatedHere) {
-      await session.commitTransaction();
-      await session.endSession();
-    }
+    const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
       source: "services:account-roles:create",
       level: "important",
       message: "Account role created successfully",
       traceId: options.traceId,
-      duration: Number((performance.now() - startTime).toFixed(3)),
+      duration,
       details: {
-        roleId: role._id.toString(),
+        accountRoleId: role.id,
         name,
       },
       _references: {
         accountRoleId: "AccountRole",
       },
-      metadata: {
-        createdBy: adminAccount?._id.toString(),
-        createdAt: now,
-      },
     });
 
     return role;
-  } catch (error) {
-    if (sessionCreatedHere) {
-      await session.abortTransaction();
-      await session.endSession();
+  } catch (err: any) {
+    // handle unique constraint on name (P2002)
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      if ((err.meta as any)?.target?.includes?.("name")) {
+        throw new AccountRoleExistsError();
+      }
     }
-    throw error;
+    throw err;
   }
 }
 
 export async function createAccountRoleWithRetry(
   params: CreateAccountRoleParameters,
   options: CreateAccountRoleOptions = {},
-): Promise<IAccountRole> {
+): Promise<AccountRole> {
   return retry(
-    async (_, attempt) => {
+    async (bail, attempt) => {
       const startTime = performance.now();
       try {
         return await createAccountRole(params, options);
       } catch (error: any) {
+        // non-retryable
+        if (error instanceof AccountRoleExistsError) {
+          bail(error);
+        }
+
         LoggingService.log({
           source: "services:account-roles:create:retry",
           level: "warning",
@@ -120,10 +138,11 @@ export async function createAccountRoleWithRetry(
           duration: Number((performance.now() - startTime).toFixed(3)),
           message: `Retryable error during account role creation (attempt ${attempt})`,
           details: {
-            error: error.message,
-            stack: error.stack,
+            error: error?.message,
+            stack: error?.stack,
           },
         });
+
         throw error;
       }
     },

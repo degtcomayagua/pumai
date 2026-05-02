@@ -1,41 +1,52 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
-
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
 import { IAccount } from "../../../../shared/models/account";
-
 import LoggingService from "../../services/logging";
 import {
   AccountRoleNotFoundError,
   deleteAccountRoleWithRetry,
 } from "../../services/account-roles/delete";
+import { Prisma } from "../../../../generated/prisma/client";
+import { IAccountRole } from "../../../../shared/models/account-role";
 
 const handler = async (
   req: Request<{}, {}, AccountRolesAPITypes.DeleteRequestBody>,
   res: Response<AccountRolesAPITypes.DeleteResponseData>,
   _next: NextFunction,
 ) => {
-  const session = await mongoose.startSession();
+  const start = performance.now();
   const { roleId } = req.body;
   const adminAccount = req.user as IAccount;
 
   try {
-    session.startTransaction();
-
     const deletedRole = await deleteAccountRoleWithRetry(roleId, {
-      session,
       traceId: req.traceId,
       adminAccount,
     });
 
-    await session.commitTransaction();
+    const duration = performance.now() - start;
+    LoggingService.log({
+      source: "api:account-roles:delete",
+      level: "info",
+      message: "Account role deleted successfully",
+      traceId: req.traceId,
+      duration,
+      _references: {
+        adminAccountId: adminAccount?.id?.toString?.(),
+        accountRoleId: (deletedRole as any)?.id?.toString?.(),
+      },
+      metadata: {
+        createdAt: new Date(),
+        createdBy: adminAccount?.id,
+      },
+    });
 
     res.status(200).json({
       status: "success",
-      accountRole: deletedRole,
+      accountRole: deletedRole as unknown as IAccountRole,
     });
   } catch (error: unknown) {
-    await session.abortTransaction();
+    const duration = performance.now() - start;
 
     if (error instanceof AccountRoleNotFoundError) {
       res.status(404).json({
@@ -44,7 +55,23 @@ const handler = async (
       return;
     }
 
-    if (error instanceof Error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      LoggingService.log({
+        source: "api:account-roles:delete",
+        level: "error",
+        message: "Prisma error during account role deletion",
+        traceId: req.traceId,
+        details: {
+          code: error.code,
+          meta: error.meta,
+        },
+        duration,
+        metadata: {
+          createdAt: new Date(),
+          createdBy: adminAccount?.id,
+        },
+      });
+    } else if (error instanceof Error) {
       LoggingService.log({
         source: "api:account-roles:delete",
         level: "error",
@@ -54,9 +81,10 @@ const handler = async (
           error: error.message,
           stack: error.stack,
         },
+        duration,
         metadata: {
           createdAt: new Date(),
-          createdBy: adminAccount._id,
+          createdBy: adminAccount?.id,
         },
       });
     }
@@ -64,8 +92,6 @@ const handler = async (
     res.status(500).json({
       status: "internal-error",
     });
-  } finally {
-    await session.endSession();
   }
 };
 

@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { IMetadata } from "../schemas/metadata";
 import { IAccountRole } from "./account-role";
 
@@ -13,7 +12,7 @@ export type IWorkflowAuth =
 export type WorkflowType = "n8n" | "custom"; // We are only using n8n for now, but we can add more types in the future if needed
 
 export type IWorkflow = {
-  _id: mongoose.Types.ObjectId;
+  _id: string; // database internal ID
   name: string;
   description: string;
   url: string;

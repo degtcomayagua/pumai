@@ -1,15 +1,18 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
+import { Prisma } from "../../../../generated/prisma/client";
 
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
 import { IAccount } from "../../../../shared/models/account";
+import { IAccountRole } from "../../../../shared/models/account-role";
 
 import LoggingService from "../../services/logging";
 import { createAccountRoleWithRetry } from "../../services/account-roles/create";
+import prismaClient from "../../config/prisma";
 
-import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../shared/models/account-role";
-
+/**
+ * Error thrown when an admin attempts to create a role
+ * at a level equal to or higher privilege than their own.
+ */
 class CannotCreateRoleAtThisLevelError extends Error {
   constructor(message: string) {
     super(message);
@@ -17,6 +20,9 @@ class CannotCreateRoleAtThisLevelError extends Error {
   }
 }
 
+/**
+ * Error thrown when a role level is already in use.
+ */
 class LevelInUseError extends Error {
   constructor(message: string) {
     super(message);
@@ -24,33 +30,58 @@ class LevelInUseError extends Error {
   }
 }
 
+/**
+ * Safely resolves a value into a numeric ID.
+ */
+const resolveNumericId = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
 const handler = async (
   req: Request<{}, {}, AccountRolesAPITypes.CreateRequestBody>,
   res: Response<AccountRolesAPITypes.CreateResponseData>,
   _next: NextFunction,
 ) => {
-  const session = await mongoose.startSession();
+  const start = performance.now();
   const { name, description, level } = req.body;
 
   const adminAccount = req.user as IAccount;
 
   try {
-    session.startTransaction();
-
-    // Validate that the level is unique and that the account can create roles at this level
     const adminAccountLevel =
-      (adminAccount.data.role as IAccountRole).level || 0;
-    if (level <= adminAccountLevel)
+      (adminAccount.data.role as IAccountRole | undefined)?.level ?? 0;
+    if (level <= adminAccountLevel) {
       throw new CannotCreateRoleAtThisLevelError(
         "Cannot create a role at this level or lower than your own.",
       );
+    }
 
-    const existingRole = await AccountRoleModel.exists({
-      level,
-      "metadata.deleted": { $ne: true },
+    if (adminAccountLevel === undefined) {
+      throw new CannotCreateRoleAtThisLevelError(
+        "Admin account does not have a valid role level.",
+      );
+    }
+
+    const existingRole = await prismaClient.accountRole.findFirst({
+      where: {
+        level,
+        metadata: {
+          is: {
+            deleted: false,
+          },
+        },
+      },
+      select: { id: true },
     });
-    if (existingRole)
+
+    if (existingRole) {
       throw new LevelInUseError(`A role with level ${level} already exists.`);
+    }
 
     const createdRole = await createAccountRoleWithRetry(
       {
@@ -62,21 +93,34 @@ const handler = async (
         permissions: [],
       },
       {
-        session,
-        adminAccount,
+        userAccount: adminAccount,
         traceId: req.traceId,
       },
     );
 
-    await session.commitTransaction();
+    const duration = performance.now() - start;
+
+    LoggingService.log({
+      source: "api:account-roles:create",
+      level: "info",
+      message: "Account role created successfully",
+      traceId: req.traceId,
+      duration,
+      _references: {
+        adminAccountId: adminAccount.id,
+        accountRoleId: createdRole._id,
+      },
+      metadata: {
+        createdAt: new Date(),
+        createdBy: adminAccount.id,
+      },
+    });
 
     res.status(201).json({
       status: "success",
-      accountRole: createdRole,
+      accountRole: createdRole as unknown as IAccountRole,
     });
   } catch (error: unknown) {
-    await session.abortTransaction();
-
     if (error instanceof LevelInUseError) {
       res.status(409).json({
         status: "level-in-use",
@@ -91,7 +135,22 @@ const handler = async (
       return;
     }
 
-    if (error instanceof Error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      LoggingService.log({
+        source: "api:account-roles:create",
+        level: "error",
+        message: "Prisma error during account role creation",
+        traceId: req.traceId,
+        details: {
+          code: error.code,
+          meta: error.meta,
+        },
+        metadata: {
+          createdAt: new Date(),
+          createdBy: resolveNumericId(adminAccount.id),
+        },
+      });
+    } else if (error instanceof Error) {
       LoggingService.log({
         source: "api:account-roles:create",
         level: "error",
@@ -103,15 +162,14 @@ const handler = async (
         },
         metadata: {
           createdAt: new Date(),
-          createdBy: adminAccount._id,
+          createdBy: resolveNumericId(adminAccount.id),
         },
       });
     }
+
     res.status(500).json({
       status: "internal-error",
     });
-  } finally {
-    await session.endSession();
   }
 };
 

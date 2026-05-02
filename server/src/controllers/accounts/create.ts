@@ -1,17 +1,12 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 
 import * as AccountsAPITypes from "../../../../shared/api/accounts";
 import { IAccount } from "../../../../shared/models/account";
 
 import LoggingService from "../../services/logging";
-import EmailService from "../../services/email";
 
+import prismaClient from "../../config/prisma";
 import { createUserAccountWithRetry } from "../../services/accounts/create";
-
-import AccountModel from "../../models/Account";
-import AccountRoleModel from "../../models/AccountRole";
-import { IAccountRole } from "../../../../shared/models/account-role";
 
 import { APIError } from "../../errors/api";
 
@@ -20,17 +15,19 @@ const handler = async (
   res: Response<AccountsAPITypes.CreateResponseData>,
   _next: NextFunction,
 ) => {
-  const session = await mongoose.startSession();
-  const { name, email, password, notify, roleId, locale } = req.body;
+  const { name, email, password, notify, roleId, locale, campus } = req.body;
   const adminAccount = req.user as IAccount;
 
   try {
-    session.startTransaction();
-
     // Check if the email is in use
-    const existingAccount = await AccountModel.exists({
-      "email.value": email.toLowerCase(),
-    }).session(session);
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingAccount = await prismaClient.account.findFirst({
+      where: {
+        emailValue: normalizedEmail,
+      },
+      select: { id: true },
+    });
+
     if (existingAccount) {
       throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
         "email-in-use",
@@ -39,38 +36,44 @@ const handler = async (
     }
 
     // Check if the role exists
-    const role = await AccountRoleModel.findById(
-      new mongoose.Types.ObjectId(roleId),
-    );
-    if (!role)
+    const role = await prismaClient.accountRole.findUnique({
+      where: { id: roleId },
+    });
+    if (!role) {
       throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
         "role-not-found",
         400,
       );
-    if (role.level <= (adminAccount.data.role as IAccountRole).level) {
+    }
+
+    const adminRoleLevel = adminAccount.role?.level;
+    if (typeof adminRoleLevel === "number" && role.level <= adminRoleLevel) {
       throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
         "role-cannot-be-assigned",
         400,
       );
+    } // Pass session explicitly to service
+    if (adminRoleLevel === undefined) {
+      throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
+        "internal-error", // Means something very bad happened with the admin account, but we don't want to leak details
+        500,
+      );
     }
 
-    // Pass session explicitly to service
     const createdAccount = await createUserAccountWithRetry(
       {
         name,
         email,
+        campus,
         password,
         roleId,
         locale,
       },
       {
-        session,
         traceId: req.traceId,
-        adminAccount,
+        userAccount: adminAccount,
       },
     );
-
-    await session.commitTransaction();
 
     if (notify) {
       if (
@@ -92,7 +95,6 @@ const handler = async (
       account: createdAccount,
     });
   } catch (error: unknown) {
-    await session.abortTransaction();
     if (error instanceof APIError) {
       res.status(error.httpStatus).send({ status: error.status });
       return;
@@ -109,7 +111,7 @@ const handler = async (
           stack: error.stack,
         },
         metadata: {
-          createdBy: adminAccount?._id,
+          createdBy: adminAccount?.id,
           createdAt: new Date(),
         },
       });
@@ -117,8 +119,6 @@ const handler = async (
         status: "internal-error",
       });
     }
-  } finally {
-    await session.endSession();
   }
 };
 
