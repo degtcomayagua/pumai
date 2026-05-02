@@ -1,62 +1,82 @@
-import { NextFunction, Request, Response } from "express";
-import * as AccountsAPITypes from "../../../../shared/api/accounts";
-
-import { IAccount } from "../../../../shared/models/account";
+import { Request, Response, NextFunction } from "express";
 import prismaClient from "../../config/prisma";
 
+import * as AccountAPITypes from "../../../../shared/api/accounts";
+
 import LoggingService from "../../services/logging";
+import { AccountInclude, AccountSelect } from "../../../../generated/prisma/models";
+
+import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma";
 
 const handler = async (
-  req: Request<{}, {}, AccountsAPITypes.GetRequestBody>,
-  res: Response<AccountsAPITypes.GetResponseData>,
+  req: Request<{}, {}, AccountAPITypes.GetRequestBody>,
+  res: Response<AccountAPITypes.GetResponseData>,
   _next: NextFunction,
 ) => {
-  const { accountIds, fields } = req.body;
-  const adminAccount = req.user as IAccount;
+  const start = performance.now();
+  const { accountIds, fields, populate } = req.body;
 
   try {
-    const select = fields?.reduce<Record<string, boolean>>((acc, field) => {
-      acc[field] = true;
-      return acc;
-    }, {});
+    let fieldsToSelect = getFieldsToSelect<AccountSelect>(fields, {
+      id: true,
+      name: true
+    })
+    const fieldsToPopulate = populate
+      ? getFieldsToPopulate<
+        AccountInclude,
+        NonNullable<AccountAPITypes.ListRequestBody["populate"]>
+      >(populate, {
+        "metadata.createdBy": ["id", "name"],
+        "metadata.updatedBy": ["id", "name"],
+        "metadata.deletedBy": ["id", "name"],
+        "role": ["id", "name", "level"],
+      })
+      : {};
+
 
     const accounts = await prismaClient.account.findMany({
       where: {
-        id: { in: accountIds },
-        metadata: { deleted: false },
+        id: {
+          in: accountIds,
+        },
+        metadata: {
+          is: {
+            deleted: false,
+          },
+        },
       },
-      ...(select ? { select } : {}),
+      select: {
+        ...fieldsToSelect,
+        ...fieldsToPopulate,
+      },
     });
 
-    res.status(200).send({
+    res.status(200).json({
       status: "success",
-      accounts:
-        accounts as unknown as AccountsAPITypes.GetResponseData["accounts"],
+      accounts: accounts,
     });
   } catch (error: unknown) {
+    console.log(error);
+    const duration = performance.now() - start;
+
     if (error instanceof Error) {
       LoggingService.log({
         source: "api:accounts:get",
         level: "error",
+        message: "Error during accounts retrieval",
         traceId: req.traceId,
-        message: "Unexpected error during user fetching",
+        duration,
         details: {
           error: error.message,
           stack: error.stack,
-          accountIds: req.body.accountIds?.join(", "),
-        },
-        _references: {
-          accountIds: "Account",
-        },
-        metadata: {
-          createdBy: (adminAccount as any)?._id,
-          createdAt: new Date(),
+          accountIds: accountIds,
         },
       });
     }
 
-    res.status(500).json({ status: "internal-error" });
-    return;
+    res.status(500).json({
+      status: "internal-error",
+    });
   }
 };
 

@@ -133,7 +133,7 @@ export async function restoreAccount(
   return restored;
 }
 
-export async function restoreAccountRoleWithRetry(
+export async function restoreAccountWithRetry(
   roleId: string,
   options: RestoreAccountOptions = {},
 ): Promise<Account> {

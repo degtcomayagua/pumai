@@ -1,5 +1,28 @@
 import { z } from "zod";
-import { turnIntoUndefinedIfEmpty } from ".";
+import {
+  metadataFields,
+  campuses,
+  metadataPopulateFields,
+  turnIntoUndefinedIfEmpty,
+} from ".";
+
+const populateFields = z.enum([...metadataPopulateFields, "role"]);
+const accountFields = z.enum(
+  [
+    "id",
+    "lastLogin",
+    "role",
+    "status",
+    "campus",
+    "email",
+    "emailVerified",
+    "emailLastChanged",
+    "name",
+    "lastPasswordChange",
+    ...metadataFields,
+  ],
+  "invalid-field",
+);
 
 const createSchema = z.object({
   email: z.email("invalid-email"),
@@ -9,8 +32,7 @@ const createSchema = z.object({
     .min(8, "password-too-short")
     .max(256, "password-too-long"),
   roleId: z.cuid("invalid-role-id"),
-  notify: z.boolean().optional(),
-  locale: z.enum(["en", "de", "fr", "es"], "invalid-locale").optional(),
+  campus: z.enum(campuses, "invalid-campus"),
 });
 
 const deleteSchema = z.object({
@@ -34,20 +56,18 @@ const updateSchema = z.object({
       { message: "password-optional" },
     ),
   ),
+  campus: z.enum(campuses, "invalid-campus"),
   roleId: z.cuid("invalid-role-id").optional(),
-  notify: z.boolean().optional(),
   disableTwoFactor: z.boolean().optional(),
 });
 
 const getSchema = z.object({
   accountIds: z.array(z.cuid("invalid-account-id")),
   fields: z
-    .array(
-      z.enum(
-        ["_id", "data", "email", "profile", "preferences", "metadata"],
-        "invalid-field",
-      ),
-    )
+    .array(accountFields, "invalid-field")
+    .optional(),
+  populate: z
+    .array(populateFields, "invalid-field")
     .optional(),
 });
 
@@ -69,14 +89,11 @@ const listSchema = z.object({
     .optional(),
   includeDeleted: z.boolean().optional(),
   fields: z
-    .array(
-      z.enum(
-        ["_id", "data", "email", "profile", "preferences", "metadata"],
-        "invalid-field",
-      ),
-    )
+    .array(accountFields, "invalid-field")
     .optional(),
-  populate: z.array(z.literal("data.role"), "invalid-populate-path").optional(),
+  populate: z
+    .array(populateFields, "invalid-field")
+    .optional(),
 });
 
 export { createSchema, deleteSchema, getSchema, updateSchema, listSchema };

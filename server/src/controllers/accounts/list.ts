@@ -1,73 +1,43 @@
 import { Request, Response, NextFunction } from "express";
-import { Prisma } from "../../../generated/prisma/client";
-import * as AccountsAPITypes from "../../../../shared/api/accounts";
+
+import { Prisma } from "../../../../generated/prisma/client";
+
+import * as AccountAPITypes from "../../../../shared/api/accounts";
+
 import prismaClient from "../../config/prisma";
-import { IAccount } from "../../../../shared/models/account";
+
 import LoggingService from "../../services/logging";
-
-/**
- * Builds Prisma query args
- */
-const buildQueryArgs = (
-  fields?: string[],
-  populate?: string[],
-): {
-  select?: Prisma.AccountSelect;
-  include?: Prisma.AccountInclude;
-} => {
-  const hasFields = Array.isArray(fields) && fields.length > 0;
-  const hasPopulate = Array.isArray(populate) && populate.length > 0;
-
-  if (hasFields) {
-    const select: Prisma.AccountSelect = {
-      id: true,
-    };
-
-    for (const field of fields!) {
-      if (field === "role" || field === "metadata") continue;
-      (select as any)[field] = true;
-    }
-
-    if (hasPopulate) {
-      for (const relation of populate!) {
-        if (relation === "role") {
-          select.role = true;
-        }
-        if (relation === "metadata") {
-          select.metadata = true;
-        }
-      }
-    }
-
-    return { select };
-  }
-
-  if (hasPopulate) {
-    const include: Prisma.AccountInclude = {};
-
-    for (const relation of populate!) {
-      if (relation === "role") include.role = true;
-      if (relation === "metadata") include.metadata = true;
-    }
-
-    return { include };
-  }
-
-  return {};
-};
+import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma";
+import {
+  AccountInclude,
+  AccountSelect,
+} from "../../../../generated/prisma/models";
 
 const handler = async (
-  req: Request<{}, {}, AccountsAPITypes.ListRequestBody>,
-  res: Response<AccountsAPITypes.ListResponseData>,
+  req: Request<{}, {}, AccountAPITypes.ListRequestBody>,
+  res: Response<AccountAPITypes.ListResponseData>,
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { page, count, filters, fields, populate, search, includeDeleted } =
-    req.body;
-  const adminAccount = req.user as IAccount;
+  const { page, count, fields, populate, search, includeDeleted } = req.body;
 
   try {
     const where: Prisma.AccountWhereInput = {};
+    const fieldsToSelect = getFieldsToSelect<AccountSelect>(fields, {
+      id: true,
+      name: true,
+    });
+    const fieldsToPopulate = populate
+      ? getFieldsToPopulate<
+        AccountInclude,
+        NonNullable<AccountAPITypes.ListRequestBody["populate"]>
+      >(populate, {
+        "metadata.createdBy": ["id", "name"],
+        "metadata.updatedBy": ["id", "name"],
+        "metadata.deletedBy": ["id", "name"],
+        "role": ["id", "name", "level"],
+      })
+      : {};
 
     if (search && search.query.length > 0 && search.searchIn.length > 0) {
       where.OR = search.searchIn.map((field) => ({
@@ -77,21 +47,15 @@ const handler = async (
       })) as Prisma.AccountWhereInput[];
     }
 
-    if (filters) {
-      if (filters.role) {
-        where.roleId = filters.role;
-      }
-      if (filters.campus) {
-        where.campus = filters.campus as any;
-      }
-    }
-
     if (!includeDeleted) {
       where.metadata = {
-        deleted: false,
+        is: {
+          deleted: {
+            not: true, // Could be undefined
+          },
+        },
       };
     }
-    const queryArgs = buildQueryArgs(fields, populate);
 
     const [accounts, totalAccounts] = await Promise.all([
       prismaClient.account.findMany({
@@ -99,40 +63,24 @@ const handler = async (
         skip: page * count,
         take: count,
         orderBy: {
-          metadata: {
-            createdAt: "desc",
-          },
+          name: "asc",
         },
-        ...queryArgs,
+        select: {
+          ...fieldsToSelect,
+          ...fieldsToPopulate,
+        },
       }),
       prismaClient.account.count({ where }),
     ]);
 
-    const duration = performance.now() - start;
-
-    LoggingService.log({
-      source: "api:accounts:list",
-      level: "info",
-      traceId: req.traceId,
-      message: "Accounts listed successfully",
-      duration,
-      _references: {
-        adminAccountId: adminAccount?.id?.toString?.(),
-      },
-      metadata: {
-        createdBy: adminAccount?.id,
-        createdAt: new Date(),
-      },
-    });
-
     res.status(200).json({
       status: "success",
-      accounts: accounts as unknown as IAccount[],
+      accounts,
       totalAccounts,
     });
   } catch (error: unknown) {
-    const duration = performance.now() - start;
     console.log(error);
+    const duration = performance.now() - start;
 
     if (error instanceof Error) {
       LoggingService.log({
@@ -142,13 +90,6 @@ const handler = async (
         message: "Unexpected error during account listing",
         details: { error: error.message, stack: error.stack },
         duration,
-        _references: {
-          adminAccountId: adminAccount?.id?.toString?.(),
-        },
-        metadata: {
-          createdBy: adminAccount?.id,
-          createdAt: new Date(),
-        },
       });
     }
 

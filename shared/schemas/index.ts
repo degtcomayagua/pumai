@@ -33,6 +33,18 @@ export const turnIntoNullIfEmpty = <T extends z.ZodTypeAny>(schema: T) =>
     schema.nullable(), // Ensure null is accepted
   );
 
+export const campuses = [
+  "COMAYAGUA",
+  "TEGUCIGALPA",
+  "SANPEDRO",
+  "YORO",
+  "OLANCHO",
+  "CHOLUTECA",
+  "DANLI",
+  "LA_CEIBA",
+  "SANTA_ROSA",
+];
+
 // Each one of these fields requires a specific permission to be populated
 export const metadataPopulateFields = [
   "metadata.createdBy",
@@ -55,4 +67,3 @@ export const metadataFields = [
   "metadata.notes",
   "metadata.tags",
 ] as const;
-

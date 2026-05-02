@@ -21,10 +21,8 @@ const handler = async (
   const start = performance.now();
   const { page, count, fields, populate, search, includeDeleted } = req.body;
 
-  const userAccount = req.user!;
-
   try {
-    const where: Prisma.AccountRoleWhereInput = {};
+    const where: Prisma.AccountWhereInput = {};
     const fieldsToSelect = getFieldsToSelect<AccountRoleSelect>(fields, {
       id: true,
       name: true,
@@ -45,7 +43,7 @@ const handler = async (
         [field]: {
           contains: search.query,
         },
-      })) as Prisma.AccountRoleWhereInput[];
+      })) as Prisma.AccountWhereInput[];
     }
 
     if (!includeDeleted) {
@@ -74,19 +72,6 @@ const handler = async (
       prismaClient.accountRole.count({ where }),
     ]);
 
-    const duration = performance.now() - start;
-
-    LoggingService.log({
-      source: "api:accounts:list",
-      level: "info",
-      traceId: req.traceId,
-      message: "Accounts listed successfully",
-      duration,
-      _references: {
-        adminAccountId: userAccount?.id?.toString?.(),
-      },
-    });
-
     res.status(200).json({
       status: "success",
       accountRoles: accountRoles,
@@ -98,15 +83,12 @@ const handler = async (
 
     if (error instanceof Error) {
       LoggingService.log({
-        source: "api:accounts:list",
+        source: "api:accounts-roles:list",
         level: "error",
         traceId: req.traceId,
-        message: "Unexpected error during account listing",
+        message: "Unexpected error during account roles listing",
         details: { error: error.message, stack: error.stack },
         duration,
-        _references: {
-          adminAccountId: userAccount?.id?.toString?.(),
-        },
       });
     }
 

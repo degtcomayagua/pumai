@@ -1,14 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import * as AccountsAPITypes from "../../../../shared/api/accounts";
 
-import { IAccount } from "../../../../shared/models/account";
 import prismaClient from "../../config/prisma";
 
 import LoggingService from "../../services/logging";
 import {
   AccountNotFoundError,
-  CannotDeleteSelfError,
-  deleteUserAccountWithRetry,
+  deleteAccountWithRetry,
 } from "../../services/accounts/delete";
 
 import { APIError } from "../../errors/api";
@@ -18,14 +16,18 @@ const handler = async (
   res: Response<AccountsAPITypes.DeleteResponseData>,
   _next: NextFunction,
 ) => {
-  const adminAccount = req.user as IAccount;
+  const userAccount = req.user!;
   const { accountId } = req.body;
 
   try {
-    const adminId = adminAccount.id;
+    const adminId = userAccount.id;
 
     if (adminId === accountId) {
-      throw new CannotDeleteSelfError("Cannot delete your own account");
+      console.log("some jackass is trying to delete their own account, blame on", userAccount.email);
+      throw new APIError<AccountsAPITypes.DeleteResponseData["status"]>(
+        "cannot-delete-self",
+        400,
+      );
     }
 
     const accountToBeDeleted = await prismaClient.account.findUnique({
@@ -41,13 +43,13 @@ const handler = async (
       throw new AccountNotFoundError("Account not found");
     }
 
-    const targetRoleLevel = accountToBeDeleted.role?.level;
-    const adminRoleLevel = adminAccount.role?.level;
+    const accountToDeleteRoleLevel = accountToBeDeleted.role?.level;
+    const deletedByRoleLevel = userAccount.role?.level;
 
     if (
-      typeof targetRoleLevel === "number" &&
-      typeof adminRoleLevel === "number" &&
-      targetRoleLevel <= adminRoleLevel
+      typeof accountToDeleteRoleLevel === "number" &&
+      typeof deletedByRoleLevel === "number" &&
+      accountToDeleteRoleLevel <= deletedByRoleLevel
     ) {
       throw new APIError<AccountsAPITypes.DeleteResponseData["status"]>(
         "cannot-delete-due-to-role-level",
@@ -55,8 +57,8 @@ const handler = async (
       );
     }
 
-    await deleteUserAccountWithRetry(accountId, {
-      userAccount: adminAccount,
+    await deleteAccountWithRetry(accountId, {
+      userAccount: userAccount,
       traceId: req.traceId,
     });
 
@@ -76,10 +78,6 @@ const handler = async (
           error: error.message,
           stack: error.stack,
           traceId: req.traceId,
-        },
-        metadata: {
-          createdBy: (adminAccount as any)?._id,
-          createdAt: new Date(),
         },
       });
     }

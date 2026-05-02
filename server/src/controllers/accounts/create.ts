@@ -9,21 +9,22 @@ import prismaClient from "../../config/prisma";
 import { createAccountWithRetry } from "../../services/accounts/create";
 
 import { APIError } from "../../errors/api";
+import { CampusCode } from "../../../../generated/prisma/enums";
 
 const handler = async (
   req: Request<{}, {}, AccountsAPITypes.CreateRequestBody>,
   res: Response<AccountsAPITypes.CreateResponseData>,
   _next: NextFunction,
 ) => {
-  const { name, email, password, notify, roleId, locale, campus } = req.body;
-  const adminAccount = req.user as IAccount;
+  const { name, email, password, roleId, campus } = req.body;
+  const adminAccount = req.user!;
 
   try {
     // Check if the email is in use
     const normalizedEmail = email.trim().toLowerCase();
     const existingAccount = await prismaClient.account.findFirst({
       where: {
-        emailValue: normalizedEmail,
+        email: normalizedEmail,
       },
       select: { id: true },
     });
@@ -46,14 +47,14 @@ const handler = async (
       );
     }
 
-    const adminRoleLevel = adminAccount.role?.level;
-    if (typeof adminRoleLevel === "number" && role.level <= adminRoleLevel) {
+    const createdByAccountLevel = adminAccount.role?.level;
+    if (typeof createdByAccountLevel === "number" && role.level <= createdByAccountLevel) {
       throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
         "role-cannot-be-assigned",
         400,
       );
     } // Pass session explicitly to service
-    if (adminRoleLevel === undefined) {
+    if (createdByAccountLevel === undefined) {
       throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
         "internal-error", // Means something very bad happened with the admin account, but we don't want to leak details
         500,
@@ -64,30 +65,15 @@ const handler = async (
       {
         name,
         email,
-        campus,
+        campus: campus as CampusCode, // Checked by Zod schema, safe to assert
         password,
         roleId,
-        locale,
       },
       {
         traceId: req.traceId,
         userAccount: adminAccount,
       },
     );
-
-    if (notify) {
-      if (
-        process.env.NODE_ENV === "production" &&
-        process.env.EMAIL_SERVICE_ENABLED === "true"
-      ) {
-        //const emailToSend = await EmailService.getEmailHTMLTemplate(
-        //	"welcome",
-        //	locale || "en",
-        //	{ name },
-        //);
-        //await EmailService.sendEmail(email, "Welcome", emailToSend);
-      }
-    }
 
     // Respond with created account (no logging here, service already logged)
     res.status(201).json({
@@ -109,10 +95,6 @@ const handler = async (
         details: {
           error: error.message,
           stack: error.stack,
-        },
-        metadata: {
-          createdBy: adminAccount?.id,
-          createdAt: new Date(),
         },
       });
       res.status(500).json({

@@ -6,8 +6,8 @@ import {
   restoreAccountWithRetry,
   AccountNotFoundError,
 } from "../../services/accounts/restore";
-import { Prisma } from "../../../generated/prisma/client";
-import { IAccount } from "../../../../shared/models/account";
+
+import { Prisma } from "../../../../generated/prisma/client";
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.RestoreRequestBody>,
@@ -16,34 +16,17 @@ const handler = async (
 ) => {
   const start = performance.now();
   const { accountId } = req.body;
-  const adminAccount = req.user as IAccount;
+  const userAccount = req.user!;
 
   try {
     const restoredAccount = await restoreAccountWithRetry(accountId, {
       traceId: req.traceId,
-      adminAccount,
-    });
-
-    const duration = performance.now() - start;
-    LoggingService.log({
-      source: "api:accounts:restore",
-      level: "info",
-      message: "Account restored successfully",
-      traceId: req.traceId,
-      duration,
-      _references: {
-        adminAccountId: adminAccount?.id?.toString?.(),
-        accountRoleId: (restoredAccount as any)?.id?.toString?.(),
-      },
-      metadata: {
-        createdAt: new Date(),
-        createdBy: adminAccount?.id,
-      },
+      userAccount,
     });
 
     res.status(200).json({
       status: "success",
-      account: restoredAccount as unknown as IAccount,
+      account: restoredAccount,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;
@@ -66,10 +49,6 @@ const handler = async (
           meta: error.meta,
         },
         duration,
-        metadata: {
-          createdAt: new Date(),
-          createdBy: adminAccount?.id,
-        },
       });
     } else if (error instanceof Error) {
       LoggingService.log({
@@ -82,10 +61,6 @@ const handler = async (
           stack: error.stack,
         },
         duration,
-        metadata: {
-          createdAt: new Date(),
-          createdBy: adminAccount?.id,
-        },
       });
     }
 

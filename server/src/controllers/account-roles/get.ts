@@ -4,9 +4,9 @@ import prismaClient from "../../config/prisma";
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
 
 import LoggingService from "../../services/logging";
-import { AccountRoleSelect } from "../../../../generated/prisma/models";
+import { AccountRoleInclude, AccountRoleSelect } from "../../../../generated/prisma/models";
 
-import { getFieldsToSelect } from "../../utils/prisma";
+import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma";
 
 
 const handler = async (
@@ -15,14 +15,25 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { roleIds, fields } = req.body;
-  const userAccount = req.user!;
+  const { roleIds, fields, populate } = req.body;
 
   try {
     let fieldsToSelect = getFieldsToSelect<AccountRoleSelect>(fields, {
       id: true,
       name: true
     })
+    const fieldsToPopulate = populate
+      ? getFieldsToPopulate<
+        AccountRoleInclude,
+        NonNullable<AccountRolesAPITypes.ListRequestBody["populate"]>
+      >(populate, {
+        "metadata.createdBy": ["id", "name"],
+        "metadata.updatedBy": ["id", "name"],
+        "metadata.deletedBy": ["id", "name"],
+      })
+      : {};
+
+
     const roles = await prismaClient.accountRole.findMany({
       where: {
         id: {
@@ -34,31 +45,16 @@ const handler = async (
           },
         },
       },
-      select: fieldsToSelect
+      select: {
+        ...fieldsToSelect,
+        ...fieldsToPopulate,
+      },
     });
 
     res.status(200).json({
       status: "success",
       accountRoles: roles,
     });
-
-    const duration = performance.now() - start;
-    LoggingService.log({
-      source: "api:account-roles:get",
-      level: "info",
-      message: "Account roles retrieved successfully",
-      traceId: req.traceId,
-      duration,
-      details: {
-        adminAccountId: userAccount.id,
-        accountRoleIds: roleIds.map((id) => id),
-      },
-      _references: {
-        adminAccountId: "Account",
-        accountRoleIds: "AccountRole",
-      },
-    });
-
   } catch (error: unknown) {
     console.log(error);
     const duration = performance.now() - start;

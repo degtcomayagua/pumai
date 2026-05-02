@@ -1,15 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 
 import * as AccountAPITypes from "../../../../shared/api/accounts";
-import { IAccount } from "../../../../shared/models/account";
-import { IAccountRole } from "../../../../shared/models/account-role";
 
 import { updateAccountWithRetry } from "../../services/accounts/update";
 import LoggingService from "../../services/logging";
 import { APIError } from "../../errors/api";
 
-import { Prisma } from "../../../generated/prisma/client";
 import prismaClient from "../../config/prisma";
+
+import { CampusCode } from "../../../../generated/prisma/enums";
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.UpdateRequestBody>,
@@ -17,7 +16,7 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const adminAccount = req.user as IAccount;
+  const userAccount = req.user!;
   const { accountId, email, name, roleId, password, campus } = req.body;
 
   try {
@@ -34,7 +33,7 @@ const handler = async (
       );
     }
 
-    const adminRoleLevel = (adminAccount.role as IAccountRole)?.level ?? 0;
+    const adminRoleLevel = userAccount.role.level ?? 1000;
     if (role.level <= adminRoleLevel) {
       throw new APIError<AccountAPITypes.UpdateResponseData["status"]>(
         "role-cannot-be-assigned",
@@ -46,37 +45,20 @@ const handler = async (
       {
         accountId,
         roleId: roleId,
-        campus: campus,
+        campus: campus as CampusCode, // Checked by Zod schema, safe to assert
         email: email?.toLowerCase(),
         name: name?.trim(),
-        securityPassword: password,
+        password: password,
       },
       {
         traceId: req.traceId,
-        userAccount: adminAccount,
+        userAccount: userAccount,
       },
     );
 
-    const duration = performance.now() - start;
-    LoggingService.log({
-      source: "api:accounts:update",
-      level: "info",
-      message: "User account updated successfully",
-      traceId: req.traceId,
-      duration,
-      _references: {
-        accountId: updatedAccount.id.toString(),
-        adminAccountId: adminAccount?.id?.toString?.(),
-      },
-      metadata: {
-        createdBy: adminAccount?.id,
-        createdAt: new Date(),
-      },
-    });
-
     res.status(200).json({
       status: "success",
-      account: updatedAccount as unknown as IAccount,
+      account: updatedAccount,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;
@@ -97,13 +79,6 @@ const handler = async (
         error: (error as any)?.message,
         stack: (error as any)?.stack,
         accountId,
-      },
-      metadata: {
-        createdBy: adminAccount?.id,
-        createdAt: new Date(),
-      },
-      _references: {
-        accountId: "Account",
       },
     });
 
