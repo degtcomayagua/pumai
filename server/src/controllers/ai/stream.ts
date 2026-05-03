@@ -9,12 +9,12 @@ import LoggingService from "../../services/logging.js";
 import { buildAiPrompt } from "../../utils/ai/rag.js";
 
 import { detectWorkflowIntent, } from "../../utils/ai/workflows.js";
-import { getWorkflows } from "../../services/workflows/repository.js";
-import {
-  clearWorkflowSession,
-  createSession,
-  getActiveWorkflowSession,
-} from "../../services/workflows/sessions.js";
+// import { getWorkflows } from "../../services/workflows/repository.js";
+// import {
+//   clearWorkflowSession,
+//   createSession,
+//   getActiveWorkflowSession,
+// } from "../../services/workflows/sessions.js";
 
 import * as AIAPITypes from "../../../../shared/api/ai.js"
 
@@ -159,81 +159,81 @@ const handler = async (
     // For logged in users, the same as above but with access to workflows and more advanced MCP tool calls.
 
     // 1. Check for active workflow sessions. If exists, continue with the workflow instead of answering regularly.
-    const activeSession = workflowSessionId
-      ? await getActiveWorkflowSession(workflowSessionId)
-      : null;
+    // const activeSession = workflowSessionId
+    //   ? await getActiveWorkflowSession(workflowSessionId)
+    //   : null;
 
-    if (activeSession) {
-      const workflows = getWorkflows();
-      const workflow = workflows[activeSession.activeWorkflow];
+    // if (activeSession) {
+    //   const workflows = getWorkflows();
+    //   const workflow = workflows[activeSession.activeWorkflow];
 
-      if (workflow) {
-        const workflowInstance = new workflow();
-        const workflowReply = await workflowInstance.continue(activeSession, prompt);
-        const updatedSession = await getActiveWorkflowSession(activeSession.sessionId);
+    //   if (workflow) {
+    //     const workflowInstance = new workflow();
+    //     const workflowReply = await workflowInstance.continue(activeSession, prompt);
+    //     const updatedSession = await getActiveWorkflowSession(activeSession.sessionId);
 
-        writeSseEvent(res, "workflow_step", {
-          title: "Workflow continued",
-          workflow: activeSession.activeWorkflow,
-          step: updatedSession?.currentStep ?? null,
-        });
+    //     writeSseEvent(res, "workflow_step", {
+    //       title: "Workflow continued",
+    //       workflow: activeSession.activeWorkflow,
+    //       step: updatedSession?.currentStep ?? null,
+    //     });
 
-        if (workflowReply?.content) {
-          writeSseEvent(res, "text", workflowReply.content);
-        }
-        if (workflowReply?.imageUrl) {
-          writeSseEvent(res, "image", {
-            title: workflowReply.title ?? "Workflow image",
-            url: workflowReply.imageUrl,
-          });
-        }
+    //     if (workflowReply?.content) {
+    //       writeSseEvent(res, "text", workflowReply.content);
+    //     }
+    //     if (workflowReply?.imageUrl) {
+    //       writeSseEvent(res, "image", {
+    //         title: workflowReply.title ?? "Workflow image",
+    //         url: workflowReply.imageUrl,
+    //       });
+    //     }
 
-        endSseStream(res);
+    //     endSseStream(res);
 
-        return;
-      }
+    //     return;
+    //   }
 
-      // If workflow session exists but workflow is not found, end the session and answer regularly.
-      await clearWorkflowSession(activeSession.sessionId);
-    }
+    //   // If workflow session exists but workflow is not found, end the session and answer regularly.
+    //   await clearWorkflowSession(activeSession.sessionId);
+    // }
 
     // 2. If no active workflow session, attempt to detect intent and start a new workflow if intent is detected.
-    const detectedIntent = await detectWorkflowIntent(prompt);
-    if (detectedIntent) {
-      const workflows = getWorkflows();
-      const workflow = workflows[detectedIntent];
+    // const detectedIntent = await detectWorkflowIntent(prompt);
+    // if (detectedIntent) {
+    //   const workflows = getWorkflows();
+    //   const workflow = workflows[detectedIntent];
 
-      if (workflow) {
-        const createdWorkflow = new workflow();
-        const workflowSession = await createSession({
-          accountId: account.id.toString(),
-          workflow: detectedIntent,
-        });
+    //   if (workflow) {
+    //     const createdWorkflow = new workflow();
+    //     const workflowSession = await createSession({
+    //       accountId: account.id.toString(),
+    //       workflow: detectedIntent,
+    //     });
 
 
-        const workflowReply = await createdWorkflow.start(workflowSession, prompt);
+    //     const workflowReply = await createdWorkflow.start(workflowSession, prompt);
 
-        writeSseEvent(res, "workflow_start", {
-          title: "Workflow started",
-          workflow: detectedIntent,
-          workflowSessionId: workflowSession.sessionId,
-          reply: workflowReply,
-        });
+    //     writeSseEvent(res, "workflow_start", {
+    //       title: "Workflow started",
+    //       workflow: detectedIntent,
+    //       workflowSessionId: workflowSession.sessionId,
+    //       reply: workflowReply,
+    //     });
 
-        if (workflowReply?.content) {
-          writeSseEvent(res, "text", workflowReply.content);
-        }
-        if (workflowReply?.imageUrl) {
-          writeSseEvent(res, "image", {
-            title: workflowReply.title ?? "Workflow image",
-            url: workflowReply.imageUrl,
-          });
-        }
+    //     if (workflowReply?.content) {
+    //       writeSseEvent(res, "text", workflowReply.content);
+    //     }
+    //     if (workflowReply?.imageUrl) {
+    //       writeSseEvent(res, "image", {
+    //         title: workflowReply.title ?? "Workflow image",
+    //         url: workflowReply.imageUrl,
+    //       });
+    //     }
 
-        endSseStream(res);
-        return;
-      }
-    }
+    //     endSseStream(res);
+    //     return;
+    //   }
+    // }
 
     // 3. If no intent is detected, answer regularly with RAG and basic MCP tool calls, without workflow orchestration.
     const result = await OllamaChatService.getInstance().generateChat<

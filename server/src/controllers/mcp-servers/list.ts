@@ -2,35 +2,35 @@ import { Request, Response, NextFunction } from "express";
 
 import { Prisma } from "../../../../generated/prisma/client.js";
 
-import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
+import * as MCPServersAPITypes from "../../../../shared/api/mcp-servers.js";
 
 import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 import {
-  AccountRoleInclude,
-  AccountRoleSelect,
+  MCPServerInclude,
+  MCPServerSelect,
 } from "../../../../generated/prisma/models.js";
 
 const handler = async (
-  req: Request<{}, {}, AccountRolesAPITypes.ListRequestBody>,
-  res: Response<AccountRolesAPITypes.ListResponseData>,
+  req: Request<{}, {}, MCPServersAPITypes.ListRequestBody>,
+  res: Response<MCPServersAPITypes.ListResponseData>,
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { page, count, fields, populate, search, includeDeleted } = req.body;
+  const { page, count, fields, populate, search, includeDeleted, filters } = req.body;
 
   try {
-    const where: Prisma.AccountRoleWhereInput = {};
-    const fieldsToSelect = getFieldsToSelect<AccountRoleSelect>(fields, {
+    const where: Prisma.MCPServerWhereInput = {};
+    const fieldsToSelect = getFieldsToSelect<MCPServerSelect>(fields, {
       id: true,
       name: true,
     });
     const fieldsToPopulate = populate
       ? getFieldsToPopulate<
-        AccountRoleInclude,
-        NonNullable<AccountRolesAPITypes.ListRequestBody["populate"]>
+        MCPServerInclude,
+        NonNullable<MCPServersAPITypes.ListRequestBody["populate"]>
       >(populate, {
         "metadata.createdBy": ["id", "name"],
         "metadata.updatedBy": ["id", "name"],
@@ -43,39 +43,45 @@ const handler = async (
         [field]: {
           contains: search.query,
         },
-      })) as Prisma.AccountRoleWhereInput[];
+      })) as Prisma.MCPServerWhereInput[];
+    }
+
+    if (filters) {
+      if (filters.protocol !== undefined) where.protocol = filters.protocol;
+      if (filters.isRestricted !== undefined) where.isRestricted = filters.isRestricted;
+      if (filters.isActive !== undefined) where.isActive = filters.isActive;
     }
 
     if (!includeDeleted) {
       where.metadata = {
         is: {
           deleted: {
-            not: true, // Could be undefined
+            not: true,
           },
         },
       };
     }
 
-    const [accountRoles, totalAccountRoles] = await Promise.all([
-      prismaClient.accountRole.findMany({
+    const [mcpServers, totalMcpServers] = await Promise.all([
+      prismaClient.mCPServer.findMany({
         where,
         skip: page * count,
         take: count,
         orderBy: {
-          level: "asc",
+          name: "asc",
         },
         select: {
           ...fieldsToSelect,
           ...fieldsToPopulate,
         },
       }),
-      prismaClient.accountRole.count({ where }),
+      prismaClient.mCPServer.count({ where }),
     ]);
 
     res.status(200).json({
       status: "success",
-      accountRoles: accountRoles,
-      totalAccountRoles: totalAccountRoles,
+      mcpServers,
+      totalMcpServers,
     });
   } catch (error: unknown) {
     console.log(error);
@@ -83,10 +89,10 @@ const handler = async (
 
     if (error instanceof Error) {
       LoggingService.log({
-        source: "api:accounts-roles:list",
+        source: "api:mcp-servers:list",
         level: "error",
         traceId: req.traceId,
-        message: "Unexpected error during account roles listing",
+        message: "Unexpected error during MCP servers listing",
         details: { error: error.message, stack: error.stack },
         duration,
       });

@@ -8,6 +8,7 @@ import AuthRouter from "./auth.js";
 import AccountsRouter from "./accounts.js";
 import AccountRolesRouter from "./account-roles.js";
 import RAGDocumentsRouter from "./rag-documents.js";
+import MCPServersRouter from "./mcp-servers.js";
 
 export function registerRoutes(app: Express): void {
   app.use("/api/ai", AIRouter);
@@ -16,4 +17,5 @@ export function registerRoutes(app: Express): void {
   app.use("/api/accounts", AccountsRouter);
   app.use("/api/account-roles", AccountRolesRouter);
   app.use("/api/rag-documents", RAGDocumentsRouter);
+  app.use("/api/mcp-servers", MCPServersRouter);
 }

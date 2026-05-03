@@ -37,7 +37,7 @@ const createSchema = z.object({
 
   url: z.string().url("invalid-url").trim(),
 
-  protocol: z.enum(["streamable-http", "sse"], {
+  protocol: z.enum(["streamable_http", "sse"], {
     message: "invalid-protocol",
   }),
 
@@ -55,7 +55,7 @@ const createSchema = z.object({
         token: z.string().min(1, "token-too-short"),
       }),
       z.object({
-        type: z.literal("api-key"),
+        type: z.literal("api_key"),
         headerName: z.string().min(1, "headerName-too-short"),
         key: z.string().min(1, "key-too-short"),
       }),
@@ -78,9 +78,9 @@ const createSchema = z.object({
 });
 
 // Update
-const updateSchema = z
-  .object({ mcpServerId: z.cuid("invalid-mcp-server-id") })
-  .merge(createSchema.partial());
+const updateSchema = createSchema.partial().extend({
+  mcpServerId: z.cuid("invalid-mcp-server-id"),
+});
 
 // Delete
 const deleteSchema = z.object({
@@ -117,7 +117,7 @@ const listSchema = z.object({
   filters: z
     .object({
       protocol: z
-        .enum(["streamable-http", "sse"], { message: "invalid-protocol" })
+        .enum(["streamable_http", "sse"], { message: "invalid-protocol" })
         .optional(),
       isRestricted: z.boolean().optional(),
       isActive: z.boolean().optional(),
