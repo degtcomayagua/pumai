@@ -180,6 +180,8 @@ class LoggingService {
     try {
       const enrichedDetails = LoggingService.buildEnrichedDetails(log);
 
+      console.log(`[${log.level.toUpperCase()}] ${log.source}: ${log.message}`, enrichedDetails);
+
       const resolvedReferences = LoggingService.buildResolvedReferences(
         enrichedDetails,
         {

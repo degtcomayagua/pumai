@@ -79,7 +79,7 @@ export async function createAccountRole(
         level,
         isSystemRole,
         requiresTwoFactor,
-        permissions: permissions as any, // Prisma Json field
+        permissions: permissions.join(","), // Prisma Json field
         metadataId: metadata.id,
       },
     });
