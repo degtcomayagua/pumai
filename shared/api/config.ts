@@ -1,7 +1,7 @@
-import { Config } from "../../generated/prisma/client";
+import { Config } from "../../generated/prisma/client.js";
 
 import { z } from "zod";
-import { updateConfigSchema } from "../schemas/config";
+import { updateConfigSchema } from "../schemas/config.js";
 
 export interface GetConfigResponseData {
   status: "success" | "internal-error";

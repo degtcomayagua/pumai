@@ -3,14 +3,14 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 
-import { OllamaMcpServer } from "../../types/ollama";
+import { OllamaMcpServer } from "../../types/ollama.js";
 import {
   ExecutedToolCall,
   MCPDiscoveryCacheValue,
   MCPServerConfig,
   MCPServerProtocol,
   ResolvedMcpCatalog,
-} from "../../types/mcp";
+} from "../../types/mcp.js";
 
 const MCP_DISCOVERY_CACHE_TTL_MS = 60_000;
 

@@ -1,5 +1,5 @@
-import { WorkflowBase } from "../base/WorkflowBase";
-import { StepHandler } from "../../types/workflows";
+import { WorkflowBase } from "../base/WorkflowBase.js";
+import { StepHandler } from "../../types/workflows.js";
 
 const STEP_IMAGES = {
   step1: "http://localhost:2175/workflows/email/reset_email/email-1.png",

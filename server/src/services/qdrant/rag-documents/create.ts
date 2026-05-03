@@ -1,14 +1,14 @@
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import LoggingService from "../../logging";
+import LoggingService from "../../logging.js";
 
 import {
   getQdrantClient,
   RAG_DOC_CHUNKS_COLLECTION,
-} from "./shared";
+} from "./shared.js";
 
-import { IRAGChunk } from "../../../../../shared/models/qdrant/rag-chunk";
+import { IRAGChunk } from "@shared/models/qdrant/rag-chunk.js";
 
 export type CreateRagDocChunkOptions = {
   traceId?: string;

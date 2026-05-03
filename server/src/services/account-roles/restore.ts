@@ -1,17 +1,17 @@
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import prismaClient from "../../config/prisma";
+import prismaClient from "../../config/prisma.js";
 import {
   Account,
   AccountRole,
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client";
+} from "../../../../generated/prisma/client.js";
 
-import LoggingService from "../../services/logging";
-import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models";
+import LoggingService from "../../services/logging.js";
+import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models.js";
 
 type RestoreAccountRoleOptions = {
   traceId?: string;

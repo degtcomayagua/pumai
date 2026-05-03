@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents";
+import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents.js";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 
 import {
   RAGDocumentNotFoundError,
   deleteRAGDocumentWithRetry,
-} from "../../services/rag-documents/delete";
+} from "../../services/rag-documents/delete.js";
 
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "../../../../generated/prisma/client.js";
 
 const handler = async (
   req: Request<{}, {}, RAGDocumentsAPITypes.DeleteRequestBody>,

@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import prismaClient from "../../config/prisma";
+import prismaClient from "../../config/prisma.js";
 
-import * as RAGDocumentAPITypes from "../../../../shared/api/rag-documents";
+import * as RAGDocumentAPITypes from "../../../../shared/api/rag-documents.js";
 
-import LoggingService from "../../services/logging";
-import { RAGDocumentInclude, RAGDocumentSelect } from "../../../../generated/prisma/models";
+import LoggingService from "../../services/logging.js";
+import { RAGDocumentInclude, RAGDocumentSelect } from "../../../../generated/prisma/models.js";
 
-import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma";
+import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 
 const handler = async (
   req: Request<{}, {}, RAGDocumentAPITypes.GetRequestBody>,

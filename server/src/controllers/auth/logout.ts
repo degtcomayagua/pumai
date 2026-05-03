@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import type * as AuthAPITypes from "../../../../shared/api/auth";
+import type * as AuthAPITypes from "../../../../shared/api/auth.js";
 
 const handler = async (
   req: Request,

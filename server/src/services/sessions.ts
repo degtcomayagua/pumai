@@ -6,8 +6,8 @@ import { PrismaSessionStore } from "@quixo3/prisma-session-store";
 
 import bcrypt from "bcrypt";
 
-import LoggingService from "./logging";
-import prismaClient from "../config/prisma";
+import LoggingService from "./logging.js";
+import prismaClient from "../config/prisma.js";
 
 class SessionManager {
   authStrategies: { [key: string]: passportLocal.Strategy };

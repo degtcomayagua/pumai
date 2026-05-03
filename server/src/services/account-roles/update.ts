@@ -8,16 +8,16 @@ import {
   MetadataStatus,
   MetadataUpdateHistory,
   Prisma,
-} from "../../../../generated/prisma/client";
-import prismaClient from "../../config/prisma";
+} from "../../../../generated/prisma/client.js";
+import prismaClient from "../../config/prisma.js";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 
 import {
   AccountRoleUpdateInput,
   MetadataUpdateHistoryCreateWithoutMetadataInput,
   MetadataUpdateInput,
-} from "../../../../generated/prisma/models";
+} from "../../../../generated/prisma/models.js";
 
 type UpdateAccountRoleParameters = {
   roleId: string;

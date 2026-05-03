@@ -2,21 +2,22 @@ import {
   setupQdrant,
   RAG_DOC_CHUNKS_COLLECTION,
   RAG_CHUNK_VECTOR_SIZE,
-} from "../../../config/qdrant";
+} from "../../../config/qdrant.js";
 import {
   CampusCode,
   DeliveryMode,
   DocumentCategory,
   SourceType,
-} from "../../../../../shared/models";
-import { IRAGChunk } from "../../../../../shared/models/chroma/rag-chunk";
+} from "../../../../../generated/prisma/enums.js"
+
+import { IRAGChunk } from "@shared/models/chroma/rag-chunk.js";
 
 export const RAG_CHUNK_MAX_CONTENT_LENGTH = 1000;
 
 export {
   RAG_DOC_CHUNKS_COLLECTION,
   RAG_CHUNK_VECTOR_SIZE,
-} from "../../../config/qdrant";
+} from "../../../config/qdrant.js";
 
 export type RagWarnings = {
   legal?: string;
@@ -99,10 +100,9 @@ function buildCampusFlags(campuses: CampusCode[]) {
     campuses_tegucigalpa: campuses.includes("TEGUCIGALPA"),
     campuses_sanpedro: campuses.includes("SANPEDRO"),
     campuses_choluteca: campuses.includes("CHOLUTECA"),
-    campuses_laceiba: campuses.includes("LA CEIBA"),
+    campuses_laceiba: campuses.includes("LA_CEIBA"),
     campuses_danli: campuses.includes("DANLI"),
-    campuses_santarosa: campuses.includes("SANTA ROSA"),
-    campuses_global: campuses.includes("GLOBAL"),
+    campuses_santarosa: campuses.includes("SANTA_ROSA"),
   };
 }
 
@@ -241,7 +241,6 @@ export function pointMatchesRagFilters(
     const documentCampuses = payload.campuses ?? [];
 
     if (
-      !documentCampuses.includes("GLOBAL") &&
       !documentCampuses.some((campus) => selectedCampuses.has(campus))
     ) {
       return false;

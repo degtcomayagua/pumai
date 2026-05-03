@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "target": "esnext",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "baseUrl": "../",
@@ -12,13 +13,11 @@
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
     "strict": true,
     "skipLibCheck": true
   },
   "include": [
     "./src",
-    "./src/types",
     "../shared"
-  ],
+  ]
 }

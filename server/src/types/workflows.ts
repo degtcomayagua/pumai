@@ -1,4 +1,4 @@
-import { workflows } from "../services/workflows/repository";
+import { workflows } from "../services/workflows/repository.js";
 export type WorkflowName = keyof typeof workflows;
 
 export type WorkflowStepResult = {

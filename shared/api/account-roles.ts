@@ -1,5 +1,5 @@
-import { AccountRole } from "../../generated/prisma/client";
-import { ResponseStatus } from ".";
+import { AccountRole } from "../../generated/prisma/client.js";
+import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
 import {
@@ -9,7 +9,7 @@ import {
   updateSchema,
   listSchema,
   restoreSchema,
-} from "../schemas/account-roles";
+} from "../schemas/account-roles.js";
 
 // Inferred request body types
 export type GetRequestBody = z.infer<typeof getSchema>;

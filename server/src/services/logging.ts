@@ -1,6 +1,5 @@
-import { IMetadata } from "../../../shared/models/metadata";
-import LogsModel from "../models/Log";
-import { ILog } from "../../../shared/models/log";
+import { IMetadata } from "@shared/models/metadata.js";
+import { ILog } from "@shared/models/log.js";
 
 type LogLevel = "info" | "warning" | "important" | "error" | "critical";
 
@@ -188,17 +187,8 @@ class LoggingService {
         },
       );
 
-      const newLog = new LogsModel({
-        date: new Date(),
-        message: log.message,
-        traceId: log.traceId,
-        details: enrichedDetails,
-        level: log.level,
-        source: log.source,
-        duration: log.duration,
-        _references: log._references ? resolvedReferences : undefined,
-      });
-      await newLog.save();
+      // Creae the log entry in the database
+
       return true;
     } catch (err) {
       // Avoid throwing from logging
@@ -218,12 +208,7 @@ class LoggingService {
     if (params.level) query.level = params.level;
     if (params.source) query.source = params.source;
 
-    return await LogsModel.find(query)
-      .skip(params.offset)
-      .limit(params.count)
-      .sort({ date: -1 })
-      .lean()
-      .exec();
+    return [];
   }
 
   /**
@@ -258,22 +243,22 @@ class LoggingService {
       }
     }
 
-    const [logs, total] = await Promise.all([
-      LogsModel.find(query)
-        .skip(skip)
-        .limit(limit)
-        .sort({ date: -1 })
-        .lean()
-        .exec(),
-      LogsModel.countDocuments(query).exec(),
-    ]);
+    // const [logs, total] = await Promise.all([
+    //   LogsModel.find(query)
+    //     .skip(skip)
+    //     .limit(limit)
+    //     .sort({ date: -1 })
+    //     .lean()
+    //     .exec(),
+    //   LogsModel.countDocuments(query).exec(),
+    // ]);
 
     return {
-      logs: logs as ILog[],
-      total,
+      logs: [],
+      total: 0,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(100 / limit),
     };
   }
 }

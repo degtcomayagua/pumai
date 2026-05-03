@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
+import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 
 import {
   AccountRoleNotFoundError,
   deleteAccountRoleWithRetry,
-} from "../../services/account-roles/delete";
+} from "../../services/account-roles/delete.js";
 
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "../../../../generated/prisma/client.js";
 
 const handler = async (
   req: Request<{}, {}, AccountRolesAPITypes.DeleteRequestBody>,

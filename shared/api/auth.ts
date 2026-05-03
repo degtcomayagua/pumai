@@ -1,9 +1,9 @@
-import { ResponseStatus } from ".";
+import { ResponseStatus } from "./index.js";
 
 import { z } from "zod";
 import {
   loginAccountSchema,
-} from "../schemas/auth";
+} from "../schemas/auth.js";
 import { ISessionAccount } from "../types/sessions";
 
 export interface RegisterResponseData {

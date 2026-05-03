@@ -1,4 +1,4 @@
-import { AccountRole } from "../../generated/prisma/client";
+import { AccountRole } from "../../generated/prisma/client.js";
 
 export type ISessionAccount = {
   _id: string;

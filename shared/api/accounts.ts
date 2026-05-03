@@ -1,5 +1,5 @@
-import { Account } from "../../generated/prisma/client";
-import { ResponseStatus } from ".";
+import { Account } from "../../generated/prisma/client.js";
+import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
 import {
@@ -8,7 +8,7 @@ import {
   getSchema,
   updateSchema,
   listSchema,
-} from "../schemas/accounts";
+} from "../schemas/accounts.js";
 
 // Inferred types from Zod schemas
 export type GetRequestBody = z.infer<typeof getSchema>;

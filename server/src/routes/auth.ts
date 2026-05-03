@@ -1,21 +1,21 @@
 import express from "express";
 
 // Controllers
-import accountsFetch from "../controllers/auth/fetch";
-import accountsLogin from "../controllers/auth/login";
-import accountsLogout from "../controllers/auth/logout";
+import accountsFetch from "../controllers/auth/fetch.js";
+import accountsLogin from "../controllers/auth/login.js";
+import accountsLogout from "../controllers/auth/logout.js";
 
 
 // Middlewares
-import { validateRequestBody } from "../middleware/validationMiddleware";
+import { validateRequestBody } from "../middleware/validationMiddleware.js";
 import {
   ensureAuthenticated,
-} from "../middleware/authMiddleware";
+} from "../middleware/authMiddleware.js";
 
 // Schemas
 import {
   loginAccountSchema,
-} from "../../../shared/schemas/auth";
+} from "@shared/schemas/auth.js";
 
 const router = express.Router();
 

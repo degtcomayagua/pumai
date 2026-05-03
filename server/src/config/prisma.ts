@@ -1,8 +1,8 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { PrismaClient } from "../../../generated/prisma/client";
+import { PrismaClient } from "../../../generated/prisma/client.js";
 import dotenv from "dotenv";
 import path from "path";
-import setupServer from "../setup";
+import setupServer from "../setup.js";
 
 const envFile =
   process.env.NODE_ENV === "production" ? ".env.prod" : ".env.dev";

@@ -1,9 +1,10 @@
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import { IAccount } from "../../../../../shared/models/account";
 
-import LoggingService from "../../logging";
+import LoggingService from "../../logging.js";
+
+import { Account } from "generated/prisma/client.js";
 
 import {
   buildRagChunkPayloadPatch,
@@ -11,11 +12,11 @@ import {
   getQdrantClient,
   UpdateRagDocChunksParameters,
   RAG_DOC_CHUNKS_COLLECTION,
-} from "./shared";
+} from "./shared.js";
 
 type UpdateRagChunksOptions = {
   traceId?: string;
-  adminAccount?: IAccount;
+  adminAccount?: Account;
 };
 
 export class RagChunksNotFoundError extends Error {
@@ -72,11 +73,8 @@ export async function updateRagChunksByDocId(
       docId: parameters.docId,
       changes: payload,
       ...(options.adminAccount && {
-        updatedBy: options.adminAccount._id.toString(),
+        updatedBy: options.adminAccount.id.toString(),
       }),
-    },
-    metadata: {
-      createdAt: new Date(),
     },
   });
 }

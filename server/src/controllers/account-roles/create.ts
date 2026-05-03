@@ -2,14 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import {
   AccountRole,
   Prisma,
-} from "../../../../generated/prisma/client";
+} from "../../../../generated/prisma/client.js";
 
-import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
+import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
 
-import LoggingService from "../../services/logging";
-import { createAccountRoleWithRetry } from "../../services/account-roles/create";
+import LoggingService from "../../services/logging.js";
+import { createAccountRoleWithRetry } from "../../services/account-roles/create.js";
 
-import prismaClient from "../../config/prisma";
+import prismaClient from "../../config/prisma.js";
 
 class CannotCreateRoleAtThisLevelError extends Error {
   constructor(message: string) {

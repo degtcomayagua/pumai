@@ -1,4 +1,4 @@
-import { Permission } from "../../../shared/types/permissions";
+import { Permission } from "@shared/types/permissions";
 
 export const hasPermissions = (
   accountPermissions: Permission[],

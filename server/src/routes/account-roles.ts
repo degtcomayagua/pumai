@@ -1,19 +1,19 @@
 import express from "express";
 
 // Controllers
-import createHandler from "../controllers/account-roles/create";
-import updateHandler from "../controllers/account-roles/update";
-import deleteHandler from "../controllers/account-roles/delete";
-import getHandler from "../controllers/account-roles/get";
-import listHandler from "../controllers/account-roles/list";
-import restoreHandler from "../controllers/account-roles/restore";
+import createHandler from "../controllers/account-roles/create.js";
+import updateHandler from "../controllers/account-roles/update.js";
+import deleteHandler from "../controllers/account-roles/delete.js";
+import getHandler from "../controllers/account-roles/get.js";
+import listHandler from "../controllers/account-roles/list.js";
+import restoreHandler from "../controllers/account-roles/restore.js";
 
 // Middleware
-import { validateRequestBody } from "../middleware/validationMiddleware";
+import { validateRequestBody } from "../middleware/validationMiddleware.js";
 import {
   ensureAuthenticated,
   ensurePermissions,
-} from "../middleware/authMiddleware";
+} from "../middleware/authMiddleware.js";
 
 // Schemas
 import {
@@ -23,7 +23,7 @@ import {
   listSchema,
   updateSchema,
   restoreSchema,
-} from "../../../shared/schemas/account-roles";
+} from "@shared/schemas/account-roles.js";
 
 const router = express.Router();
 

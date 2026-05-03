@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import prismaClient from "../../config/prisma";
+import prismaClient from "../../config/prisma.js";
 
-import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
+import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
 
-import LoggingService from "../../services/logging";
-import { AccountRoleInclude, AccountRoleSelect } from "../../../../generated/prisma/models";
+import LoggingService from "../../services/logging.js";
+import { AccountRoleInclude, AccountRoleSelect } from "../../../../generated/prisma/models.js";
 
-import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma";
+import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 
 
 const handler = async (

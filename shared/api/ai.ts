@@ -1,6 +1,6 @@
 import z from "zod";
 
-import { generateSchema } from "../schemas/ai";
+import { generateSchema } from "../schemas/ai.js";
 
 import { ResponseStatus } from "../models";
 

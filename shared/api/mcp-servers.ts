@@ -1,5 +1,5 @@
-import { MCPServer } from "../../generated/prisma/client";
-import { ResponseStatus } from ".";
+import { MCPServer } from "../../generated/prisma/client.js";
+import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
 import {
@@ -9,7 +9,7 @@ import {
   updateSchema,
   listSchema,
   restoreSchema,
-} from "../schemas/mcp-servers";
+} from "../schemas/mcp-servers.js";
 
 // Inferred request body types
 export type GetRequestBody = z.infer<typeof getSchema>;

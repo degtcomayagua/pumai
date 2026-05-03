@@ -6,9 +6,9 @@ import {
   RagQueryFilters,
   RagQueryResult,
   RAG_DOC_CHUNKS_COLLECTION,
-} from "./shared";
+} from "./shared.js";
 
-export { RAG_DOC_CHUNKS_COLLECTION, RagQueryFilters } from "./shared";
+export type { RAG_DOC_CHUNKS_COLLECTION, RagQueryFilters } from "./shared.js";
 
 export async function queryRagDocumentsByEmbedding(
   queryEmbedding: number[],

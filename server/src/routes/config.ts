@@ -9,7 +9,7 @@
 //   ensurePermissions,
 // } from "../middleware/authMiddleware";
 //
-// import { updateConfigSchema } from "../../../shared/schemas/config";
+// import { updateConfigSchema } from "@shared/schemas/config";
 //
 // const router = express.Router();
 //

@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import * as AccountRolesAPITypes from "../../../../shared/api/account-roles";
+import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 import {
   AccountRoleNotFoundError,
   updateAccountRole,
-} from "../../services/account-roles/update";
+} from "../../services/account-roles/update.js";
 
-import { Prisma } from "../../../../generated/prisma/client";
-import prismaClient from "../../config/prisma";
+import { Prisma } from "../../../../generated/prisma/client.js";
+import prismaClient from "../../config/prisma.js";
 
 /**
  * Error thrown when an admin attempts to update a role

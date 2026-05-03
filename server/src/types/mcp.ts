@@ -1,4 +1,4 @@
-import { OllamaMcpServer } from "./ollama";
+import { OllamaMcpServer } from "./ollama.js";
 
 export type MCPServerProtocol = "streamable-http" | "sse";
 

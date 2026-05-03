@@ -1,6 +1,6 @@
-import { getRedisClient } from "../../config/redis";
+import { getRedisClient } from "../../config/redis.js";
 
-import { WorkflowName, type WorkflowSession } from "../../types/workflows";
+import { WorkflowName, type WorkflowSession } from "../../types/workflows.js";
 
 const SESSION_KEY_PREFIX = "workflow:session:";
 const SESSION_TTL_SECONDS = 60 * 60;

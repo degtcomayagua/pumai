@@ -1,17 +1,17 @@
 import express from "express";
 
-import createHandler from "../controllers/accounts/create";
-import getHandler from "../controllers/accounts/get";
-import listHandler from "../controllers/accounts/list";
-import updateHandler from "../controllers/accounts/update";
-import deleteHandler from "../controllers/accounts/delete";
-import restoreHandler from "../controllers/accounts/restore";
+import createHandler from "../controllers/accounts/create.js";
+import getHandler from "../controllers/accounts/get.js";
+import listHandler from "../controllers/accounts/list.js";
+import updateHandler from "../controllers/accounts/update.js";
+import deleteHandler from "../controllers/accounts/delete.js";
+import restoreHandler from "../controllers/accounts/restore.js";
 
-import { validateRequestBody } from "../middleware/validationMiddleware";
+import { validateRequestBody } from "../middleware/validationMiddleware.js";
 import {
   ensureAuthenticated,
   ensurePermissions,
-} from "../middleware/authMiddleware";
+} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ import {
   getSchema,
   updateSchema,
   listSchema,
-} from "../../../shared/schemas/accounts";
+} from "@shared/schemas/accounts.js";
 
 // Apply global middlewares
 router.use(ensureAuthenticated);

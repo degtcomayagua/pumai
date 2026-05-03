@@ -1,21 +1,21 @@
 import { NextFunction, Response } from "express";
 import { ChatResponse } from "ollama";
 
-import { TypedRequest } from "../../types";
+import { TypedRequest } from "../../types/index.js";
 
-import LoggingService from "../../services/logging";
-import OllamaChatService from "../../services/ollama/chat";
+import LoggingService from "../../services/logging.js";
+import OllamaChatService from "../../services/ollama/chat.js";
 
 import {
   buildAiPrompt,
   AiRequestBody,
   AiResponseData,
-} from "../../utils/ai/rag";
+} from "../../utils/ai/rag.js";
 import {
   buildToolContext,
   executeMcpToolCalls,
   resolveAiMcpCatalog,
-} from "../../utils/ai/mcp";
+} from "../../utils/ai/mcp.js";
 
 const MAX_TOOL_CALL_ROUNDS = 4;
 

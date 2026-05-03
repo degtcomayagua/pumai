@@ -1,4 +1,4 @@
-import { CampusCode, DocumentCategory, DeliveryMode } from "../../../generated/prisma/enums"
+import { CampusCode, DocumentCategory, DeliveryMode } from "../../../generated/prisma/enums.js"
 
 export interface IRAGChunk {
   docId: string; // Reference to DBs id of the parent document

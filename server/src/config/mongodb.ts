@@ -1,6 +1,6 @@
 import mongoose, { ConnectOptions } from "mongoose";
 
-import setupServer from "../setup";
+import setupServer from "../setup.js";
 
 class MongoDBClient {
   private readonly connectionString: string;

@@ -1,12 +1,12 @@
 import bcrypt from "bcrypt";
 import speakeasy from "speakeasy";
-import { IAccount } from "../../../shared/models/account";
-import { ISessionAccount } from "../../../shared/types/sessions";
+import { IAccount } from "@shared/models/account";
+import { ISessionAccount } from "@shared/types/sessions";
 
-import AccountRoleModel from "../models/AccountRole";
+import AccountRoleModel from "../models/AccountRole.js";
 
-import { Account } from "../../../generated/prisma/client";
-import { AccountWithRole } from "../types";
+import { Account } from "../../../generated/prisma/client.js";
+import { AccountWithRole } from "../types/index.js";
 
 const verifyPassword = (passwordHash: string, password: string): boolean => {
   return bcrypt.compareSync(password, passwordHash);

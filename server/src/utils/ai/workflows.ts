@@ -1,10 +1,10 @@
 import { ChatResponse } from "ollama";
 
-import OllamaChatService from "../../services/ollama/chat";
+import OllamaChatService from "../../services/ollama/chat.js";
 
-import { WorkflowName } from "../../types/workflows";
+import { WorkflowName } from "../../types/workflows.js";
 
-import { getWorkflowList, getWorkflows } from "../../services/workflows/repository";
+import { getWorkflowList, getWorkflows } from "../../services/workflows/repository.js";
 
 
 function parseJsonObject(raw: string): Record<string, any> | null {

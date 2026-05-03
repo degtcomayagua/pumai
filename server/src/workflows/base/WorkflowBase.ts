@@ -1,10 +1,10 @@
 import { ChatResponse } from "ollama";
 
-import OllamaChatService from "../../services/ollama/chat";
+import OllamaChatService from "../../services/ollama/chat.js";
 
-import { WorkflowSession, WorkflowStepResult, StepHandler } from "../../types/workflows";
+import { WorkflowSession, WorkflowStepResult, StepHandler } from "../../types/workflows.js";
 
-import { clearWorkflowSession, updateWorkflowSession } from "../../services/workflows/sessions";
+import { clearWorkflowSession, updateWorkflowSession } from "../../services/workflows/sessions.js";
 
 export type WorkflowExtractionResult = {
   wants_to_exit: boolean;

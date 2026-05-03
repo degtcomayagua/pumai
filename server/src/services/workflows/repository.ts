@@ -1,5 +1,5 @@
 // Import workflows
-import { ResetPasswordWorkflow } from "../../workflows/email/reset-password"
+import { ResetPasswordWorkflow } from "../../workflows/email/reset-password.js"
 
 export const workflows = {
   "reset_password_unah": ResetPasswordWorkflow,

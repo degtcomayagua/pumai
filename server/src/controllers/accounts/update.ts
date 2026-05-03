@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountAPITypes from "../../../../shared/api/accounts";
+import * as AccountAPITypes from "../../../../shared/api/accounts.js";
 
-import { updateAccountWithRetry } from "../../services/accounts/update";
-import LoggingService from "../../services/logging";
-import { APIError } from "../../errors/api";
+import { updateAccountWithRetry } from "../../services/accounts/update.js";
+import LoggingService from "../../services/logging.js";
+import { APIError } from "../../errors/api.js";
 
-import prismaClient from "../../config/prisma";
+import prismaClient from "../../config/prisma.js";
 
-import { CampusCode } from "../../../../generated/prisma/enums";
+import { CampusCode } from "../../../../generated/prisma/enums.js";
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.UpdateRequestBody>,

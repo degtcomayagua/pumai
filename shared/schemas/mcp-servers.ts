@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { metadataFields, metadataPopulateFields } from ".";
+import { metadataFields, metadataPopulateFields } from "./index.js";
 
 // Shared
 const mcpServerFields = z.enum(

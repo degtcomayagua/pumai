@@ -1,15 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import * as AccountsAPITypes from "../../../../shared/api/accounts";
+import * as AccountsAPITypes from "../../../../shared/api/accounts.js";
 
-import prismaClient from "../../config/prisma";
+import prismaClient from "../../config/prisma.js";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 import {
   AccountNotFoundError,
   deleteAccountWithRetry,
-} from "../../services/accounts/delete";
+} from "../../services/accounts/delete.js";
 
-import { APIError } from "../../errors/api";
+import { APIError } from "../../errors/api.js";
 
 const handler = async (
   req: Request<{}, {}, AccountsAPITypes.DeleteRequestBody>,

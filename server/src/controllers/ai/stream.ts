@@ -1,24 +1,22 @@
 import { NextFunction, Response } from "express";
 import { AbortableAsyncIterator, ChatResponse } from "ollama";
 
-import { TypedRequest } from "../../types";
+import { TypedRequest } from "../../types/index.js";
 
-import OllamaChatService from "../../services/ollama/chat";
-import LoggingService from "../../services/logging";
+import OllamaChatService from "../../services/ollama/chat.js";
+import LoggingService from "../../services/logging.js";
 
-import { buildAiPrompt } from "../../utils/ai/rag";
+import { buildAiPrompt } from "../../utils/ai/rag.js";
 
-import { detectWorkflowIntent, } from "../../utils/ai/workflows";
-import { getWorkflows } from "../../services/workflows/repository";
+import { detectWorkflowIntent, } from "../../utils/ai/workflows.js";
+import { getWorkflows } from "../../services/workflows/repository.js";
 import {
   clearWorkflowSession,
   createSession,
   getActiveWorkflowSession,
-} from "../../services/workflows/sessions";
+} from "../../services/workflows/sessions.js";
 
-import { IAccount } from "../../../../shared/models/account";
-
-import * as AIAPITypes from "../../../../shared/api/ai"
+import * as AIAPITypes from "../../../../shared/api/ai.js"
 
 type StreamEventName = AIAPITypes.StreamChunk["event"];
 
@@ -74,7 +72,7 @@ const handler = async (
 ) => {
   try {
     // Allow no workflows to be executed by people not logged in.
-    const account = req.user as IAccount | undefined;
+    const account = req.user!;
 
     const {
       chat,

@@ -4,7 +4,7 @@ import {
   campuses,
   metadataPopulateFields,
   turnIntoUndefinedIfEmpty,
-} from ".";
+} from "./index.js";
 
 const populateFields = z.enum([...metadataPopulateFields, "role"]);
 const accountFields = z.enum(

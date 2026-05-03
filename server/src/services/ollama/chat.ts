@@ -1,12 +1,12 @@
 import { ChatRequest, Message, Ollama, Options, Tool } from "ollama";
 
-import OllamaClient from "./client";
+import OllamaClient from "./client.js";
 import {
   buildFinalPrompt,
   buildSystemPrompt as composeSystemPrompt,
   trimChatHistory,
-} from "../../utils/ai/prompts";
-import type { OllamaChatRequest, OllamaMcpServer } from "./types";
+} from "../../utils/ai/prompts.js";
+import type { OllamaChatRequest, OllamaMcpServer } from "./types.js";
 
 class OllamaChatService {
   private static instance: OllamaChatService | null = null;

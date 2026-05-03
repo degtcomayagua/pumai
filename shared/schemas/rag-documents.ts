@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { campuses, isoDateString, metadataFields, metadataPopulateFields } from ".";
+import { campuses, isoDateString, metadataFields, metadataPopulateFields } from "./index.js";
 
 const ragDocumentFields = z.enum([
   "_id",

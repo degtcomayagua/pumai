@@ -1,15 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountsAPITypes from "../../../../shared/api/accounts";
-import { IAccount } from "../../../../shared/models/account";
+import * as AccountsAPITypes from "../../../../shared/api/accounts.js";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 
-import prismaClient from "../../config/prisma";
-import { createAccountWithRetry } from "../../services/accounts/create";
+import prismaClient from "../../config/prisma.js";
+import { createAccountWithRetry } from "../../services/accounts/create.js";
 
-import { APIError } from "../../errors/api";
-import { CampusCode } from "../../../../generated/prisma/enums";
+import { APIError } from "../../errors/api.js";
+import { CampusCode } from "../../../../generated/prisma/enums.js";
 
 const handler = async (
   req: Request<{}, {}, AccountsAPITypes.CreateRequestBody>,

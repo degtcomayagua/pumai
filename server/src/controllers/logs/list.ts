@@ -1,280 +1,278 @@
-import { Request, Response, NextFunction } from "express";
-import mongoose from "mongoose";
-import * as LogsAPITypes from "../../../../shared/api/logs";
+// import { request, response, nextfunction } from "express";
+// import mongoose from "mongoose";
+// import * as logsapitypes from "../../../../shared/api/logs.js";
 
-import LogsModel from "../../models/Log";
-import AccountModel from "../../models/Account";
-import AccountRoleModel from "../../models/AccountRole";
-import ConfigModel from "../../models/Config";
-import RAGDocumentModel from "../../models/RAGDocument";
-import { IAccount } from "../../../../shared/models/account";
-import { ILog } from "../../../../shared/models/log";
+// import logsmodel from "../../models/log.js";
+// import accountmodel from "../../models/account.js";
+// import accountrolemodel from "../../models/accountrole.js";
+// import configmodel from "../../models/config.js";
+// import ragdocumentmodel from "../../models/ragdocument.js";
 
-import LoggingService from "../../services/logging";
+// import loggingservice from "../../services/logging.js";
 
-export const ALLOWED_FIELDS_PER_MODEL = {
-  Account: ["data.role", "data.status", "email.value", "profile.name"],
-  AccountRole: ["name", "permissions"],
-  RAGDocument: ["title", "summary", "category", "authorityLevel"],
-  RagDocument: ["title", "summary", "category", "authorityLevel"],
-  Config: ["key", "value"],
-} as const;
+// export const allowed_fields_per_model = {
+//   account: ["data.role", "data.status", "email.value", "profile.name"],
+//   accountrole: ["name", "permissions"],
+//   ragdocument: ["title", "summary", "category", "authoritylevel"],
+//   ragdocument: ["title", "summary", "category", "authoritylevel"],
+//   config: ["key", "value"],
+// } as const;
 
-const MODEL_BY_NAME = {
-  Account: AccountModel,
-  AccountRole: AccountRoleModel,
-  Config: ConfigModel,
-  RAGDocument: RAGDocumentModel,
-  RagDocument: RAGDocumentModel,
-} as const;
+// const model_by_name = {
+//   account: accountmodel,
+//   accountrole: accountrolemodel,
+//   config: configmodel,
+//   ragdocument: ragdocumentmodel,
+//   ragdocument: ragdocumentmodel,
+// } as const;
 
-const toObjectRecord = (
-  value: Record<string, any> | Map<string, any> | undefined,
-): Record<string, any> => {
-  if (!value) {
-    return {};
-  }
+// const toobjectrecord = (
+//   value: record<string, any> | map<string, any> | undefined,
+// ): record<string, any> => {
+//   if (!value) {
+//     return {};
+//   }
 
-  if (value instanceof Map) {
-    return Object.fromEntries(value.entries());
-  }
+//   if (value instanceof map) {
+//     return object.fromentries(value.entries());
+//   }
 
-  return value;
-};
+//   return value;
+// };
 
-const normalizeReferenceId = (value: unknown): string | undefined => {
-  if (value === null || value === undefined) {
-    return undefined;
-  }
+// const normalizereferenceid = (value: unknown): string | undefined => {
+//   if (value === null || value === undefined) {
+//     return undefined;
+//   }
 
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-  }
+//   if (typeof value === "string") {
+//     const trimmed = value.trim();
+//     return trimmed.length > 0 ? trimmed : undefined;
+//   }
 
-  if (typeof value === "object") {
-    if (
-      "_id" in (value as Record<string, unknown>) &&
-      typeof (value as Record<string, unknown>)._id === "string"
-    ) {
-      return (value as Record<string, string>)._id;
-    }
+//   if (typeof value === "object") {
+//     if (
+//       "_id" in (value as record<string, unknown>) &&
+//       typeof (value as record<string, unknown>)._id === "string"
+//     ) {
+//       return (value as record<string, string>)._id;
+//     }
 
-    if ("toString" in value && typeof value.toString === "function") {
-      const asString = value.toString();
-      return asString && asString !== "[object Object]" ? asString : undefined;
-    }
-  }
+//     if ("tostring" in value && typeof value.tostring === "function") {
+//       const asstring = value.tostring();
+//       return asstring && asstring !== "[object object]" ? asstring : undefined;
+//     }
+//   }
 
-  return undefined;
-};
+//   return undefined;
+// };
 
-const shouldPopulateReference = (
-  populateSet: Set<string>,
-  detailKey: string,
-  modelName: string,
-): boolean => {
-  if (populateSet.size === 0) {
-    return false;
-  }
+// const shouldpopulatereference = (
+//   populateset: set<string>,
+//   detailkey: string,
+//   modelname: string,
+// ): boolean => {
+//   if (populateset.size === 0) {
+//     return false;
+//   }
 
-  return (
-    populateSet.has(detailKey) ||
-    populateSet.has(`details.${detailKey}`) ||
-    populateSet.has(modelName)
-  );
-};
+//   return (
+//     populateset.has(detailkey) ||
+//     populateset.has(`details.${detailkey}`) ||
+//     populateset.has(modelname)
+//   );
+// };
 
-const toSelectableFields = (modelName: string): string | undefined => {
-  const allowedFields =
-    ALLOWED_FIELDS_PER_MODEL[
-    modelName as keyof typeof ALLOWED_FIELDS_PER_MODEL
-    ];
+// const toselectablefields = (modelname: string): string | undefined => {
+//   const allowedfields =
+//     allowed_fields_per_model[
+//     modelname as keyof typeof allowed_fields_per_model
+//     ];
 
-  if (!allowedFields?.length) {
-    return undefined;
-  }
+//   if (!allowedfields?.length) {
+//     return undefined;
+//   }
 
-  return allowedFields.join(" ");
-};
+//   return allowedfields.join(" ");
+// };
 
-const handler = async (
-  req: Request<{}, {}, LogsAPITypes.ListRequestBody>,
-  res: Response<LogsAPITypes.ListResponseData>,
-  _next: NextFunction,
-) => {
-  const { page, count, filters, fields, populate, search, includeDeleted } =
-    req.body;
-  const adminAccount = req.user!;
+// const handler = async (
+//   req: request<{}, {}, logsapitypes.listrequestbody>,
+//   res: response<logsapitypes.listresponsedata>,
+//   _next: nextfunction,
+// ) => {
+//   const { page, count, filters, fields, populate, search, includedeleted } =
+//     req.body;
+//   const adminaccount = req.user!;
 
-  try {
-    // let queryFilters: Record<string, any> = {};
+//   try {
+//     // let queryfilters: record<string, any> = {};
 
-    // if (search && search.query.length > 0 && search.searchIn.length > 0) {
-    //   const searchRegex = new RegExp(search.query, "i");
-    //   queryFilters = {
-    //     ...queryFilters,
-    //     $or: search.searchIn.map((field) => ({
-    //       [field]: searchRegex,
-    //     })),
-    //   };
-    // }
+//     // if (search && search.query.length > 0 && search.searchin.length > 0) {
+//     //   const searchregex = new regexp(search.query, "i");
+//     //   queryfilters = {
+//     //     ...queryfilters,
+//     //     $or: search.searchin.map((field) => ({
+//     //       [field]: searchregex,
+//     //     })),
+//     //   };
+//     // }
 
-    // if (filters) {
-    //   if (filters.startDate || filters.endDate) {
-    //     queryFilters.date = {};
-    //     if (filters.startDate) {
-    //       queryFilters.date.$gte = filters.startDate;
-    //     }
-    //     if (filters.endDate) {
-    //       queryFilters.date.$lte = filters.endDate;
-    //     }
-    //   }
+//     // if (filters) {
+//     //   if (filters.startdate || filters.enddate) {
+//     //     queryfilters.date = {};
+//     //     if (filters.startdate) {
+//     //       queryfilters.date.$gte = filters.startdate;
+//     //     }
+//     //     if (filters.enddate) {
+//     //       queryfilters.date.$lte = filters.enddate;
+//     //     }
+//     //   }
 
-    //   if (filters.level) {
-    //     queryFilters.level = filters.level;
-    //   }
+//     //   if (filters.level) {
+//     //     queryfilters.level = filters.level;
+//     //   }
 
-    //   if (filters.source) {
-    //     queryFilters.source = { $regex: filters.source, $options: "i" };
-    //   }
+//     //   if (filters.source) {
+//     //     queryfilters.source = { $regex: filters.source, $options: "i" };
+//     //   }
 
-    //   if (filters.traceId) {
-    //     queryFilters.traceId = filters.traceId;
-    //   }
-    // }
+//     //   if (filters.traceid) {
+//     //     queryfilters.traceid = filters.traceid;
+//     //   }
+//     // }
 
-    // if (!includeDeleted) {
-    //   queryFilters["metadata.deleted"] = { $ne: true };
-    // }
+//     // if (!includedeleted) {
+//     //   queryfilters["metadata.deleted"] = { $ne: true };
+//     // }
 
-    // let cursor = LogsModel.find(queryFilters)
-    //   .skip(page * count)
-    //   .limit(count)
-    //   .sort({ "metadata.createdAt": -1 });
+//     // let cursor = logsmodel.find(queryfilters)
+//     //   .skip(page * count)
+//     //   .limit(count)
+//     //   .sort({ "metadata.createdat": -1 });
 
-    // if (fields?.length) {
-    //   cursor = cursor.select(fields.join(" "));
-    // }
+//     // if (fields?.length) {
+//     //   cursor = cursor.select(fields.join(" "));
+//     // }
 
-    // const [rawLogs, totalLogs] = await Promise.all([
-    //   cursor.lean().exec(),
-    //   LogsModel.countDocuments(queryFilters),
-    // ]);
+//     // const [rawlogs, totallogs] = await promise.all([
+//     //   cursor.lean().exec(),
+//     //   logsmodel.countdocuments(queryfilters),
+//     // ]);
 
-    // const populateSet = new Set((populate ?? []).map((field) => field.trim()));
-    // const logs = rawLogs as Array<Record<string, any>>;
+//     // const populateset = new set((populate ?? []).map((field) => field.trim()));
+//     // const logs = rawlogs as array<record<string, any>>;
 
-    // if (populateSet.size > 0) {
-    //   const idsByModelName = new Map<string, Set<string>>();
+//     // if (populateset.size > 0) {
+//     //   const idsbymodelname = new map<string, set<string>>();
 
-    //   for (const log of logs) {
-    //     const details = toObjectRecord(log.details);
-    //     const references = toObjectRecord(log._references);
+//     //   for (const log of logs) {
+//     //     const details = toobjectrecord(log.details);
+//     //     const references = toobjectrecord(log._references);
 
-    //     for (const [detailKey, modelNameRaw] of Object.entries(references)) {
-    //       if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
-    //         continue;
-    //       }
+//     //     for (const [detailkey, modelnameraw] of object.entries(references)) {
+//     //       if (typeof modelnameraw !== "string" || modelnameraw.length === 0) {
+//     //         continue;
+//     //       }
 
-    //       if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
-    //         continue;
-    //       }
+//     //       if (!shouldpopulatereference(populateset, detailkey, modelnameraw)) {
+//     //         continue;
+//     //       }
 
-    //       const referenceId = normalizeReferenceId(details[detailKey]);
-    //       if (!referenceId || !mongoose.Types.ObjectId.isValid(referenceId)) {
-    //         continue;
-    //       }
+//     //       const referenceid = normalizereferenceid(details[detailkey]);
+//     //       if (!referenceid || !mongoose.types.objectid.isvalid(referenceid)) {
+//     //         continue;
+//     //       }
 
-    //       if (!idsByModelName.has(modelNameRaw)) {
-    //         idsByModelName.set(modelNameRaw, new Set<string>());
-    //       }
+//     //       if (!idsbymodelname.has(modelnameraw)) {
+//     //         idsbymodelname.set(modelnameraw, new set<string>());
+//     //       }
 
-    //       idsByModelName.get(modelNameRaw)?.add(referenceId);
-    //     }
-    //   }
+//     //       idsbymodelname.get(modelnameraw)?.add(referenceid);
+//     //     }
+//     //   }
 
-    //   const documentsByModelName = new Map<string, Map<string, any>>();
+//     //   const documentsbymodelname = new map<string, map<string, any>>();
 
-    //   await Promise.all(
-    //     Array.from(idsByModelName.entries()).map(async ([modelName, ids]) => {
-    //       const model =
-    //         MODEL_BY_NAME[modelName as keyof typeof MODEL_BY_NAME] ??
-    //         mongoose.models[modelName];
+//     //   await promise.all(
+//     //     array.from(idsbymodelname.entries()).map(async ([modelname, ids]) => {
+//     //       const model =
+//     //         model_by_name[modelname as keyof typeof model_by_name] ??
+//     //         mongoose.models[modelname];
 
-    //       if (!model || ids.size === 0) {
-    //         return;
-    //       }
+//     //       if (!model || ids.size === 0) {
+//     //         return;
+//     //       }
 
-    //       const typedModel = model as mongoose.Model<any>;
-    //       const modelCursor = typedModel.find({ _id: { $in: Array.from(ids) } });
-    //       const selectableFields = toSelectableFields(modelName);
-    //       if (selectableFields) {
-    //         modelCursor.select(selectableFields);
-    //       }
+//     //       const typedmodel = model as mongoose.model<any>;
+//     //       const modelcursor = typedmodel.find({ _id: { $in: array.from(ids) } });
+//     //       const selectablefields = toselectablefields(modelname);
+//     //       if (selectablefields) {
+//     //         modelcursor.select(selectablefields);
+//     //       }
 
-    //       const documents = await modelCursor.lean().exec();
-    //       const mapById = new Map<string, any>();
+//     //       const documents = await modelcursor.lean().exec();
+//     //       const mapbyid = new map<string, any>();
 
-    //       for (const document of documents as Array<Record<string, any>>) {
-    //         if (document?._id) {
-    //           mapById.set(String(document._id), document);
-    //         }
-    //       }
+//     //       for (const document of documents as array<record<string, any>>) {
+//     //         if (document?._id) {
+//     //           mapbyid.set(string(document._id), document);
+//     //         }
+//     //       }
 
-    //       documentsByModelName.set(modelName, mapById);
-    //     }),
-    //   );
+//     //       documentsbymodelname.set(modelname, mapbyid);
+//     //     }),
+//     //   );
 
-    //   for (const log of logs) {
-    //     const details = toObjectRecord(log.details);
-    //     const references = toObjectRecord(log._references);
+//     //   for (const log of logs) {
+//     //     const details = toobjectrecord(log.details);
+//     //     const references = toobjectrecord(log._references);
 
-    //     for (const [detailKey, modelNameRaw] of Object.entries(references)) {
-    //       if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
-    //         continue;
-    //       }
+//     //     for (const [detailkey, modelnameraw] of object.entries(references)) {
+//     //       if (typeof modelnameraw !== "string" || modelnameraw.length === 0) {
+//     //         continue;
+//     //       }
 
-    //       if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
-    //         continue;
-    //       }
+//     //       if (!shouldpopulatereference(populateset, detailkey, modelnameraw)) {
+//     //         continue;
+//     //       }
 
-    //       const value = details[detailKey];
-    //       const referenceId = normalizeReferenceId(value);
-    //       const document = referenceId
-    //         ? documentsByModelName.get(modelNameRaw)?.get(referenceId) ?? null
-    //         : null;
+//     //       const value = details[detailkey];
+//     //       const referenceid = normalizereferenceid(value);
+//     //       const document = referenceid
+//     //         ? documentsbymodelname.get(modelnameraw)?.get(referenceid) ?? null
+//     //         : null;
 
-    //       details[detailKey] = {
-    //         value,
-    //         document,
-    //       };
-    //     }
+//     //       details[detailkey] = {
+//     //         value,
+//     //         document,
+//     //       };
+//     //     }
 
-    //     log.details = details;
-    //   }
-    // }
+//     //     log.details = details;
+//     //   }
+//     // }
 
-    res.status(200).json({
-      status: "success",
-      logs: [],
-      totalLogs: 0,
-    });
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      LoggingService.log({
-        source: "api:logs:list",
-        level: "error",
-        traceId: req.traceId,
-        message: "Unexpected error during log listing",
-        details: { error: error.message, stack: error.stack },
+//     res.status(200).json({
+//       status: "success",
+//       logs: [],
+//       totallogs: 0,
+//     });
+//   } catch (error: unknown) {
+//     if (error instanceof error) {
+//       loggingservice.log({
+//         source: "api:logs:list",
+//         level: "error",
+//         traceid: req.traceid,
+//         message: "unexpected error during log listing",
+//         details: { error: error.message, stack: error.stack },
 
-      });
-    }
+//       });
+//     }
 
-    res.status(500).json({ status: "internal-error" });
-    return;
-  }
-};
+//     res.status(500).json({ status: "internal-error" });
+//     return;
+//   }
+// };
 
-export default handler;
+// export default handler;

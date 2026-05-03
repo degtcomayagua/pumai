@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 
-import * as AccountAPITypes from "../../../../shared/api/accounts";
-import LoggingService from "../../services/logging";
+import * as AccountAPITypes from "../../../../shared/api/accounts.js";
+import LoggingService from "../../services/logging.js";
 import {
   restoreAccountWithRetry,
   AccountNotFoundError,
-} from "../../services/accounts/restore";
+} from "../../services/accounts/restore.js";
 
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "../../../../generated/prisma/client.js";
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.RestoreRequestBody>,

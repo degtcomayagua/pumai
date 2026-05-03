@@ -1,8 +1,7 @@
-import type { IAccount } from "../../../../shared/models/account";
-import AccountUtils from "../../utils/accounts";
+import AccountUtils from "../../utils/accounts.js";
 
 import { NextFunction, Request, Response } from "express";
-import * as AccountAPITypes from "../../../../shared/api/auth";
+import * as AccountAPITypes from "../../../../shared/api/auth.js";
 
 const handler = async (
   req: Request,

@@ -1,18 +1,18 @@
 import express, { RequestHandler } from "express";
 
-import listHandler from "../controllers/rag-documents/list";
+import listHandler from "../controllers/rag-documents/list.js";
 // import getHandler from "../controllers/rag-documents/get";
-import createHandler from "../controllers/rag-documents/create";
+import createHandler from "../controllers/rag-documents/create.js";
 
 const router = express.Router();
-import { validateRequestBody } from "../middleware/validationMiddleware";
+import { validateRequestBody } from "../middleware/validationMiddleware.js";
 
 // Schemas
 import {
   createSchema,
   listSchema,
   getSchema,
-} from "../../../shared/schemas/rag-documents";
+} from "@shared/schemas/rag-documents.js";
 
 // Routes
 router.post(

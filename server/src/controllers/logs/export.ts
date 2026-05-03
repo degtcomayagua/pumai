@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 
 const handler = async (
   req: Request,

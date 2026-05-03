@@ -2,12 +2,12 @@ import { Message, Tool } from "ollama";
 
 import { CampusCode, DeliveryMode, DocumentCategory } from "../../../../shared/models";
 
-import OllamaChatService from "../../services/ollama/chat";
-import OllamaEmbeddingService from "../../services/ollama/embed";
-import { queryRagDocumentsByEmbedding } from "../../services/qdrant/rag-documents/query";
-import { RagQueryFilters } from "../../services/qdrant/rag-documents/shared"
+import OllamaChatService from "../../services/ollama/chat.js";
+import OllamaEmbeddingService from "../../services/ollama/embed.js";
+import { queryRagDocumentsByEmbedding } from "../../services/qdrant/rag-documents/query.js";
+import { RagQueryFilters } from "../../services/qdrant/rag-documents/shared.js"
 
-import { MCPServerConfig } from "../../types/mcp";
+import { MCPServerConfig } from "../../types/mcp.js";
 
 export type AiRequestBody = {
   prompt: string;

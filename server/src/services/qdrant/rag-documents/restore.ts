@@ -1,16 +1,16 @@
 import { performance } from "perf_hooks";
 import retry from "async-retry";
 
-import { IAccount } from "../../../../../shared/models/account";
+import { IAccount } from "../../../../../shared/models/account.js";
 
-import LoggingService from "../../logging";
+import LoggingService from "../../logging.js";
 
 import {
   buildRagChunkPayloadPatch,
   buildRagDocIdFilter,
   getQdrantClient,
   RAG_DOC_CHUNKS_COLLECTION,
-} from "./shared";
+} from "./shared.js";
 
 type RestoreRagChunksOptions = {
   traceId?: string;
@@ -68,11 +68,8 @@ export async function restoreRagChunksByDocId(
     details: {
       docId,
       ...(options.adminAccount && {
-        restoredBy: options.adminAccount._id.toString(),
+        restoredBy: options.adminAccount.id.toString(),
       }),
-    },
-    metadata: {
-      createdAt: new Date(),
     },
   });
 }

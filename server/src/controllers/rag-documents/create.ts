@@ -1,17 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 
-import * as RagDocumentsAPITypes from "../../../../shared/api/rag-documents";
+import * as RagDocumentsAPITypes from "../../../../shared/api/rag-documents.js";
 
-import LoggingService from "../../services/logging";
-import { createRagDocChunkWithRetry } from "../../services/qdrant/rag-documents/create";
-import { createRAGDocumentWithRetry } from "../../services/rag-documents/create";
-import OllamaEmbedService from "../../services/ollama/embed";
+import LoggingService from "../../services/logging.js";
+import { createRagDocChunkWithRetry } from "../../services/qdrant/rag-documents/create.js";
+import { createRAGDocumentWithRetry } from "../../services/rag-documents/create.js";
+import OllamaEmbedService from "../../services/ollama/embed.js";
 
-import { buildTextChunks } from "../../utils/ai/chunking";
+import { buildTextChunks } from "../../utils/ai/chunking.js";
 
-import { APIError } from "../../errors/api";
+import { APIError } from "../../errors/api.js";
 
-import { CampusCode } from "../../../../generated/prisma/enums";
+import { CampusCode } from "../../../../generated/prisma/enums.js";
 
 const handler = async (
   req: Request<{}, {}, RagDocumentsAPITypes.CreateRequestBody>,

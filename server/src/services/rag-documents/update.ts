@@ -7,14 +7,14 @@ import {
   Account,
   MetadataUpdateHistory,
   RAGDocument,
-} from "../../../../generated/prisma/client";
+} from "../../../../generated/prisma/client.js";
 import {
   MetadataUpdateHistoryCreateWithoutMetadataInput,
   RAGDocumentUpdateInput,
-} from "../../../../generated/prisma/models";
+} from "../../../../generated/prisma/models.js";
 
-import prismaClient from "../../config/prisma";
-import LoggingService from "../../services/logging";
+import prismaClient from "../../config/prisma.js";
+import LoggingService from "../../services/logging.js";
 
 type UpdateRAGDocumentOptions = {
   traceId?: string;
@@ -58,9 +58,9 @@ export async function updateRAGDocument(
   const changes: MetadataUpdateHistory["changes"] = {};
   const updatePayload: RAGDocumentUpdateInput = {};
 
-  for (const key of Object.keys(params) as (keyof Omit<RAGDocument, "id" | "metadata">)[]) {
+  for (const key of Object.keys(params) as (keyof Omit<RAGDocument, "id" | "metadata" | "metadataId">)[]) {
     if (params[key] !== existing[key]) {
-      updatePayload[key] = params[key];
+      updatePayload[key] = params[key] as any;
       changes[key] = params[key]?.toString();
     }
   }

@@ -1,11 +1,11 @@
 import { EmbedRequest, Ollama } from "ollama";
 
-import OllamaClient from "./client";
+import OllamaClient from "./client.js";
 import {
   queryRagDocumentsByEmbedding,
   RagQueryFilters,
-} from "../qdrant/rag-documents/query";
-import { RagQueryResult } from "../qdrant/rag-documents/shared";
+} from "../qdrant/rag-documents/query.js";
+import { RagQueryResult } from "../qdrant/rag-documents/shared.js";
 
 class OllamaEmbeddingClient {
   private static instance: OllamaEmbeddingClient | null = null;

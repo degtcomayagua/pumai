@@ -1,7 +1,7 @@
 import type { Message, Tool, Options } from "ollama";
 
-import { DEFAULT_SYSTEM_PROMPT } from "../../../../shared/constants/prompts";
-import { OllamaMcpServer } from "../../types/ollama";
+import { DEFAULT_SYSTEM_PROMPT } from "../../../../shared/constants/prompts.js";
+import { OllamaMcpServer } from "../../types/ollama.js";
 
 function formatToolSummary(tools: Tool[]): string {
   if (tools.length === 0) {

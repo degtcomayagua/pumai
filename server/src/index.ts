@@ -1,5 +1,4 @@
-import "module-alias/register";
-import "./types";
+import "./types/index.js";
 
 import express from "express";
 import { createServer } from "http";
@@ -7,11 +6,11 @@ import cors from "cors";
 import cookie from "cookie-parser";
 import path from "path";
 
-import { loadEnv } from "./config/env";
-import { registerRoutes } from "./routes";
-import { traceIdMiddleware } from "./middleware/traceId";
-import SessionsService from "./services/sessions";
-import SocketServer from "./services/socket";
+import { loadEnv } from "./config/env.js";
+import { registerRoutes } from "./routes/index.js";
+import { traceIdMiddleware } from "./middleware/traceId.js";
+import SessionsService from "./services/sessions.js";
+import SocketServer from "./services/socket.js";
 
 export async function startServer() {
   loadEnv();
@@ -57,9 +56,7 @@ export async function startServer() {
   socketServer.loadToServer(httpServer);
 }
 
-if (require.main === module) {
-  startServer().catch((error) => {
-    console.error("[SERVER] Failed to start server:", error);
-    process.exit(1);
-  });
-}
+startServer().catch((error) => {
+  console.error("[SERVER] Failed to start server:", error);
+  process.exit(1);
+});

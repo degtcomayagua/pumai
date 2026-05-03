@@ -2,15 +2,15 @@ import bcrypt from "bcrypt";
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import prismaClient from "../../config/prisma";
+import prismaClient from "../../config/prisma.js";
 import {
   MetadataSource,
   MetadataStatus,
   Account,
   Prisma,
-} from "../../../../generated/prisma/client";
+} from "../../../../generated/prisma/client.js";
 
-import LoggingService from "../../services/logging";
+import LoggingService from "../../services/logging.js";
 
 type CreateUserOptions = {
   traceId?: string; // Unique identifier for tracing requests

@@ -1,19 +1,20 @@
 import retry from "async-retry";
 import { performance } from "perf_hooks";
 
-import { IAccount } from "../../../../../shared/models/account";
+import LoggingService from "../../logging.js";
 
-import LoggingService from "../../logging";
+import { Account } from "generated/prisma/client.js";
+
 
 import {
   buildRagDocIdFilter,
   getQdrantClient,
   RAG_DOC_CHUNKS_COLLECTION,
-} from "./shared";
+} from "./shared.js";
 
 type DeleteRagChunksOptions = {
   traceId?: string;
-  adminAccount?: IAccount;
+  adminAccount?: Account;
 };
 
 export async function deleteRagChunksByDocId(
@@ -41,11 +42,8 @@ export async function deleteRagChunksByDocId(
       docId,
       chunkCount: Number(matchingChunks.count ?? 0),
       ...(options.adminAccount && {
-        deletedBy: options.adminAccount._id.toString(),
+        deletedBy: options.adminAccount.id.toString(),
       }),
-    },
-    metadata: {
-      createdAt: new Date(),
     },
   });
 }
