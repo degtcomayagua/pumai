@@ -13,13 +13,8 @@ dotenv.config({
   quiet: true,
 });
 
-const adapter = new PrismaMariaDb({
-  connectionLimit: 5,
-  database: process.env.DATABASE_NAME,
-  host: process.env.DATABASE_HOST,
-  port: Number(process.env.DATABASE_PORT),
-  user: process.env.DATABASE_USER,
-  password: process.env.DATABASE_PASSWORD,
+const adapter = new PrismaMariaDb(process.env.DATABASE_URL as string, {
+  database: "your_database_name"
 });
 
 (async () => {
