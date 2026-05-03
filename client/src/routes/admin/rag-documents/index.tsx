@@ -23,7 +23,7 @@ import RAGDocumentsFeature, {
   IRAGDocument,
   RAGDocumentsAPITypes,
 } from "../../../features/rag-documents";
-import { IAccountRole } from "../../../features/roles";
+import { AccountRole } from "../../../features/roles";
 
 export const Route = createFileRoute("/admin/rag-documents/")({
   component: RouteComponent,
@@ -141,11 +141,11 @@ function RouteComponent() {
           ragDocuments={ragDocuments}
           ragDocumentsListState={ragDocumentsListState}
           currentAccountPermissions={
-            (account.data.role as IAccountRole).permissions
+            (account.data.role as AccountRole).permissions
           }
-          onRestore={(document) => {}}
-          onUpdate={async (document) => {}}
-          onDelete={(document) => {}}
+          onRestore={(document) => { }}
+          onUpdate={async (document) => { }}
+          onDelete={(document) => { }}
         />
       )}
 

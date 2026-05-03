@@ -1,4 +1,4 @@
-import { RAGDocument } from "../../generated/prisma/client.js";
+import { Prisma, RAGDocument } from "../../generated/prisma/client.js";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
@@ -22,12 +22,26 @@ export type ListRequestBody = z.infer<typeof listSchema>;
 // Response types
 export interface GetResponseData {
   status: ResponseStatus;
-  ragDocuments?: RAGDocument[];
+  ragDocuments?: Prisma.RAGDocumentGetPayload<{
+    include: {
+      metadata: true;
+      campuses: true;
+      tags: true;
+      deliveryModes: true
+    }
+  }>[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  ragDocuments?: RAGDocument[];
+  ragDocuments?: Prisma.RAGDocumentGetPayload<{
+    include: {
+      metadata: true;
+      campuses: true;
+      tags: true;
+      deliveryModes: true
+    }
+  }>[];
   totalRagDocuments?: number;
 }
 

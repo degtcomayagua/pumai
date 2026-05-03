@@ -2,7 +2,7 @@ import { z } from "zod";
 import { campuses, isoDateString, metadataFields, metadataPopulateFields } from "./index.js";
 
 const ragDocumentFields = z.enum([
-  "_id",
+  "id",
   "title",
   "category",
   "authorityLevel",
@@ -12,7 +12,9 @@ const ragDocumentFields = z.enum([
   "effectiveFrom",
   "effectiveUntil",
   "archived",
-  "warnings",
+  "warningLegal",
+  "warningTimeSensitive",
+  "warningCampusSpecific",
   "summary",
   "tags",
   ...metadataFields,

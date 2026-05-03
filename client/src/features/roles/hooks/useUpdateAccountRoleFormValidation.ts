@@ -28,7 +28,7 @@ export function useUpdateAccountRoleFormValidation(t: TFunction) {
 	const validate = useCallback(
 		(values: RolesAPITypes.UpdateRequestBody) => {
 			const result =
-				AccountRolesFeature.schemas.updateAccountRoleSchema.safeParse(values);
+				AccountRolesFeature.schemas.updateSchema.safeParse(values);
 
 			if (result.success) {
 				// No errors at all, clear all errors

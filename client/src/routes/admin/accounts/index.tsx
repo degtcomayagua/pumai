@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { FaUser, FaTrash, FaPlus, FaSave } from "react-icons/fa";
 
 import AccountsFeature, { AccountAPITypes } from "../../../features/accounts";
-import AccountRolesFeature, { IAccountRole } from "../../../features/roles";
+import AccountRolesFeature, { AccountRole } from "../../../features/roles";
 
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
@@ -311,9 +311,9 @@ function RouteComponent() {
             message.info(tPage("updateStatusNotAvailable"));
           }}
           accountPermissions={
-            (account?.data.role as IAccountRole).permissions ?? []
+            (account?.data.role as AccountRole).permissions ?? []
           }
-          accountLevel={(account?.data.role as IAccountRole).level ?? 0}
+          accountLevel={(account?.data.role as AccountRole).level ?? 0}
         />
       )}
 

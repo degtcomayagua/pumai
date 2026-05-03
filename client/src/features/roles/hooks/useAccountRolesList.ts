@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { App } from "antd";
 
 interface ListAccountRole {
-  _id: string;
+  id: string;
   name: string;
   level: number;
   totalPermissions: number;
@@ -15,8 +15,8 @@ interface ListAccountRole {
 
 type NullableAccountsListState = {
   [K in keyof RolesAPITypes.ListRequestBody]?:
-    | RolesAPITypes.ListRequestBody[K]
-    | null;
+  | RolesAPITypes.ListRequestBody[K]
+  | null;
 };
 
 type UseAccountRolesListOptions = {
@@ -37,7 +37,7 @@ export function useAccountRolesList({
     RolesAPITypes.ListRequestBody & { loading: boolean }
   >({
     loading: true,
-    fields: ["metadata", "_id", "name", "permissions", "level"],
+    fields: ["metadata.createdAt", "id", "name", "permissions", "level", "metadata.deleted"],
     count: 50,
     page: 0,
   });
@@ -79,14 +79,14 @@ export function useAccountRolesList({
 
         setAccountRoles({
           accountRoles: result.accountRoles!.map((role) => ({
-            _id: role._id.toString(),
+            id: role.id.toString(),
             name: role.name ?? "",
             level: role.level ?? 0,
-            totalPermissions: role.permissions.length,
+            totalPermissions: role.permissions?.split(",").length ?? 0,
             createdAt: role.metadata
               ? new Date(role.metadata.createdAt ?? Date.now())
               : new Date(),
-            deleted: role.metadata.deleted ?? false,
+            deleted: role.metadata!.deleted ?? false,
           })),
           totalAccountRoles: result.totalAccountRoles ?? 0,
         });

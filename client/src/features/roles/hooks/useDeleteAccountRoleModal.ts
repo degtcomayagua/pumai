@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { App } from "antd";
 import { useState, useCallback } from "react";
 
-import AccountRolesFeature, { IAccountRole, RolesAPITypes } from "../";
+import AccountRolesFeature, { AccountRole, RolesAPITypes } from "../";
 
 export type DeleteAccountRoleModalState = RolesAPITypes.DeleteRequestBody & {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export type DeleteAccountRoleModalState = RolesAPITypes.DeleteRequestBody & {
 export function useDeleteAccountRoleModal({
   onSuccess,
 }: {
-  onSuccess: (account: IAccountRole) => void;
+  onSuccess: (account: AccountRole) => void;
 }) {
   const { t } = useTranslation(["features"], {
     keyPrefix: "account-roles.hooks.useDeleteModal",

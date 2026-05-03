@@ -19,7 +19,7 @@ import {
 } from "react-icons/fa";
 
 import AccountRolesFeature, {
-  IAccountRole,
+  AccountRole,
   RolesAPITypes,
 } from "../../../features/roles";
 
@@ -294,7 +294,7 @@ function RouteComponent() {
           fetchAccountRoles={fetchAccountRoles}
           accountRoles={accountRoles}
           accountRolesListState={accountRolesListState}
-          accountPermissions={(account.data.role as IAccountRole).permissions}
+          accountPermissions={(account.data.role as AccountRole).permissions}
           onRestore={(accRole) => {
             handleRestoreAccountRole(accRole._id);
           }}

@@ -1,4 +1,4 @@
-import { AccountRole } from "../../generated/prisma/client.js";
+import { AccountRole, Prisma } from "../../generated/prisma/client.js";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
@@ -22,12 +22,20 @@ export type ListRequestBody = z.infer<typeof listSchema>;
 // Response types
 export interface GetResponseData {
   status: ResponseStatus;
-  accountRoles?: AccountRole[];
+  accountRoles?: Prisma.AccountRoleGetPayload<{
+    include: {
+      metadata: true;
+    }
+  }>[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  accountRoles?: AccountRole[];
+  accountRoles?: Prisma.AccountRoleGetPayload<{
+    include: {
+      metadata: true;
+    }
+  }>[];
   totalAccountRoles?: number;
 }
 

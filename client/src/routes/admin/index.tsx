@@ -24,7 +24,7 @@ import type { RootState } from "../../store";
 import AuthFeature from "../../features/auth/";
 import AdminLayout from "../../layouts/Admin";
 import type { MenuItemType } from "antd/es/menu/interface";
-import type { IAccountRole } from "../../features/roles";
+import type { AccountRole } from "../../features/roles";
 
 import type { Permission } from "../../../../shared/types/permissions";
 import { TiCalendar } from "react-icons/ti";
@@ -56,8 +56,8 @@ function RouteComponent() {
   const hasPermission = (permission: Permission): boolean => {
     if (account) {
       if (
-        (account.data.role as IAccountRole).permissions.includes(permission) ||
-        (account.data.role as IAccountRole).permissions.includes("*")
+        (account.data.role as AccountRole).permissions.includes(permission) ||
+        (account.data.role as AccountRole).permissions.includes("*")
       )
         return true;
       return false;
@@ -72,31 +72,31 @@ function RouteComponent() {
     description?: string;
     icon: React.ReactNode;
   }> = [
-    // === Overview & Core ===
-    {
-      key: "documents",
-      link: "/admin/rag-documents",
-      label: tpage("items.rag-documents.title"),
-      description: tpage("items.rag-documents.description"),
-      icon: <FaFile className="text-6xl" />, // Better for dashboards
-    },
+      // === Overview & Core ===
+      {
+        key: "documents",
+        link: "/admin/rag-documents",
+        label: tpage("items.rag-documents.title"),
+        description: tpage("items.rag-documents.description"),
+        icon: <FaFile className="text-6xl" />, // Better for dashboards
+      },
 
-    {
-      key: "accounts",
-      link: "/admin/accounts",
-      label: tpage("items.accounts.title"),
-      description: tpage("items.accounts.description"),
-      icon: <FaUser className="text-6xl" />, // Better for dashboards
-    },
+      {
+        key: "accounts",
+        link: "/admin/accounts",
+        label: tpage("items.accounts.title"),
+        description: tpage("items.accounts.description"),
+        icon: <FaUser className="text-6xl" />, // Better for dashboards
+      },
 
-    {
-      key: "account-roles",
-      link: "/admin/accounts/roles",
-      label: tpage("items.account-roles.title"),
-      description: tpage("items.account-roles.description"),
-      icon: <FaUserShield className="text-6xl" />, // Better for dashboards
-    },
-  ];
+      {
+        key: "account-roles",
+        link: "/admin/accounts/roles",
+        label: tpage("items.account-roles.title"),
+        description: tpage("items.account-roles.description"),
+        icon: <FaUserShield className="text-6xl" />, // Better for dashboards
+      },
+    ];
 
   const greeting =
     new Date().getHours() < 12

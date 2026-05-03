@@ -2,7 +2,7 @@ import api from "./api";
 import * as schemas from "../../../../shared/schemas/account-roles";
 
 import * as RolesAPITypes from "../../../../shared/api/account-roles";
-import { IAccountRole } from "../../../../shared/models/account-role";
+import { AccountRole } from "../../../../generated/prisma/client"
 
 // Hooks
 import { useAccountRolesList } from "./hooks/useAccountRolesList";
@@ -15,7 +15,7 @@ import { AccountRolesTable } from "./components/AccountRolesTable";
 import { UpdateAccountRoleForm } from "./components/UpdateAccountRoleForm";
 import { CreateAccountRoleModal } from "./components/CreateAccountRoleModal";
 
-export type { IAccountRole, RolesAPITypes };
+export type { AccountRole, RolesAPITypes };
 export default {
   api,
   schemas,

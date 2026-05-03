@@ -2,11 +2,11 @@ import api from "./api";
 import * as schemas from "../../../../shared/schemas/rag-documents";
 
 import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents";
-import { IRAGDocument } from "../../../../shared/models/rag-document";
-import { CampusCode, DocumentCategory } from "../../../../shared/models";
+import { RAGDocument } from "../../../../generated/prisma/client"
+import { CampusCode, DocumentCategory } from "../../../../generated/prisma/enums"
 
 interface ListRAGDocument {
-  _id: string;
+  id: string;
   title: string;
   category: DocumentCategory;
   authorityLevel: number;
@@ -31,7 +31,7 @@ import { RagDocumentsTable } from "./components/DocumentsTable";
 import { CreateRagDocumentDrawer } from "./components/CreateRAGDocumentDrawer";
 // import { CreateAccountRoleModal } from "./components/CreateAccountRoleModal";
 
-export type { IRAGDocument, ListRAGDocument, RAGDocumentsAPITypes };
+export type { RAGDocument as IRAGDocument, ListRAGDocument, RAGDocumentsAPITypes };
 export default {
   api,
   schemas,

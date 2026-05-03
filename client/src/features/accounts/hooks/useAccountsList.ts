@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next'
 import type { MessageInstance } from 'antd/es/message/interface'
 
 import AccountsFeature, { AccountAPITypes, type ListAccount } from '../'
-import type { IAccountRole } from '../../roles'
+import type { AccountRole } from '../../roles'
 
 type NullableAccountsListState = {
   [K in keyof AccountAPITypes.ListRequestBody]?:

@@ -9,8 +9,8 @@ import { App } from "antd";
 
 type NullableRAGDocumentsListState = {
   [K in keyof RAGDocumentsAPITypes.ListRequestBody]?:
-    | RAGDocumentsAPITypes.ListRequestBody[K]
-    | null;
+  | RAGDocumentsAPITypes.ListRequestBody[K]
+  | null;
 };
 
 type UseRagDocumentsListOptions = {
@@ -28,7 +28,7 @@ export function useRagDocumentsList({
   >({
     loading: true,
     fields: [
-      "_id",
+      "id",
       "title",
       "category",
       "authorityLevel",
@@ -38,10 +38,13 @@ export function useRagDocumentsList({
       "effectiveFrom",
       "effectiveUntil",
       "archived",
-      "warnings",
+      "warningCampusSpecific",
+      "warningLegal",
+      "warningTimeSensitive",
       "summary",
       "tags",
-      "metadata",
+      "metadata.deleted",
+      "metadata.createdAt"
     ],
     count: 50,
     page: 0,
@@ -82,16 +85,18 @@ export function useRagDocumentsList({
 
         setRagDocuments({
           ragDocuments: result.ragDocuments!.map((doc) => ({
-            ...doc,
+            id: doc.id.toString(),
+            title: doc.title,
+            category: doc.category,
+            authorityLevel: doc.authorityLevel,
+            campuses: doc.campuses.map((campus) => campus.campus),
             effective: {
               from: doc.effectiveFrom,
               until: doc.effectiveUntil,
             },
-            _id: doc._id.toString(),
-            createdAt: doc.metadata
-              ? new Date(doc.metadata.createdAt ?? Date.now())
-              : new Date(),
-            deleted: doc.metadata.deleted ?? false,
+            tags: doc.tags.map((tag) => tag.tag),
+            createdAt: doc.metadata?.createdAt ?? new Date(0),
+            deleted: doc.metadata?.deleted ?? false,
           })),
           totalRagDocuments: result.totalRagDocuments ?? 0,
         });
