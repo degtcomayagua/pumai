@@ -104,120 +104,120 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const { logIds, fields, populate } = req.body;
-  const adminAccount = req.user as IAccount;
+  const adminAccount = req.user!;
 
   try {
-    const projection = fields?.reduce(
-      (acc, field) => {
-        acc[field] = 1;
-        return acc;
-      },
-      {} as Record<string, 1>,
-    );
+    // const projection = fields?.reduce(
+    //   (acc, field) => {
+    //     acc[field] = 1;
+    //     return acc;
+    //   },
+    //   {} as Record<string, 1>,
+    // );
 
-    const logs = await LogsModel.find(
-      {
-        _id: { $in: logIds },
-        deleted: false,
-      },
-      projection,
-    ).lean().exec();
+    // const logs = await LogsModel.find(
+    //   {
+    //     _id: { $in: logIds },
+    //     deleted: false,
+    //   },
+    //   projection,
+    // ).lean().exec();
 
-    const populateSet = new Set((populate ?? []).map((field) => field.trim()));
+    // const populateSet = new Set((populate ?? []).map((field) => field.trim()));
 
-    if (populateSet.size > 0) {
-      const idsByModelName = new Map<string, Set<string>>();
+    // if (populateSet.size > 0) {
+    //   const idsByModelName = new Map<string, Set<string>>();
 
-      for (const log of logs as Array<Record<string, any>>) {
-        const details = toObjectRecord(log.details);
-        const references = toObjectRecord(log._references);
+    //   for (const log of logs as Array<Record<string, any>>) {
+    //     const details = toObjectRecord(log.details);
+    //     const references = toObjectRecord(log._references);
 
-        for (const [detailKey, modelNameRaw] of Object.entries(references)) {
-          if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
-            continue;
-          }
+    //     for (const [detailKey, modelNameRaw] of Object.entries(references)) {
+    //       if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
+    //         continue;
+    //       }
 
-          if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
-            continue;
-          }
+    //       if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
+    //         continue;
+    //       }
 
-          const referenceId = normalizeReferenceId(details[detailKey]);
-          if (!referenceId || !mongoose.Types.ObjectId.isValid(referenceId)) {
-            continue;
-          }
+    //       const referenceId = normalizeReferenceId(details[detailKey]);
+    //       if (!referenceId || !mongoose.Types.ObjectId.isValid(referenceId)) {
+    //         continue;
+    //       }
 
-          if (!idsByModelName.has(modelNameRaw)) {
-            idsByModelName.set(modelNameRaw, new Set<string>());
-          }
+    //       if (!idsByModelName.has(modelNameRaw)) {
+    //         idsByModelName.set(modelNameRaw, new Set<string>());
+    //       }
 
-          idsByModelName.get(modelNameRaw)?.add(referenceId);
-        }
-      }
+    //       idsByModelName.get(modelNameRaw)?.add(referenceId);
+    //     }
+    //   }
 
-      const documentsByModelName = new Map<string, Map<string, any>>();
+    //   const documentsByModelName = new Map<string, Map<string, any>>();
 
-      await Promise.all(
-        Array.from(idsByModelName.entries()).map(async ([modelName, ids]) => {
-          const model =
-            MODEL_BY_NAME[modelName as keyof typeof MODEL_BY_NAME] ??
-            mongoose.models[modelName];
+    //   await Promise.all(
+    //     Array.from(idsByModelName.entries()).map(async ([modelName, ids]) => {
+    //       const model =
+    //         MODEL_BY_NAME[modelName as keyof typeof MODEL_BY_NAME] ??
+    //         mongoose.models[modelName];
 
-          if (!model || ids.size === 0) {
-            return;
-          }
+    //       if (!model || ids.size === 0) {
+    //         return;
+    //       }
 
-          const typedModel = model as mongoose.Model<any>;
-          const modelCursor = typedModel.find({ _id: { $in: Array.from(ids) } });
-          const selectableFields = toSelectableFields(modelName);
-          if (selectableFields) {
-            modelCursor.select(selectableFields);
-          }
+    //       const typedModel = model as mongoose.Model<any>;
+    //       const modelCursor = typedModel.find({ _id: { $in: Array.from(ids) } });
+    //       const selectableFields = toSelectableFields(modelName);
+    //       if (selectableFields) {
+    //         modelCursor.select(selectableFields);
+    //       }
 
-          const documents = await modelCursor.lean().exec();
-          const mapById = new Map<string, any>();
+    //       const documents = await modelCursor.lean().exec();
+    //       const mapById = new Map<string, any>();
 
-          for (const document of documents as Array<Record<string, any>>) {
-            if (document?._id) {
-              mapById.set(String(document._id), document);
-            }
-          }
+    //       for (const document of documents as Array<Record<string, any>>) {
+    //         if (document?._id) {
+    //           mapById.set(String(document._id), document);
+    //         }
+    //       }
 
-          documentsByModelName.set(modelName, mapById);
-        }),
-      );
+    //       documentsByModelName.set(modelName, mapById);
+    //     }),
+    //   );
 
-      for (const log of logs as Array<Record<string, any>>) {
-        const details = toObjectRecord(log.details);
-        const references = toObjectRecord(log._references);
+    //   for (const log of logs as Array<Record<string, any>>) {
+    //     const details = toObjectRecord(log.details);
+    //     const references = toObjectRecord(log._references);
 
-        for (const [detailKey, modelNameRaw] of Object.entries(references)) {
-          if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
-            continue;
-          }
+    //     for (const [detailKey, modelNameRaw] of Object.entries(references)) {
+    //       if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
+    //         continue;
+    //       }
 
-          if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
-            continue;
-          }
+    //       if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
+    //         continue;
+    //       }
 
-          const value = details[detailKey];
-          const referenceId = normalizeReferenceId(value);
-          const document = referenceId
-            ? documentsByModelName.get(modelNameRaw)?.get(referenceId) ?? null
-            : null;
+    //       const value = details[detailKey];
+    //       const referenceId = normalizeReferenceId(value);
+    //       const document = referenceId
+    //         ? documentsByModelName.get(modelNameRaw)?.get(referenceId) ?? null
+    //         : null;
 
-          details[detailKey] = {
-            value,
-            document,
-          };
-        }
+    //       details[detailKey] = {
+    //         value,
+    //         document,
+    //       };
+    //     }
 
-        log.details = details;
-      }
-    }
+    //     log.details = details;
+    //   }
+    // }
 
     res.status(200).send({
       status: "success",
-      logs: logs as ILog[],
+      logs: [],
     });
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -233,10 +233,6 @@ const handler = async (
         },
         _references: {
           logIds: "Log",
-        },
-        metadata: {
-          createdBy: adminAccount?._id,
-          createdAt: new Date(),
         },
       });
     }

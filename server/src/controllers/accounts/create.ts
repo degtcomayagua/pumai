@@ -22,7 +22,7 @@ const handler = async (
   try {
     // Check if the email is in use
     const normalizedEmail = email.trim().toLowerCase();
-    const existingAccount = await prismaClient.account.findFirst({
+    const existingAccount = await prismaClient.account.findMany({
       where: {
         email: normalizedEmail,
       },

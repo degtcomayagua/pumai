@@ -1,6 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
@@ -9,6 +10,7 @@
     "build": "tsc && cp -r ./src/emails/ ./dist",
     "start": "cross-env NODE_ENV=production node ./dist/server/src/index.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "tsconfig-paths": "^4.2.0"
+  }
 }

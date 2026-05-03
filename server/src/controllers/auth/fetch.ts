@@ -9,7 +9,7 @@ const handler = async (
   res: Response<AccountAPITypes.FetchResponseData>,
   _next: NextFunction,
 ) => {
-  const account = req.user as IAccount; // Middleware verifies the user is logged in
+  const account = req.user!; // Middleware verifies the user is logged in
   const accountSession = await AccountUtils.createSessionAccount(account);
 
   res.status(200).send({

@@ -8,7 +8,7 @@ import {
   ensureAuthenticated,
   ensurePermissions,
 } from "../middleware/authMiddleware";
-import { getSchema, listSchema } from "../../../shared/schemas/logs";
+import { getSchema, listSchema } from "@shared/schemas/logs";
 
 const router = express.Router();
 

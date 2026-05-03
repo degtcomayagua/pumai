@@ -30,7 +30,7 @@ const handler = async (
   } = req.parsedBody;
 
   try {
-    const { finalPrompt, ragDocuments } = await buildAiPrompt(req.parsedBody);
+    const { finalPrompt, ragDocuments } = await buildAiPrompt(req.parsedBody.prompt);
     // MCP temporarily disabled for workflow/data-extraction performance tuning.
     // const mcpCatalog = await resolveAiMcpCatalog(req.parsedBody.mcpServers);
 
@@ -101,10 +101,7 @@ const handler = async (
           error: error.message,
           stack: error.stack,
         },
-        metadata: {
-          createdAt: new Date(),
-          // createdBy: adminAccount._id,
-        },
+
       });
     }
     res.status(500).json({

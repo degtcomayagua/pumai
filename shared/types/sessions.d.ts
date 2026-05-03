@@ -1,4 +1,4 @@
-import { IAccountRole } from "../models/account-role";
+import { AccountRole } from "../../generated/prisma/client";
 
 export type ISessionAccount = {
   _id: string;
@@ -10,7 +10,7 @@ export type ISessionAccount = {
     verified: boolean;
   };
   data: {
-    role: IAccountRole;
+    role: AccountRole;
     status: "active" | "locked";
   };
   preferences: {

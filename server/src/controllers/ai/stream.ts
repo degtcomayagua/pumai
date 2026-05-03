@@ -208,7 +208,7 @@ const handler = async (
       if (workflow) {
         const createdWorkflow = new workflow();
         const workflowSession = await createSession({
-          accountId: account._id.toString(),
+          accountId: account.id.toString(),
           workflow: detectedIntent,
         });
 
@@ -342,10 +342,7 @@ const handler = async (
           error: error.message,
           stack: error.stack,
         },
-        metadata: {
-          createdAt: new Date(),
-          // createdBy: adminAccount._id,
-        },
+
       });
     }
 

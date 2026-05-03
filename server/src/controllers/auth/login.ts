@@ -7,7 +7,7 @@ import AccountUtils from "../../utils/accounts";
 import { NextFunction, Request, Response } from "express";
 import type * as AuthAPITypes from "../../../../shared/api/auth";
 
-import { IAccount } from "../../../../shared/models/account";
+import { AccountWithRole } from "../../types";
 
 const handler = (
   req: Request<{}, {}, AuthAPITypes.LoginRequestBody>,
@@ -17,7 +17,7 @@ const handler = (
   try {
     passport.authenticate(
       "local",
-      (err: any, user: IAccount | null, info: any) => {
+      (err: any, user: AccountWithRole | null, info: any) => {
         if (err) {
           next(err);
           return;
@@ -50,9 +50,6 @@ const handler = (
       message: "Unexpected error during email change",
       traceId: req.traceId,
       details: { error: error.message, stack: error.stack },
-      metadata: {
-        createdAt: new Date(),
-      },
     });
     res.status(500).send({ status: "internal-error" });
   }

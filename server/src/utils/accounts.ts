@@ -5,6 +5,9 @@ import { ISessionAccount } from "../../../shared/types/sessions";
 
 import AccountRoleModel from "../models/AccountRole";
 
+import { Account } from "../../../generated/prisma/client";
+import { AccountWithRole } from "../types";
+
 const verifyPassword = (passwordHash: string, password: string): boolean => {
   return bcrypt.compareSync(password, passwordHash);
 };
@@ -18,27 +21,26 @@ const verifyTFA = (tfaSecret: string, tfaCode: string): boolean => {
 };
 
 const createSessionAccount = async (
-  account: IAccount,
+  account: AccountWithRole,
 ): Promise<ISessionAccount> => {
-  const role = await AccountRoleModel.findById(account.data.role);
-  if (!role) {
-    throw new Error("Role not found");
-  }
+  const role = account.role!;
 
   return {
-    _id: account._id.toString(),
-    profile: account.profile,
+    _id: account.id.toString(),
+    profile: {
+      name: account.name,
+    },
     email: {
-      value: account.email.value,
-      verified: account.email.verified,
+      value: account.email,
+      verified: account.emailVerified,
     },
     data: {
       role,
-      status: account.data.status,
+      status: account.status,
     },
     preferences: {
       security: {
-        twoFactorEnabled: account.preferences.security.tfaSecret !== null,
+        twoFactorEnabled: account.tfaSecret ? true : false,
       },
     },
   };

@@ -105,160 +105,160 @@ const handler = async (
 ) => {
   const { page, count, filters, fields, populate, search, includeDeleted } =
     req.body;
-  const adminAccount = req.user as IAccount;
+  const adminAccount = req.user!;
 
   try {
-    let queryFilters: Record<string, any> = {};
+    // let queryFilters: Record<string, any> = {};
 
-    if (search && search.query.length > 0 && search.searchIn.length > 0) {
-      const searchRegex = new RegExp(search.query, "i");
-      queryFilters = {
-        ...queryFilters,
-        $or: search.searchIn.map((field) => ({
-          [field]: searchRegex,
-        })),
-      };
-    }
+    // if (search && search.query.length > 0 && search.searchIn.length > 0) {
+    //   const searchRegex = new RegExp(search.query, "i");
+    //   queryFilters = {
+    //     ...queryFilters,
+    //     $or: search.searchIn.map((field) => ({
+    //       [field]: searchRegex,
+    //     })),
+    //   };
+    // }
 
-    if (filters) {
-      if (filters.startDate || filters.endDate) {
-        queryFilters.date = {};
-        if (filters.startDate) {
-          queryFilters.date.$gte = filters.startDate;
-        }
-        if (filters.endDate) {
-          queryFilters.date.$lte = filters.endDate;
-        }
-      }
+    // if (filters) {
+    //   if (filters.startDate || filters.endDate) {
+    //     queryFilters.date = {};
+    //     if (filters.startDate) {
+    //       queryFilters.date.$gte = filters.startDate;
+    //     }
+    //     if (filters.endDate) {
+    //       queryFilters.date.$lte = filters.endDate;
+    //     }
+    //   }
 
-      if (filters.level) {
-        queryFilters.level = filters.level;
-      }
+    //   if (filters.level) {
+    //     queryFilters.level = filters.level;
+    //   }
 
-      if (filters.source) {
-        queryFilters.source = { $regex: filters.source, $options: "i" };
-      }
+    //   if (filters.source) {
+    //     queryFilters.source = { $regex: filters.source, $options: "i" };
+    //   }
 
-      if (filters.traceId) {
-        queryFilters.traceId = filters.traceId;
-      }
-    }
+    //   if (filters.traceId) {
+    //     queryFilters.traceId = filters.traceId;
+    //   }
+    // }
 
-    if (!includeDeleted) {
-      queryFilters["metadata.deleted"] = { $ne: true };
-    }
+    // if (!includeDeleted) {
+    //   queryFilters["metadata.deleted"] = { $ne: true };
+    // }
 
-    let cursor = LogsModel.find(queryFilters)
-      .skip(page * count)
-      .limit(count)
-      .sort({ "metadata.createdAt": -1 });
+    // let cursor = LogsModel.find(queryFilters)
+    //   .skip(page * count)
+    //   .limit(count)
+    //   .sort({ "metadata.createdAt": -1 });
 
-    if (fields?.length) {
-      cursor = cursor.select(fields.join(" "));
-    }
+    // if (fields?.length) {
+    //   cursor = cursor.select(fields.join(" "));
+    // }
 
-    const [rawLogs, totalLogs] = await Promise.all([
-      cursor.lean().exec(),
-      LogsModel.countDocuments(queryFilters),
-    ]);
+    // const [rawLogs, totalLogs] = await Promise.all([
+    //   cursor.lean().exec(),
+    //   LogsModel.countDocuments(queryFilters),
+    // ]);
 
-    const populateSet = new Set((populate ?? []).map((field) => field.trim()));
-    const logs = rawLogs as Array<Record<string, any>>;
+    // const populateSet = new Set((populate ?? []).map((field) => field.trim()));
+    // const logs = rawLogs as Array<Record<string, any>>;
 
-    if (populateSet.size > 0) {
-      const idsByModelName = new Map<string, Set<string>>();
+    // if (populateSet.size > 0) {
+    //   const idsByModelName = new Map<string, Set<string>>();
 
-      for (const log of logs) {
-        const details = toObjectRecord(log.details);
-        const references = toObjectRecord(log._references);
+    //   for (const log of logs) {
+    //     const details = toObjectRecord(log.details);
+    //     const references = toObjectRecord(log._references);
 
-        for (const [detailKey, modelNameRaw] of Object.entries(references)) {
-          if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
-            continue;
-          }
+    //     for (const [detailKey, modelNameRaw] of Object.entries(references)) {
+    //       if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
+    //         continue;
+    //       }
 
-          if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
-            continue;
-          }
+    //       if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
+    //         continue;
+    //       }
 
-          const referenceId = normalizeReferenceId(details[detailKey]);
-          if (!referenceId || !mongoose.Types.ObjectId.isValid(referenceId)) {
-            continue;
-          }
+    //       const referenceId = normalizeReferenceId(details[detailKey]);
+    //       if (!referenceId || !mongoose.Types.ObjectId.isValid(referenceId)) {
+    //         continue;
+    //       }
 
-          if (!idsByModelName.has(modelNameRaw)) {
-            idsByModelName.set(modelNameRaw, new Set<string>());
-          }
+    //       if (!idsByModelName.has(modelNameRaw)) {
+    //         idsByModelName.set(modelNameRaw, new Set<string>());
+    //       }
 
-          idsByModelName.get(modelNameRaw)?.add(referenceId);
-        }
-      }
+    //       idsByModelName.get(modelNameRaw)?.add(referenceId);
+    //     }
+    //   }
 
-      const documentsByModelName = new Map<string, Map<string, any>>();
+    //   const documentsByModelName = new Map<string, Map<string, any>>();
 
-      await Promise.all(
-        Array.from(idsByModelName.entries()).map(async ([modelName, ids]) => {
-          const model =
-            MODEL_BY_NAME[modelName as keyof typeof MODEL_BY_NAME] ??
-            mongoose.models[modelName];
+    //   await Promise.all(
+    //     Array.from(idsByModelName.entries()).map(async ([modelName, ids]) => {
+    //       const model =
+    //         MODEL_BY_NAME[modelName as keyof typeof MODEL_BY_NAME] ??
+    //         mongoose.models[modelName];
 
-          if (!model || ids.size === 0) {
-            return;
-          }
+    //       if (!model || ids.size === 0) {
+    //         return;
+    //       }
 
-          const typedModel = model as mongoose.Model<any>;
-          const modelCursor = typedModel.find({ _id: { $in: Array.from(ids) } });
-          const selectableFields = toSelectableFields(modelName);
-          if (selectableFields) {
-            modelCursor.select(selectableFields);
-          }
+    //       const typedModel = model as mongoose.Model<any>;
+    //       const modelCursor = typedModel.find({ _id: { $in: Array.from(ids) } });
+    //       const selectableFields = toSelectableFields(modelName);
+    //       if (selectableFields) {
+    //         modelCursor.select(selectableFields);
+    //       }
 
-          const documents = await modelCursor.lean().exec();
-          const mapById = new Map<string, any>();
+    //       const documents = await modelCursor.lean().exec();
+    //       const mapById = new Map<string, any>();
 
-          for (const document of documents as Array<Record<string, any>>) {
-            if (document?._id) {
-              mapById.set(String(document._id), document);
-            }
-          }
+    //       for (const document of documents as Array<Record<string, any>>) {
+    //         if (document?._id) {
+    //           mapById.set(String(document._id), document);
+    //         }
+    //       }
 
-          documentsByModelName.set(modelName, mapById);
-        }),
-      );
+    //       documentsByModelName.set(modelName, mapById);
+    //     }),
+    //   );
 
-      for (const log of logs) {
-        const details = toObjectRecord(log.details);
-        const references = toObjectRecord(log._references);
+    //   for (const log of logs) {
+    //     const details = toObjectRecord(log.details);
+    //     const references = toObjectRecord(log._references);
 
-        for (const [detailKey, modelNameRaw] of Object.entries(references)) {
-          if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
-            continue;
-          }
+    //     for (const [detailKey, modelNameRaw] of Object.entries(references)) {
+    //       if (typeof modelNameRaw !== "string" || modelNameRaw.length === 0) {
+    //         continue;
+    //       }
 
-          if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
-            continue;
-          }
+    //       if (!shouldPopulateReference(populateSet, detailKey, modelNameRaw)) {
+    //         continue;
+    //       }
 
-          const value = details[detailKey];
-          const referenceId = normalizeReferenceId(value);
-          const document = referenceId
-            ? documentsByModelName.get(modelNameRaw)?.get(referenceId) ?? null
-            : null;
+    //       const value = details[detailKey];
+    //       const referenceId = normalizeReferenceId(value);
+    //       const document = referenceId
+    //         ? documentsByModelName.get(modelNameRaw)?.get(referenceId) ?? null
+    //         : null;
 
-          details[detailKey] = {
-            value,
-            document,
-          };
-        }
+    //       details[detailKey] = {
+    //         value,
+    //         document,
+    //       };
+    //     }
 
-        log.details = details;
-      }
-    }
+    //     log.details = details;
+    //   }
+    // }
 
     res.status(200).json({
       status: "success",
-      logs: logs as ILog[],
-      totalLogs,
+      logs: [],
+      totalLogs: 0,
     });
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -268,10 +268,7 @@ const handler = async (
         traceId: req.traceId,
         message: "Unexpected error during log listing",
         details: { error: error.message, stack: error.stack },
-        metadata: {
-          createdBy: adminAccount?._id,
-          createdAt: new Date(),
-        },
+
       });
     }
 
