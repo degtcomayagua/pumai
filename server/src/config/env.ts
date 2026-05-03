@@ -4,7 +4,9 @@ import path from "path";
 export function loadEnv() {
   const baseEnv = ".env";
   const envFile =
-    process.env.NODE_ENV === "production" ? ".env.prod" : ".env.dev";
+    process.env.NODE_ENV === "production" ? "../.env.prod" : "../.env.dev";
+
+  console.log(envFile, path.resolve(process.cwd(), envFile))
 
   dotenv.config(); // Load base first
   dotenv.config({ path: path.resolve(process.cwd(), envFile) });

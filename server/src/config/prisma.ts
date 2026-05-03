@@ -5,7 +5,7 @@ import path from "path";
 import setupServer from "../setup.js";
 
 const envFile =
-  process.env.NODE_ENV === "production" ? ".env.prod" : ".env.dev";
+  process.env.NODE_ENV === "production" ? "../.env.prod" : "../.env.dev";
 
 dotenv.config({
   path: path.resolve(process.cwd(), envFile),
@@ -13,6 +13,7 @@ dotenv.config({
   quiet: true,
 });
 
+console.log(path.resolve(process.cwd(), envFile))
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL as string, {
   database: "your_database_name"
 });

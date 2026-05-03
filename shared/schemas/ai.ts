@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { campuses } from ".";
 
 export const generateSchema = z.object({
   prompt: z.string().min(1, "prompt-too-short").max(5000, "prompt-too-long"),
@@ -16,20 +17,9 @@ export const generateSchema = z.object({
         .max(10000, "message-content-too-long"),
     }),
   ),
-  campuses: z
-    .array(
-      z.enum([
-        "COMAYAGUA",
-        "TEGUCIGALPA",
-        "SANPEDRO",
-        "CHOLUTECA",
-        "LA CEIBA",
-        "DANLI",
-        "SANTA ROSA",
-        "GLOBAL",
-      ]),
-    )
-    .min(1, "at-least-one-campus-required"),
+
+  campuses: z.array(z.enum(campuses)).min(1, "at-least-one-campus-required"),
+
   deliveryModes: z
     .array(z.enum(["onsite", "online", "hybrid"]))
     .min(1, "at-least-one-delivery-mode-required"),
