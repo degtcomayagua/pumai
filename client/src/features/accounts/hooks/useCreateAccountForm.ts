@@ -14,14 +14,13 @@ export function useCreateAccountFormValidation(t: TFunction) {
     email: '',
     password: '',
     roleId: '',
-    locale: 'es',
-    notify: false,
+    campus: "COMAYAGUA"
   }
 
   const validate = useCallback(
     (values: AccountAPITypes.CreateRequestBody) => {
       const result =
-        AccountsFeature.schemas.createAccountSchema.safeParse(values)
+        AccountsFeature.schemas.createSchema.safeParse(values)
 
       if (result.success) {
         // No errors at all, clear all errors

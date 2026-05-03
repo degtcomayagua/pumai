@@ -1,4 +1,4 @@
-import { Account } from "../../generated/prisma/client.js";
+import { Account, Prisma } from "../../generated/prisma/client.js";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
@@ -22,12 +22,22 @@ export type RestoreRequestBody = z.infer<typeof deleteSchema>;
 
 export interface GetResponseData {
   status: ResponseStatus;
-  accounts?: Account[];
+  accounts?: Prisma.AccountGetPayload<{
+    include: {
+      metadata: true;
+      role: true;
+    }
+  }>[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  accounts?: Account[];
+  accounts?: Prisma.AccountGetPayload<{
+    include: {
+      metadata: true;
+      role: true;
+    }
+  }>[];
   totalAccounts?: number;
 }
 

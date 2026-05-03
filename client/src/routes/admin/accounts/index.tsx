@@ -281,7 +281,7 @@ function RouteComponent() {
           accounts={accounts}
           onDelete={(acc) => {
             setDeleteAccountState({
-              accountId: acc._id,
+              accountId: acc.id,
               isOpen: true,
               loading: false,
             });
@@ -292,17 +292,17 @@ function RouteComponent() {
               isOpen: true,
             });
             setUpdateAccountFormDefaultValues({
-              roleId: acc.role._id ?? "",
+              roleId: acc.role.id ?? "",
               password: "",
               notify: false,
               name: acc.name,
               email: acc.email,
               disableTwoFactor: false,
-              accountId: acc._id,
+              accountId: acc.id,
             });
           }}
           onRestore={(acc) => {
-            handleRestoreAccount(acc._id);
+            handleRestoreAccount(acc.id);
           }}
           onChangePassword={(acc) => {
             message.info(tPage("changePasswordNotAvailable"));

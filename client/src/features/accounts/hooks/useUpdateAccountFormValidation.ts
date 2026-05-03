@@ -13,7 +13,7 @@ export function useUpdateAccountFormValidation(t: TFunction) {
 		disableTwoFactor: false,
 		email: "",
 		name: "",
-		notify: false,
+		campus: "COMAYAGUA",
 		password: "",
 		roleId: "",
 	};
@@ -28,7 +28,7 @@ export function useUpdateAccountFormValidation(t: TFunction) {
 	const validate = useCallback(
 		(values: AccountAPITypes.UpdateRequestBody) => {
 			const result =
-				AccountsFeature.schemas.updateAccountSchema.safeParse(values);
+				AccountsFeature.schemas.updateSchema.safeParse(values);
 
 			if (result.success) {
 				// No errors at all, clear all errors

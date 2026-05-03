@@ -21,7 +21,7 @@ export function useAccountSearch({
   apiList = AccountsFeature.api.list,
 }: UseAccountsListOptions) {
   const [accounts, setAccounts] = useState<SearchAccountResult[]>([])
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const searchAccounts = useCallback(
     (query: string) => {
@@ -39,7 +39,7 @@ export function useAccountSearch({
         try {
           const result = await apiList({
             search: { query, searchIn: ['profile.name'] },
-            fields: ['profile', '_id'],
+            fields: ['name', 'id'],
             count: 10,
             page: 0,
           })
@@ -47,8 +47,8 @@ export function useAccountSearch({
           if (result.status === 'success') {
             setAccounts(
               (result.accounts ?? []).map((acc) => ({
-                _id: acc._id.toString(),
-                name: acc.profile.name,
+                _id: acc.id.toString(),
+                name: acc.name,
               })),
             )
 

@@ -20,7 +20,7 @@ export function loadEnv() {
     "QDRANT_URI",
     "QDRANT_RAG_DOCS_COLLECTION",
 
-    "FRONT_END_ORIGIN",
+    "ALLOWED_ORIGINS",
     "SESSION_SECRET",
     "PORT"
   ];

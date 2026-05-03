@@ -45,6 +45,21 @@ export const campuses = [
   "SANTA_ROSA",
 ];
 
+export const campusesEnum = z.enum(
+  [
+    "COMAYAGUA",
+    "TEGUCIGALPA",
+    "SANPEDRO",
+    "YORO",
+    "OLANCHO",
+    "CHOLUTECA",
+    "DANLI",
+    "LA_CEIBA",
+    "SANTA_ROSA",
+  ],
+  "invalid-campus",
+);
+
 // Each one of these fields requires a specific permission to be populated
 export const metadataPopulateFields = [
   "metadata.createdBy",

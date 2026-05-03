@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { App } from "antd";
 import { useState, useCallback } from "react";
 
-import AccountsFeature, { IAccount, AccountAPITypes } from "../";
+import AccountsFeature, { Account, AccountAPITypes } from "../";
 
 export type CreateAccountModalState = AccountAPITypes.CreateRequestBody & {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export type CreateAccountModalState = AccountAPITypes.CreateRequestBody & {
 export function useCreateModal({
   onSuccess,
 }: {
-  onSuccess: (account: IAccount) => void;
+  onSuccess: (account: Account) => void;
 }) {
   const { t } = useTranslation(["features"], {
     keyPrefix: "accounts.hooks.useCreateModal",

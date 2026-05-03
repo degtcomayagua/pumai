@@ -7,8 +7,8 @@ import type { IAccountRole } from '../../roles'
 
 type NullableAccountsListState = {
   [K in keyof AccountAPITypes.ListRequestBody]?:
-    | AccountAPITypes.ListRequestBody[K]
-    | null
+  | AccountAPITypes.ListRequestBody[K]
+  | null
 }
 
 type UseAccountsListOptions = {
@@ -26,8 +26,8 @@ export function useAccountsList({
     AccountAPITypes.ListRequestBody & { loading: boolean }
   >({
     loading: true,
-    fields: ['data', 'email', 'profile', 'metadata', '_id'],
-    populate: ['data.role'],
+    fields: ['name', 'email', 'campus', 'metadata.createdAt', 'id'],
+    populate: ['role'],
     count: 50,
     page: 0,
   })
@@ -72,18 +72,18 @@ export function useAccountsList({
 
         setAccounts({
           accounts: result.accounts!.map((acc) => ({
-            _id: acc._id.toString(),
-            name: acc.profile.name,
-            email: acc.email.value,
+            id: acc.id,
+            name: acc.name,
+            email: acc.email,
             role: {
-              _id: (acc.data.role as IAccountRole)._id.toString(),
-              name: (acc.data.role as IAccountRole).name,
-              level: (acc.data.role as IAccountRole).level,
+              id: (acc.role).id.toString(),
+              name: (acc.role).name,
+              level: (acc.role).level,
             },
-            createdAt: acc.metadata.createdAt
+            createdAt: acc.metadata?.createdAt
               ? new Date(acc.metadata.createdAt)
               : new Date(),
-            deleted: acc.metadata.deleted ?? false,
+            deleted: acc.metadata?.deleted ?? false,
           })),
           totalAccounts: result.totalAccounts ?? 0,
         })

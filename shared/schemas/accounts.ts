@@ -4,6 +4,7 @@ import {
   campuses,
   metadataPopulateFields,
   turnIntoUndefinedIfEmpty,
+  campusesEnum,
 } from "./index.js";
 
 const populateFields = z.enum([...metadataPopulateFields, "role"]);
@@ -32,7 +33,7 @@ const createSchema = z.object({
     .min(8, "password-too-short")
     .max(256, "password-too-long"),
   roleId: z.cuid("invalid-role-id"),
-  campus: z.enum(campuses, "invalid-campus"),
+  campus: campusesEnum,
 });
 
 const deleteSchema = z.object({
@@ -56,7 +57,7 @@ const updateSchema = z.object({
       { message: "password-optional" },
     ),
   ),
-  campus: z.enum(campuses, "invalid-campus"),
+  campus: campusesEnum,
   roleId: z.cuid("invalid-role-id").optional(),
   disableTwoFactor: z.boolean().optional(),
 });

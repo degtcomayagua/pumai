@@ -73,7 +73,7 @@ export function AccountsTable({
           },
           {
             filterSearch: true,
-            onFilter: (value, record: ListAccount) => record.role._id === value,
+            onFilter: (value, record: ListAccount) => record.role.id === value,
             title: tComponent("role"),
             render: (_: any, record: ListAccount) => (
               <p>
@@ -111,46 +111,46 @@ export function AccountsTable({
 
               const menuItems = !record.deleted
                 ? [
-                    {
-                      key: "update",
-                      label: tComponent("actionButtons.update"),
-                      icon: <FaPencilAlt />,
-                      disabled: !canUpdate,
-                      onClick: () => onUpdate(record),
-                    },
-                    {
-                      key: "change-password",
-                      label: tComponent("actionButtons.changePassword"),
-                      icon: <FaKey />,
-                      disabled: !canChangePassword,
-                      onClick: () => onChangePassword(record),
-                    },
-                    {
-                      key: "update-status",
-                      label: tComponent("actionButtons.updateStatus"),
-                      icon: <FaFlag />,
-                      disabled: !canUpdateStatus,
-                      onClick: () => onUpdateStatus(record),
-                    },
-                    {
-                      key: "delete",
-                      label: tComponent("actionButtons.delete"),
-                      danger: true,
-                      icon: <FaTrash />,
-                      disabled: !canDelete,
-                      onClick: () => onDelete(record),
-                    },
-                  ]
+                  {
+                    key: "update",
+                    label: tComponent("actionButtons.update"),
+                    icon: <FaPencilAlt />,
+                    disabled: !canUpdate,
+                    onClick: () => onUpdate(record),
+                  },
+                  {
+                    key: "change-password",
+                    label: tComponent("actionButtons.changePassword"),
+                    icon: <FaKey />,
+                    disabled: !canChangePassword,
+                    onClick: () => onChangePassword(record),
+                  },
+                  {
+                    key: "update-status",
+                    label: tComponent("actionButtons.updateStatus"),
+                    icon: <FaFlag />,
+                    disabled: !canUpdateStatus,
+                    onClick: () => onUpdateStatus(record),
+                  },
+                  {
+                    key: "delete",
+                    label: tComponent("actionButtons.delete"),
+                    danger: true,
+                    icon: <FaTrash />,
+                    disabled: !canDelete,
+                    onClick: () => onDelete(record),
+                  },
+                ]
                 : [
-                    {
-                      key: "restore",
-                      label: tComponent("actionButtons.restore"),
-                      icon: <FaTrashRestore />,
-                      disabled: !canRestore || !record.deleted,
-                      className: record.deleted ? "hidden" : "",
-                      onClick: () => onRestore(record),
-                    },
-                  ];
+                  {
+                    key: "restore",
+                    label: tComponent("actionButtons.restore"),
+                    icon: <FaTrashRestore />,
+                    disabled: !canRestore || !record.deleted,
+                    className: record.deleted ? "hidden" : "",
+                    onClick: () => onRestore(record),
+                  },
+                ];
 
               return (
                 <Space>

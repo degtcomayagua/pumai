@@ -3,14 +3,14 @@ import * as schemas from "../../../../shared/schemas/accounts";
 
 // Types
 import * as AccountAPITypes from "../../../../shared/api/accounts";
-import type { IAccount } from "../../../../shared/models/account";
+import type { Account } from "generated/prisma/client";
 
 type ListAccount = {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: {
-    _id: string;
+    id: string;
     name: string;
     level: number;
   };
@@ -28,7 +28,7 @@ import { CreateAccountModal } from "./components/CreateAccountModal";
 import { UpdateAccountForm } from "./components/UpdateAccountForm";
 import { AccountsTable } from "./components/AccountsTable";
 
-export type { AccountAPITypes, IAccount, ListAccount };
+export type { AccountAPITypes, Account, ListAccount };
 export default {
   api,
   schemas,
