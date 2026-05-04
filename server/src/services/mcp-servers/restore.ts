@@ -34,14 +34,9 @@ export async function restoreMCPServer(
   const userAccountId = options.userAccount?.id;
 
   // fetch mcp server with metadata + updateHistory
-  const existingMCPServer = await prismaClient.mCPServer.findUnique({
+  const existingMCPServer = await prismaClient.mCPServer.findFirst({
     where: {
       id: mcpServerId,
-      metadata: {
-        is: {
-          deleted: true,
-        }
-      }
     },
     include: {
       metadata: {
@@ -52,7 +47,7 @@ export async function restoreMCPServer(
     },
   });
 
-  if (!existingMCPServer) {
+  if (!existingMCPServer || existingMCPServer.metadata?.deleted === false) {
     throw new MCPServerNotFoundError(
       "MCP server not found or already restored",
     );

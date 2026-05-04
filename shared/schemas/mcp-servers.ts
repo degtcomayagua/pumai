@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { metadataFields, metadataPopulateFields } from "./index.js";
+import { metadataFields, metadataPopulateFields, turnIntoUndefinedIfEmpty } from "./index.js";
 
 // Shared
 const mcpServerFields = z.enum(
@@ -72,7 +72,15 @@ const createSchema = z.object({
     .max(20, "too-many-tags")
     .optional(),
 
-  iconUrl: z.string().url("invalid-icon-url").optional(),
+  iconUrl: turnIntoUndefinedIfEmpty(
+    z.union(
+      [
+        z.url("invalid-icon-url"),
+        z.undefined("iconUrl-optional"),
+      ],
+      { message: "iconUrl-optional" },
+    ),
+  ),
 
   _references: z.record(z.string(), z.string()).optional(),
 });

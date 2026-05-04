@@ -63,6 +63,7 @@ export function useMCPServerList({
         search: search == null ? undefined : search,
         includeDeleted: includeDeleted == null ? undefined : includeDeleted,
       });
+      console.log(result)
 
       if (result.status === "success") {
         setMCPServersListState((prev) => ({

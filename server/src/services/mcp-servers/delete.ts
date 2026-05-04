@@ -34,14 +34,9 @@ export async function deleteMCPServer(
   const userAccountId = options.userAccount?.id;
 
   // fetch MCP Server with metadata + updateHistory
-  const existingMCPServer = await prismaClient.mCPServer.findUnique({
+  const existingMCPServer = await prismaClient.mCPServer.findFirst({
     where: {
       id: mcpServerId,
-      metadata: {
-        is: {
-          deleted: false,
-        },
-      },
     },
     include: {
       metadata: {
@@ -52,7 +47,7 @@ export async function deleteMCPServer(
     },
   });
 
-  if (!existingMCPServer) {
+  if (!existingMCPServer || existingMCPServer.metadata?.deleted === true) {
     throw new MCPServerNotFoundError("MCP server not found or already deleted");
   }
 

@@ -14,6 +14,8 @@ import {
   FaFile,
   FaPlus,
   FaServer,
+  FaTrash,
+  FaTrashRestore,
 } from "react-icons/fa";
 
 import MCPServersFeature from "../../../features/mcp-servers";
@@ -27,7 +29,7 @@ function RouteComponent() {
   const { account } = useSelector((state: RootState) => state.auth);
 
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const { t: tPage } = useTranslation(["pages"], {
     keyPrefix: "admin.mcp-servers",
@@ -50,6 +52,30 @@ function RouteComponent() {
       await fetchMCPServers({ count: 50, page: 0 });
     },
   });
+
+  // Delete 
+  const handleDeleteMCPServer = async (serverId: string) => {
+    const result = await MCPServersFeature.api.delete({ mcpServerId: serverId });
+    if (result.status == "success") {
+      message.success(tPage("messages.delete.success"));
+      await fetchMCPServers({ count: 50, page: 0 });
+    } else {
+      console.log(result);
+      message.error(tPage("messages.delete.error"));
+    }
+  }
+
+  // Restore 
+  const handleRestoreMCPServer = async (serverId: string) => {
+    const result = await MCPServersFeature.api.restore({ mcpServerId: serverId });
+    if (result.status == "success") {
+      message.success(tPage("messages.restore.success"));
+      await fetchMCPServers({ count: 50, page: 0 });
+    } else {
+      console.log(result);
+      message.error(tPage("messages.restore.error"));
+    }
+  }
 
   useEffect(() => {
     if (!account) return; // Admin layout will handle this
@@ -134,9 +160,31 @@ function RouteComponent() {
           fetchMCPServers={fetchMCPServers}
           mcpServers={mcpServers}
           mcpServersListState={mcpServersListState}
-          onRestore={(server) => { }}
+          onRestore={(server) => {
+            modal.confirm({
+              title: tPage("modals.restore.title"),
+              content: tPage("modals.restore.content"),
+              icon: <FaTrashRestore />,
+              cancelText: tCommon("cancel"),
+              okText: tCommon("confirm"),
+              onOk: async () => {
+                handleRestoreMCPServer(server.id);
+              }
+            })
+          }}
+          onDelete={(server) => {
+            modal.confirm({
+              title: tPage("modals.delete.title"),
+              content: tPage("modals.delete.content"),
+              icon: <FaTrash />,
+              cancelText: tCommon("cancel"),
+              okText: tCommon("confirm"),
+              onOk: async () => {
+                handleDeleteMCPServer(server.id);
+              }
+            })
+          }}
           onUpdate={async (server) => { }}
-          onDelete={(server) => { }}
         />
       )}
 

@@ -14,6 +14,8 @@ import { RootState } from "../../../../src/store";
 
 import { FnFetchMCPServers, NullableMCPServersListState } from "../hooks/useList";
 
+import { hasPermissions } from "../../../utils/permissions";
+
 type MCPServersTableProps = {
   mcpServers: { mcpServers: ListMCPServer[]; totalMCPServers: number };
   mcpServersListState: MCPServersAPITypes.ListRequestBody & { loading: boolean };
@@ -94,15 +96,13 @@ export function MCPServersTable({
             key: "actions",
             fixed: "right",
             render: (_: any, record: ListMCPServer) => {
+              const accountPermissions = account?.data.role.permissions || [];
               const canUpdate =
-                account?.data.role.permissions.includes("*:*") ||
-                account?.data.role.permissions.includes("rag-documents:update");
+                hasPermissions(accountPermissions, ["mcp-servers:update"])
               const canDelete =
-                account?.data.role.permissions.includes("*:*") ||
-                account?.data.role.permissions.includes("rag-documents:delete");
+                hasPermissions(accountPermissions, ["mcp-servers:delete"])
               const canRestore =
-                account?.data.role.permissions.includes("*:*") ||
-                account?.data.role.permissions.includes("rag-documents:restore");
+                hasPermissions(accountPermissions, ["mcp-servers:restore"])
 
               const menuItems = !record.deleted
                 ? [

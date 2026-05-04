@@ -53,13 +53,9 @@ const handler = async (
     }
 
     if (!includeDeleted) {
-      where.metadata = {
-        is: {
-          deleted: {
-            not: true,
-          },
-        },
-      };
+      // where.metadata = {
+      //   deleted: false,
+      // };
     }
 
     const [mcpServers, totalMcpServers] = await Promise.all([
