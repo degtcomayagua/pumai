@@ -35,7 +35,6 @@ type CreateWorkflowParameters = {
 
   tags: string[];
   iconUrl?: string;
-  references: string;
 };
 
 type CreateWorkflowOptions = {
@@ -64,7 +63,6 @@ export async function createWorkflow(
     description,
     isRestricted,
     protocol,
-    references,
     tags,
     url,
     authHeaderName,
@@ -117,7 +115,6 @@ export async function createWorkflow(
         authUsername,
         iconUrl,
         isActive: false,
-        references,
         allowedRoles: {
           connect: allowedRoles.map((roleId) => ({ id: roleId })),
         },

@@ -45,44 +45,20 @@ export interface ListResponseData {
 
 export interface CreateResponseData {
   status: ResponseStatus;
-  workflow?: Prisma.WorkflowGetPayload<{
-    include: {
-      metadata: true;
-      allowedRoles: true;
-      tags: true
-    }
-  }>;
+  workflow?: Workflow;
 }
 
 export interface UpdateResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: Prisma.WorkflowGetPayload<{
-    include: {
-      metadata: true;
-      allowedRoles: true;
-      tags: true
-    }
-  }>;
+  workflow?: Workflow;
 }
 
 export interface DeleteResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: Prisma.WorkflowGetPayload<{
-    include: {
-      metadata: true;
-      allowedRoles: true;
-      tags: true
-    }
-  }>;
+  workflow?: Workflow;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: Prisma.WorkflowGetPayload<{
-    include: {
-      metadata: true;
-      allowedRoles: true;
-      tags: true
-    }
-  }>;
+  workflow?: Workflow;
 }

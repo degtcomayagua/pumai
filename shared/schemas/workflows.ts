@@ -64,7 +64,7 @@ const createSchema = z.object({
         token: z.string().min(1, "token-too-short"),
       }),
       z.object({
-        type: z.literal("api-key"),
+        type: z.literal("api_key"),
         headerName: z.string().min(1, "headerName-too-short"),
         key: z.string().min(1, "key-too-short"),
       }),

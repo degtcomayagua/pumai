@@ -41,40 +41,21 @@ export interface ListResponseData {
 
 export interface CreateResponseData {
   status: ResponseStatus;
-  mcpServer?: Prisma.MCPServerGetPayload<{
-    include: {
-      metadata: true;
-      role: true;
-    }
-  }>;
+  mcpServer?: MCPServer;
+
 }
 
 export interface UpdateResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: Prisma.MCPServerGetPayload<{
-    include: {
-      metadata: true;
-      role: true;
-    }
-  }>;
+  mcpServer?: MCPServer;
 }
 
 export interface DeleteResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: Prisma.MCPServerGetPayload<{
-    include: {
-      metadata: true;
-      role: true;
-    }
-  }>;
+  mcpServer?: MCPServer;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: Prisma.MCPServerGetPayload<{
-    include: {
-      metadata: true;
-      role: true;
-    }
-  }>;
+  mcpServer?: MCPServer;
 }
