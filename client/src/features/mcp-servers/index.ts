@@ -22,7 +22,7 @@ import { useCreateRagDocumentModal } from "./hooks/useCreateDrawer";
 
 // Components
 import { MCPServersTable } from "./components/MCPServersTable";
-import { CreateRagDocumentDrawer } from "./components/CreateRAGDocumentDrawer";
+import { CreateMCPServerDrawer } from "./components/CreateMCPServerDrawer";
 // import { CreateAccountRoleModal } from "./components/CreateAccountRoleModal";
 
 export type { MCPServer, ListMCPServer, MCPServersAPITypes };
@@ -37,7 +37,7 @@ export default {
   },
   components: {
     MCPServersTable,
-    CreateRagDocumentDrawer,
+    CreateMCPServerDrawer,
     // CreateAccountRoleModal,
   },
 };

@@ -69,7 +69,7 @@ function RouteComponent() {
 
   return (
     <AdminPageLayout selectedPage="mcp-servers">
-      <MCPServersFeature.components.CreateRagDocumentDrawer
+      <MCPServersFeature.components.CreateMCPServerDrawer
         setState={setCreateMCPState}
         state={createMCPServerState}
         onClose={closeCreateMCPServerModal}
