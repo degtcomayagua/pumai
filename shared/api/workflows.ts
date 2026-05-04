@@ -1,4 +1,4 @@
-import { Workflow } from "../../generated/prisma/client.js";
+import { Prisma, Workflow } from "../../generated/prisma/client.js";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
@@ -22,31 +22,67 @@ export type ListRequestBody = z.infer<typeof listSchema>;
 // Response types
 export interface GetResponseData {
   status: ResponseStatus;
-  workflows?: Workflow[];
+  workflows?: Prisma.WorkflowGetPayload<{
+    include: {
+      metadata: true;
+      allowedRoles: true;
+      tags: true
+    }
+  }>[];
 }
 
 export interface ListResponseData {
   status: ResponseStatus;
-  workflows?: Workflow[];
+  workflows?: Prisma.WorkflowGetPayload<{
+    include: {
+      metadata: true;
+      allowedRoles: true;
+      tags: true
+    }
+  }>[];
   totalWorkflows?: number;
 }
 
 export interface CreateResponseData {
   status: ResponseStatus;
-  workflow?: Workflow;
+  workflow?: Prisma.WorkflowGetPayload<{
+    include: {
+      metadata: true;
+      allowedRoles: true;
+      tags: true
+    }
+  }>;
 }
 
 export interface UpdateResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: Workflow;
+  workflow?: Prisma.WorkflowGetPayload<{
+    include: {
+      metadata: true;
+      allowedRoles: true;
+      tags: true
+    }
+  }>;
 }
 
 export interface DeleteResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: Workflow;
+  workflow?: Prisma.WorkflowGetPayload<{
+    include: {
+      metadata: true;
+      allowedRoles: true;
+      tags: true
+    }
+  }>;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "workflow-not-found";
-  workflow?: Workflow;
+  workflow?: Prisma.WorkflowGetPayload<{
+    include: {
+      metadata: true;
+      allowedRoles: true;
+      tags: true
+    }
+  }>;
 }

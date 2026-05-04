@@ -15,7 +15,6 @@ const mcpServerFields = z.enum(
     "authType",
     "tags",
     "iconUrl",
-    "_references",
     ...metadataFields,
   ],
   { message: "invalid-field" },

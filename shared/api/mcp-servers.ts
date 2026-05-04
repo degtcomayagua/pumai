@@ -22,7 +22,11 @@ export type ListRequestBody = z.infer<typeof listSchema>;
 // Response types
 export interface GetResponseData {
   status: ResponseStatus;
-  mcpServers?: MCPServer[];
+  mcpServers?: Prisma.MCPServerGetPayload<{
+    include: {
+      metadata: true;
+    }
+  }>[];
 }
 
 export interface ListResponseData {
@@ -47,15 +51,30 @@ export interface CreateResponseData {
 
 export interface UpdateResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: MCPServer;
+  mcpServer?: Prisma.MCPServerGetPayload<{
+    include: {
+      metadata: true;
+      role: true;
+    }
+  }>;
 }
 
 export interface DeleteResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: MCPServer;
+  mcpServer?: Prisma.MCPServerGetPayload<{
+    include: {
+      metadata: true;
+      role: true;
+    }
+  }>;
 }
 
 export interface RestoreResponseData {
   status: ResponseStatus | "mcp-server-not-found";
-  mcpServer?: MCPServer;
+  mcpServer?: Prisma.MCPServerGetPayload<{
+    include: {
+      metadata: true;
+      role: true;
+    }
+  }>;
 }

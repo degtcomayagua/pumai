@@ -8,23 +8,25 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-  MCPAuthType,
-  MCPServerProtocol,
+  Workflow,
+  WorkflowAuthType,
+  WorkflowProtocol,
+  WorkflowType,
 } from "../../../../generated/prisma/client.js";
 
 import LoggingService from "../logging.js";
 
-type CreateMCPServerParameters = {
+type CreateWorkflowParameters = {
   name: string;
   description: string;
   url: string;
-
-  protocol: MCPServerProtocol;
+  protocol: WorkflowProtocol;
+  type: WorkflowType;
 
   isRestricted: boolean;
   allowedRoles: string[]; // String of IDs referencing AccountRoles
 
-  authType: MCPAuthType;
+  authType: WorkflowAuthType;
   authToken?: string;
   authHeaderName?: string;
   authKey?: string;
@@ -36,23 +38,23 @@ type CreateMCPServerParameters = {
   references: string;
 };
 
-type CreateMCPServerOptions = {
+type CreateWorkflowOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class MCPServerAlreadyExistsError extends Error {
+export class WorkflowAlreadyExistsError extends Error {
   retryable = false;
-  constructor(message = "mcp-server-name-in-use") {
+  constructor(message = "workflow-name-in-use") {
     super(message);
-    this.name = "MCPServerAlreadyExistsError";
+    this.name = "WorkflowAlreadyExistsError";
   }
 }
 
-export async function createMCPDocument(
-  params: CreateMCPServerParameters,
-  options: CreateMCPServerOptions = {},
-): Promise<MCPServer> {
+export async function createWorkflow(
+  params: CreateWorkflowParameters,
+  options: CreateWorkflowOptions = {},
+): Promise<Workflow> {
   const startTime = performance.now();
 
   const {
@@ -100,7 +102,7 @@ export async function createMCPDocument(
     ];
 
     // create account role referencing metadataId
-    const mcpServer = await prismaClient.mCPServer.create({
+    const workflow = await prismaClient.workflow.create({
       data: {
         name,
         description,
@@ -134,21 +136,21 @@ export async function createMCPDocument(
     const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
-      source: "services:mcp-servers:create",
+      source: "services:workflows:create",
       level: "important",
-      message: "MCP Server created in database successfully",
+      message: "Workflow created in database successfully",
       traceId: options.traceId,
       duration,
       details: {
-        mcpServerId: mcpServer.id,
-        name: mcpServer.name,
+        workflowId: workflow.id,
+        name: workflow.name,
       },
       _references: {
-        mcpServerId: "MCPServer",
+        workflowId: "Workflow",
       },
     });
 
-    return mcpServer;
+    return workflow;
   } catch (err: any) {
     // handle unique constraint on name (P2002)
     if (
@@ -156,34 +158,34 @@ export async function createMCPDocument(
       err.code === "P2002"
     ) {
       if ((err.meta as any)?.target?.includes?.("name")) {
-        throw new MCPServerAlreadyExistsError();
+        throw new WorkflowAlreadyExistsError();
       }
     }
     throw err;
   }
 }
 
-export async function createMCPServerWithRetry(
-  params: CreateMCPServerParameters,
-  options: CreateMCPServerOptions = {},
-): Promise<MCPServer> {
+export async function createWorkflowWithRetry(
+  params: CreateWorkflowParameters,
+  options: CreateWorkflowOptions = {},
+): Promise<Workflow> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await createMCPDocument(params, options);
+        return await createWorkflow(params, options);
       } catch (error: any) {
         // non-retryable
-        if (error instanceof MCPServerAlreadyExistsError) {
+        if (error instanceof WorkflowAlreadyExistsError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:mcp-servers:create:retry",
+          source: "services:workflows:create:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during MCP server creation (attempt ${attempt})`,
+          message: `Retryable error during workflow creation (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

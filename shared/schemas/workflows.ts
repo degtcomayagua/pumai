@@ -1,21 +1,26 @@
 import { z } from "zod";
-import { metadataFields, metadataPopulateFields } from "./index.js";
+import {
+  metadataFields,
+  metadataPopulateFields,
+  turnIntoUndefinedIfEmpty,
+} from "./index.js";
 
 // Shared
 const workflowFields = z.enum(
   [
-    "_id",
+    "id",
     "name",
     "description",
     "url",
-    "protocol",
     "type",
+    "protocol",
     "isRestricted",
     "allowedRoles",
     "isActive",
-    "auth",
+    "authType",
     "tags",
     "iconUrl",
+
     ...metadataFields,
   ],
   { message: "invalid-field" },
@@ -76,13 +81,17 @@ const createSchema = z.object({
     .max(20, "too-many-tags")
     .optional(),
 
-  iconUrl: z.string().url("invalid-icon-url").optional(),
+  iconUrl: turnIntoUndefinedIfEmpty(
+    z.union([z.url("invalid-icon-url"), z.undefined("iconUrl-optional")], {
+      message: "iconUrl-optional",
+    }),
+  ),
 });
 
 // Update
-const updateSchema = z
-  .object({ workflowId: z.cuid("invalid-workflow-id") })
-  .merge(createSchema.partial());
+const updateSchema = createSchema.partial().extend({
+  workflowId: z.cuid("invalid-workflow-id"),
+});
 
 // Delete
 const deleteSchema = z.object({
@@ -113,23 +122,25 @@ const listSchema = z.object({
         .array(
           z.enum(["name", "description"], { message: "invalid-search-field" }),
         )
-        .min(1, "searchIn-too-short")
+        .min(1, "searchIn-too-short"),
     })
     .optional(),
-  filters: z.object({
-    protocol: z
-      .enum(["webhook", "websocket"], {
-        message: "invalid-protocol",
-      })
-      .optional(),
-    type: z
-      .enum(["n8n", "custom"], {
-        message: "invalid-type",
-      })
-      .optional(),
-    isRestricted: z.boolean().optional(),
-    isActive: z.boolean().optional(),
-  }).optional(),
+  filters: z
+    .object({
+      protocol: z
+        .enum(["webhook", "websocket"], {
+          message: "invalid-protocol",
+        })
+        .optional(),
+      type: z
+        .enum(["n8n", "custom"], {
+          message: "invalid-type",
+        })
+        .optional(),
+      isRestricted: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+    })
+    .optional(),
   fields: z.array(workflowFields).optional(),
   populate: z.array(workflowPopulate).optional(),
 });
