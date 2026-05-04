@@ -152,9 +152,9 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
           {
             key: "mcp-servers",
             label: (
-              <Link to="/admin/rag-documents">{t("sidebar.data.mcp-servers")}</Link>
+              <Link to="/admin/mcp-servers">{t("sidebar.data.mcp-servers")}</Link>
             ),
-            icon: <FaBots />,
+            icon: <FaServer />,
           },
 
           {

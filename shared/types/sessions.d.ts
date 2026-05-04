@@ -1,4 +1,5 @@
 import { AccountRole } from "../../generated/prisma/client.js";
+import { Permission } from "../types/permissions.js"
 
 export type ISessionAccount = {
   _id: string;
@@ -10,7 +11,9 @@ export type ISessionAccount = {
     verified: boolean;
   };
   data: {
-    role: AccountRole;
+    role: Omit<AccountRole, 'permissions'> & {
+      permissions: Permission[]
+    }
     status: "active" | "locked";
   };
   preferences: {

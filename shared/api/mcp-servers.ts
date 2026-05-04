@@ -1,4 +1,4 @@
-import { MCPServer } from "../../generated/prisma/client.js";
+import { MCPServer, Prisma } from "../../generated/prisma/client.js";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
@@ -27,13 +27,22 @@ export interface GetResponseData {
 
 export interface ListResponseData {
   status: ResponseStatus;
-  mcpServers?: MCPServer[];
+  mcpServers?: Prisma.MCPServerGetPayload<{
+    include: {
+      metadata: true;
+    }
+  }>[];
   totalMcpServers?: number;
 }
 
 export interface CreateResponseData {
   status: ResponseStatus;
-  mcpServer?: MCPServer;
+  mcpServer?: Prisma.MCPServerGetPayload<{
+    include: {
+      metadata: true;
+      role: true;
+    }
+  }>;
 }
 
 export interface UpdateResponseData {

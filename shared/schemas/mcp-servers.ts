@@ -4,7 +4,7 @@ import { metadataFields, metadataPopulateFields } from "./index.js";
 // Shared
 const mcpServerFields = z.enum(
   [
-    "_id",
+    "id",
     "name",
     "description",
     "url",
@@ -12,7 +12,7 @@ const mcpServerFields = z.enum(
     "isRestricted",
     "allowedRoles",
     "isActive",
-    "auth",
+    "authType",
     "tags",
     "iconUrl",
     "_references",

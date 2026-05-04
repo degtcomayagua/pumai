@@ -1,12 +1,11 @@
 import bcrypt from "bcrypt";
 import speakeasy from "speakeasy";
-import { IAccount } from "@shared/models/account";
-import { ISessionAccount } from "@shared/types/sessions";
-
-import AccountRoleModel from "../models/AccountRole.js";
+import { ISessionAccount } from "@shared/types/sessions.js";
 
 import { Account } from "../../../generated/prisma/client.js";
 import { AccountWithRole } from "../types/index.js";
+
+import { Permission } from "@shared/types/permissions.js";
 
 const verifyPassword = (passwordHash: string, password: string): boolean => {
   return bcrypt.compareSync(password, passwordHash);
@@ -35,7 +34,11 @@ const createSessionAccount = async (
       verified: account.emailVerified,
     },
     data: {
-      role,
+      role: {
+        ...role,
+        // @ts-expect-error - Prisma returns permissions as a comma-separated string, but we want it as an array
+        permissions: role.permissions?.split(",").map((perm) => perm.trim()) || [] as unknown as Permission[],
+      },
       status: account.status,
     },
     preferences: {

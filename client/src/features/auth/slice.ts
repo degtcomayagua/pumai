@@ -63,23 +63,6 @@ export const fetch = createAsyncThunk('accounts/fetch', async (_, thunkAPI) => {
   }
 })
 
-export const register = createAsyncThunk(
-  'accounts/register',
-  async (data: AuthAPITypes.RegisterRequestBody, thunkAPI) => {
-    try {
-      return await authApi.register(data)
-    } catch (error: unknown) {
-      if (!(error instanceof AxiosError)) {
-        return thunkAPI.rejectWithValue('Unknown error')
-      } else {
-        return thunkAPI.rejectWithValue(
-          error.response?.data.status || error.message,
-        )
-      }
-    }
-  },
-)
-
 export const accountsSlice = createSlice({
   name: 'accounts',
   initialState,
@@ -144,21 +127,6 @@ export const accountsSlice = createSlice({
         state.error = null
       })
       .addCase(fetch.rejected, (state, action) => {
-        state.loading = false
-        state.error = action.payload as string
-      })
-      // Register cases
-      .addCase(register.pending, (state) => {
-        state.loading = true
-        state.error = null
-      })
-      .addCase(register.fulfilled, (state, action) => {
-        state.account = action.payload!
-          .account! as WritableDraft<ISessionAccount>
-        state.loading = false
-        state.error = null
-      })
-      .addCase(register.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload as string
       })

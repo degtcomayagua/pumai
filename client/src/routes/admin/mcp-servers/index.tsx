@@ -13,19 +13,13 @@ import AdminPageLayout from "../../../layouts/Admin";
 import {
   FaFile,
   FaPlus,
-  FaSave,
-  FaTrash,
-  FaUsersCog,
-  FaUserShield,
+  FaServer,
 } from "react-icons/fa";
 
-import RAGDocumentsFeature, {
-  IRAGDocument,
-  RAGDocumentsAPITypes,
-} from "../../../features/rag-documents";
+import MCPServersFeature from "../../../features/mcp-servers";
 import { AccountRole } from "../../../features/roles";
 
-export const Route = createFileRoute("/admin/rag-documents/")({
+export const Route = createFileRoute("/admin/mcp-servers/")({
   component: RouteComponent,
 });
 
@@ -36,31 +30,31 @@ function RouteComponent() {
   const { message } = App.useApp();
 
   const { t: tPage } = useTranslation(["pages"], {
-    keyPrefix: "admin.rag-documents",
+    keyPrefix: "admin.mcp-servers",
   });
   const { t: tCommon } = useTranslation(["common"]);
 
   // List
-  const { ragDocuments, fetchRagDocuments, ragDocumentsListState } =
-    RAGDocumentsFeature.hooks.useRagDocumentsList({});
+  const { mcpServers, fetchMCPServers, mcpServersListState } =
+    MCPServersFeature.hooks.useMCPServerList({});
 
   // Create
   const {
-    state: createRagDocumentState,
-    setState: setCreateRagDocumentState,
-    openModal: openCreateRagDocumentModal,
-    closeModal: closeCreateRagDocumentModal,
-    createDocument: createRagDocument,
-  } = RAGDocumentsFeature.hooks.useCreateRagDocumentModal({
+    state: createMCPServerState,
+    setState: setCreateMCPState,
+    openModal: openCreateMCPServerModal,
+    closeModal: closeCreateMCPServerModal,
+    createDocument: createMCPServer,
+  } = MCPServersFeature.hooks.useCreateRagDocumentModal({
     onSuccess: async () => {
-      await fetchRagDocuments({ count: 50, page: 0 });
+      await fetchMCPServers({ count: 50, page: 0 });
     },
   });
 
   useEffect(() => {
     if (!account) return; // Admin layout will handle this
     if (
-      !account.data.role.permissions!.includes("account-roles:read") &&
+      !account.data.role.permissions!.includes("mcp-servers:read") &&
       !account.data.role.permissions!.includes("*")
     ) {
       message.error(tPage("error-messages:forbidden"));
@@ -68,24 +62,24 @@ function RouteComponent() {
       return;
     } else {
       (async () => {
-        await fetchRagDocuments({ count: 50, page: 0 });
+        await fetchMCPServers({ count: 50, page: 0 });
       })();
     }
   }, [account]);
 
   return (
-    <AdminPageLayout selectedPage="rag-documents">
-      <RAGDocumentsFeature.components.CreateRagDocumentDrawer
-        setState={setCreateRagDocumentState}
-        state={createRagDocumentState}
-        onClose={closeCreateRagDocumentModal}
+    <AdminPageLayout selectedPage="mcp-servers">
+      <MCPServersFeature.components.CreateRagDocumentDrawer
+        setState={setCreateMCPState}
+        state={createMCPServerState}
+        onClose={closeCreateMCPServerModal}
         onCreate={async () => {
-          await createRagDocument();
+          await createMCPServer();
         }}
       />
 
       <Title className="flex items-center gap-2">
-        <FaFile />
+        <FaServer />
         {tPage("title")}
       </Title>
 
@@ -99,15 +93,15 @@ function RouteComponent() {
             !account ||
             !(
               account?.data.role.permissions!.includes("*") ||
-              account?.data.role.permissions!.includes("account-roles:create")
+              account?.data.role.permissions!.includes("mcp-servers:create")
             )
           }
           onClick={() => {
-            openCreateRagDocumentModal();
+            openCreateMCPServerModal();
           }}
           icon={<FaPlus />}
         >
-          {tPage("uploadDocument")}
+          {tPage("createServer")}
         </Button>
       </div>
 
@@ -119,7 +113,7 @@ function RouteComponent() {
           allowClear
           onSearch={(query) => {
             if (!query || query.trim() === "") return;
-            fetchRagDocuments({
+            fetchMCPServers({
               search: {
                 query: query.trim(),
                 searchIn: ["name"],
@@ -128,7 +122,7 @@ function RouteComponent() {
               page: 0,
             });
           }}
-          loading={ragDocumentsListState.loading}
+          loading={mcpServersListState.loading}
           enterButton={tCommon("search")}
           placeholder={tPage("searchPlaceholder")}
         />
@@ -136,25 +130,22 @@ function RouteComponent() {
 
       {/* Documents List */}
       {account && (
-        <RAGDocumentsFeature.components.RagDocumentsTable
-          fetchRagDocuments={fetchRagDocuments}
-          ragDocuments={ragDocuments}
-          ragDocumentsListState={ragDocumentsListState}
-          currentAccountPermissions={
-            (account.data.role).permissions
-          }
-          onRestore={(document) => { }}
-          onUpdate={async (document) => { }}
-          onDelete={(document) => { }}
+        <MCPServersFeature.components.MCPServersTable
+          fetchMCPServers={fetchMCPServers}
+          mcpServers={mcpServers}
+          mcpServersListState={mcpServersListState}
+          onRestore={(server) => { }}
+          onUpdate={async (server) => { }}
+          onDelete={(server) => { }}
         />
       )}
 
       <div className="flex mt-4 gap-2 items-center">
         <Switch
           id="page-show-deleted"
-          checked={ragDocumentsListState.includeDeleted}
+          checked={mcpServersListState.includeDeleted}
           onChange={(value) => {
-            fetchRagDocuments({
+            fetchMCPServers({
               includeDeleted: value,
             });
           }}

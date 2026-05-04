@@ -1,8 +1,8 @@
 // Slice
-import slice, { login, logout, register, fetch } from "./slice";
+import slice, { login, logout, fetch } from "./slice";
 
 // API
-import * as AuthAPITypes from "../../../../shared/types/api/auth";
+import * as AuthAPITypes from "../../../../shared/api/auth";
 import * as schemas from "../../../../shared/schemas/auth";
 import authApi from "./api";
 
@@ -13,7 +13,6 @@ export default {
   actions: {
     login,
     logout,
-    register,
     fetch,
   },
   schemas,
