@@ -17,6 +17,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AdminConfigRouteImport } from './routes/admin/config'
+import { Route as AdminWorkflowsIndexRouteImport } from './routes/admin/workflows/index'
 import { Route as AdminRagDocumentsIndexRouteImport } from './routes/admin/rag-documents/index'
 import { Route as AdminMcpServersIndexRouteImport } from './routes/admin/mcp-servers/index'
 import { Route as AdminLogsIndexRouteImport } from './routes/admin/logs/index'
@@ -63,6 +64,11 @@ const AdminConfigRoute = AdminConfigRouteImport.update({
   path: '/admin/config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminWorkflowsIndexRoute = AdminWorkflowsIndexRouteImport.update({
+  id: '/admin/workflows/',
+  path: '/admin/workflows/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRagDocumentsIndexRoute = AdminRagDocumentsIndexRouteImport.update({
   id: '/admin/rag-documents/',
   path: '/admin/rag-documents/',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/admin/logs': typeof AdminLogsIndexRoute
   '/admin/mcp-servers': typeof AdminMcpServersIndexRoute
   '/admin/rag-documents': typeof AdminRagDocumentsIndexRoute
+  '/admin/workflows': typeof AdminWorkflowsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/admin/logs': typeof AdminLogsIndexRoute
   '/admin/mcp-servers': typeof AdminMcpServersIndexRoute
   '/admin/rag-documents': typeof AdminRagDocumentsIndexRoute
+  '/admin/workflows': typeof AdminWorkflowsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/admin/logs/': typeof AdminLogsIndexRoute
   '/admin/mcp-servers/': typeof AdminMcpServersIndexRoute
   '/admin/rag-documents/': typeof AdminRagDocumentsIndexRoute
+  '/admin/workflows/': typeof AdminWorkflowsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/admin/logs'
     | '/admin/mcp-servers'
     | '/admin/rag-documents'
+    | '/admin/workflows'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/admin/logs'
     | '/admin/mcp-servers'
     | '/admin/rag-documents'
+    | '/admin/workflows'
   id:
     | '__root__'
     | '/'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/admin/logs/'
     | '/admin/mcp-servers/'
     | '/admin/rag-documents/'
+    | '/admin/workflows/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   AdminLogsIndexRoute: typeof AdminLogsIndexRoute
   AdminMcpServersIndexRoute: typeof AdminMcpServersIndexRoute
   AdminRagDocumentsIndexRoute: typeof AdminRagDocumentsIndexRoute
+  AdminWorkflowsIndexRoute: typeof AdminWorkflowsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/workflows/': {
+      id: '/admin/workflows/'
+      path: '/admin/workflows'
+      fullPath: '/admin/workflows'
+      preLoaderRoute: typeof AdminWorkflowsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/rag-documents/': {
       id: '/admin/rag-documents/'
       path: '/admin/rag-documents'
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLogsIndexRoute: AdminLogsIndexRoute,
   AdminMcpServersIndexRoute: AdminMcpServersIndexRoute,
   AdminRagDocumentsIndexRoute: AdminRagDocumentsIndexRoute,
+  AdminWorkflowsIndexRoute: AdminWorkflowsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -160,7 +160,7 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
           {
             key: "deterministic-workflows",
             label: (
-              <Link to="/admin/rag-documents">{t("sidebar.data.deterministic-workflows")}</Link>
+              <Link to="/admin/workflows">{t("sidebar.data.deterministic-workflows")}</Link>
             ),
             icon: <FaRecycle />,
           },
