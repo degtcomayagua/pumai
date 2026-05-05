@@ -30,6 +30,7 @@ export function useWorkflowsList({
     loading: true,
     fields: [
       "id",
+      "type",
       "name",
       "url",
       "isActive",
@@ -79,6 +80,7 @@ export function useWorkflowsList({
             id: workflow.id.toString(),
             name: workflow.name,
             url: workflow.url,
+            type: workflow.type,
             isActive: workflow.isActive,
             authType: workflow.authType,
             createdAt: workflow.metadata?.createdAt ?? new Date(0),

@@ -268,6 +268,104 @@ const translation = {
         },
       },
     },
+    "mcp-servers": {
+      components: {
+        table: {
+          name: "Nombre",
+          url: "URL",
+          isActive: "Activo",
+          type: "Tipo",
+          authType: "Tipo de Autenticación",
+          createdAt: "Creado El",
+          actions: "Acciones",
+          active: "Activo",
+          inactive: "Inactivo",
+          actionButtons: {
+            trigger: "Acciones",
+            update: "Actualizar",
+            delete: "Eliminar",
+            restore: "Restaurar",
+          },
+          total: "Mostrando {{range}} de {{total}} servidores MCP",
+        },
+      },
+    },
+    workflows: {
+      components: {
+        table: {
+          name: "Nombre",
+          url: "URL",
+          isActive: "Activo",
+          type: "Tipo",
+          authType: "Tipo de Autenticación",
+          createdAt: "Creado El",
+          actions: "Acciones",
+          active: "Activo",
+          inactive: "Inactivo",
+          actionButtons: {
+            trigger: "Acciones",
+            update: "Actualizar",
+            delete: "Eliminar",
+            restore: "Restaurar",
+          },
+          total: "Mostrando {{range}} de {{total}} flujos de trabajo",
+        },
+        createDrawer: {
+          title: "Crear Flujo de Trabajo Determinístico",
+          fields: {
+            name: {
+              label: "Nombre",
+              placeholder: "Ingrese el nombre del flujo de trabajo",
+            },
+            url: {
+              label: "URL",
+              placeholder: "Ingrese la URL del flujo de trabajo",
+            },
+            type: {
+              label: "Tipo",
+              options: {
+                n8n: "n8n (Recomendado)",
+                custom: "Personalizado",
+              },
+            },
+            typePlaceholder: "Seleccione el tipo de flujo de trabajo",
+            authType: {
+              label: "Tipo de Autenticación",
+              placeholder: "Seleccione el tipo de autenticación",
+              options: {
+                none: "Ninguna",
+              }
+            },
+            allowedRoles: "Roles Permitidos",
+            allowedRolesPlaceholder:
+              "Seleccione los roles que pueden usar este flujo de trabajo",
+            description: {
+              label: "Descripción",
+              placeholder: "Ingrese una descripción para el flujo de trabajo",
+            },
+            protocol: {
+              label: "Protocolo",
+              placeholder:
+                "Seleccione el protocolo de activación del flujo de trabajo",
+              options: {
+                webhook: "Webhook",
+                websocket: "Websocket",
+              },
+            },
+            iconUrl: {
+              label: "URL del Icono",
+              placeholder:
+                "Ingrese la URL del icono para este flujo de trabajo",
+            },
+            tags: {
+              label: "Etiquetas",
+              placeholder:
+                "Añade etiquetas para organizar tus flujos de trabajo",
+            },
+          },
+        },
+      },
+    },
     logs: {
       components: {
         table: {
@@ -334,13 +432,13 @@ const translation = {
           text: "Chat por texto",
           voice: "Chat por voz",
         },
-        "reports": {
+        reports: {
           title: "Reportes",
           "no-reports": "No hay reportes disponibles",
           usage: "Uso de la IA",
           feedback: "Comentarios de los usuarios",
         },
-        "data": {
+        data: {
           title: "Datos del Sistema",
           "mcp-servers": "Servidores MCP",
           "deterministic-workflows": "Flujos de Trabajo Determinísticos",
@@ -355,7 +453,7 @@ const translation = {
           title: "Gestión",
           accounts: "Cuentas de usuario",
           "account-roles": "Roles de cuenta",
-          "logs": "Registros técnicos",
+          logs: "Registros técnicos",
           config: "Configuración del sistema",
         },
         logout: "Cerrar sesión",
@@ -450,6 +548,21 @@ const translation = {
         uploadDocument: "Subir Nuevo Documento",
         searchPlaceholder: "Buscar por nombre o contenido",
         showDeleted: "Mostrar Documentos Eliminados",
+      },
+      workflows: {
+        title: "Gestión de Flujos Determinísticos",
+        description:
+          "Administra los flujos de trabajo determinísticos que la IA puede ejecutar para realizar tareas específicas.",
+        createWorkflow: "Crear Nuevo Flujo de Trabajo",
+        searchPlaceholder: "Buscar por nombre o URL",
+        showDeleted: "Mostrar Flujos de Trabajo Eliminados",
+      },
+      "mcp-servers": {
+        title: "Gestión de Servidores MCP",
+        description: "Administra los servidores MCP que la IA puede utilizar.",
+        createServer: "Crear Nuevo Servidor MCP",
+        searchPlaceholder: "Buscar por nombre o URL",
+        showDeleted: "Mostrar Servidores MCP Eliminados",
       },
       logs: {
         title: "Registros Técnicos",
