@@ -9,7 +9,8 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../store";
 import { unwrapResult } from "@reduxjs/toolkit";
 
-import { Button } from "antd";
+import { Button, Card } from "antd";
+import GeneralLayout from "client/src/layouts/General";
 
 export const Route = createFileRoute("/auth/logout")({
   component: RouteComponent,
@@ -35,7 +36,6 @@ function RouteComponent() {
     if (!account) {
       (async () => {
         const result = await dispatch(AuthFeature.actions.fetch());
-        const payload = unwrapResult(result);
 
         if (
           AuthFeature.actions.fetch.rejected.match(result) ||
@@ -48,10 +48,10 @@ function RouteComponent() {
   }, [account]);
 
   return (
-    <div>
+    <GeneralLayout>
       {account && (
         <main className="min-h-screen flex items-center justify-center">
-          <div className="rounded-md p-4 shadow-md bg-neutral-100 dark:bg-neutral-700">
+          <Card>
             <div className="text-2xl font-bold text-center">
               {t("title")}
             </div>
@@ -82,11 +82,11 @@ function RouteComponent() {
                 {t("cancel")}
               </Button>
             </div>
-          </div>
+          </Card>
         </main>
       )}
 
       {!account && <p>Loading your account...</p>}
-    </div>
+    </GeneralLayout>
   );
 }

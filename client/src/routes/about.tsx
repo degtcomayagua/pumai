@@ -14,7 +14,7 @@ import { FaPaperPlane } from "react-icons/fa";
 const { Paragraph, Title } = Typography;
 
 import AIFeature, { ChatMessage } from "../features/ai";
-import GeneralLayout from "../layouts/General";
+import GeneralLayout from "../layouts/User";
 
 import { useTranslation } from "react-i18next";
 

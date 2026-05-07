@@ -8,7 +8,7 @@ import { MessageCirclePlus } from "lucide-react";
 
 import StatusFeature from "../features/status";
 
-import GeneralLayout from "../layouts/General";
+import GeneralLayout from "../layouts/User";
 
 export const Route = createFileRoute("/")({
   component: Page,

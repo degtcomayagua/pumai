@@ -4,7 +4,7 @@ import { Button, Spin, message as antdMessage, Typography, Card } from "antd";
 import { AudioOutlined, StopOutlined } from "@ant-design/icons";
 
 import AIFeature, { ChatMessage } from "../features/ai";
-import GeneralLayout from "../layouts/General";
+import GeneralLayout from "../layouts/User";
 
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";

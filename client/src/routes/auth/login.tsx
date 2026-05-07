@@ -11,8 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 
 import AuthFeature, { type AuthAPITypes } from "../../features/auth/";
-import type { AccountAPITypes } from "@/features/accounts";
-// import { LoginRequestBody } from "../../../../shared/types/api/auth";
+import GeneralLayout from "client/src/layouts/General";
 
 // import TerminalFeature from "../../features/terminals/";
 
@@ -52,7 +51,7 @@ function RouteComponent() {
 
     if (!parsedData.success) {
       for (const error of parsedData.error.issues) {
-        message.error(t(`login.messages.${error.message}`));
+        message.error(t(`messages.${error.message}`));
       }
       setLoginState((s) => ({ ...s, loading: false }));
       return;
@@ -63,17 +62,17 @@ function RouteComponent() {
 
     switch (payload.status) {
       case "success":
-        message.success(t("login.messages.success"));
+        message.success(t("messages.success"));
         break;
       case "requires-tfa":
-        message.info(t("login.messages.requires-tfa"));
+        message.info(t("messages.requires-tfa"));
         setLoginState((s) => ({ ...s, loading: false, requiresTfa: true }));
         break;
       case "invalid-credentials":
-        message.error(t("login.messages.invalid-credentials"));
+        message.error(t("messages.invalid-credentials"));
         break;
       case "invalid-tfa-code":
-        message.error(t("login.messages.invalid-tfa-code"));
+        message.error(t("messages.invalid-tfa-code"));
         break;
     }
 
@@ -107,7 +106,7 @@ function RouteComponent() {
   // }, [terminal]);
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 relative">
+    <GeneralLayout>
       <Modal
         open={loginState.tfaModalOpen}
         title={t("login.tfaModal.title")}
@@ -195,6 +194,6 @@ function RouteComponent() {
           </Form.Item>
         </Form>
       </Card>
-    </div>
+    </GeneralLayout>
   );
 }

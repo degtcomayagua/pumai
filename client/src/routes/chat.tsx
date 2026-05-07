@@ -4,7 +4,7 @@ import { Button, Input, Spin, message as antdMessage } from "antd";
 import { FaPaperPlane } from "react-icons/fa";
 
 import AIFeature, { ChatMessage } from "../features/ai";
-import GeneralLayout from "../layouts/General";
+import GeneralLayout from "../layouts/User";
 
 import { useTranslation } from "react-i18next";
 
