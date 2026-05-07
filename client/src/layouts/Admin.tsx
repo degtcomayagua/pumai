@@ -40,6 +40,7 @@ import ConfigFeature from "../features/config/";
 import type { RootState } from "../store";
 
 import { hasPermissions } from "../utils/permissions";
+import { unahTheme } from "../themes/unah";
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -239,73 +240,10 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
     ];
   }, [account]);
 
-  const darkTheme = {
-    algorithm: theme.darkAlgorithm,
-    token: {
-      // Primary
-      colorPrimary: "#1e3976",
-
-      // Backgrounds
-      colorBgBase: "#0f1115", // app background (almost black)
-      colorBgLayout: "#0f1115",
-      colorBgContainer: "#16181d", // cards, sider, header
-      colorBgElevated: "#1d2026", // dropdowns, modals, popovers
-      colorBgSpotlight: "#262a33", // highlights, selected items
-
-      // Text
-      colorTextBase: "#e6e9f0",
-      colorTextSecondary: "#b8c1d9",
-
-      // Borders
-      colorBorder: "#262a33",
-      colorSplit: "#262a33",
-
-      // Status
-      colorSuccess: "#366533",
-      colorWarning: "#f0b92d",
-      colorError: "#8a1518",
-      colorInfo: "#5facc5",
-
-      // UI
-      borderRadius: 8,
-      fontSize: 15,
-    },
-  };
-
-  const lightTheme = {
-    algorithm: theme.defaultAlgorithm,
-    token: {
-      // Primary
-      colorPrimary: "#1e3976",
-
-      // Backgrounds
-      colorBgBase: "#ffffff",
-      colorBgContainer: "#ffffff",
-      colorBgLayout: "#f5f7fb",
-
-      // Text
-      colorTextBase: "#1f2937",
-      colorTextSecondary: "#4b5563",
-
-      // Borders
-      colorBorder: "#e5e7eb",
-
-      // Status
-      colorSuccess: "#366533",
-      colorWarning: "#f0b92d",
-      colorError: "#8a1518",
-      colorInfo: "#5facc5",
-
-      // UI
-      borderRadius: 8,
-      fontSize: 15,
-    },
-  };
-
   const isDark = true;
 
   return (
-    <ConfigProvider locale={esES} theme={isDark ? darkTheme : lightTheme}>
+    <ConfigProvider locale={esES} theme={unahTheme}>
       {/* Top Navbar */}
       <Header
         className={`px-4 flex items-center justify-between bg-white dark:bg-neutral-800 ${isDark ? "dark" : ""}`}
