@@ -7,9 +7,11 @@ import cookie from "cookie-parser";
 import path from "path";
 
 import { loadEnv } from "./config/env.js";
+import { setupRedis } from "./config/redis.js";
 import { registerRoutes } from "./routes/index.js";
 import { traceIdMiddleware } from "./middleware/traceId.js";
 import SessionsService from "./services/sessions.js";
+import { initializeWorkflowRegistry } from "./services/workflows/registry.js";
 import SocketServer from "./services/socket.js";
 
 export async function startServer() {
@@ -43,6 +45,9 @@ export async function startServer() {
       res.sendFile(path.join(clientPath, "index.html"));
     });
   }
+
+  await setupRedis();
+  await initializeWorkflowRegistry();
 
   const sessions = SessionsService.prototype.getInstance();
   sessions.loadToServer(app);

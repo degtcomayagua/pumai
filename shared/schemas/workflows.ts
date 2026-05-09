@@ -145,6 +145,17 @@ const listSchema = z.object({
   populate: z.array(workflowPopulate).optional(),
 });
 
+// Start workflow
+const startSchema = z.object({
+  workflow: z.string().min(1, "workflow-required").trim(),
+  userInput: z.string().optional(),
+});
+
+// Clear workflow session
+const clearSessionSchema = z.object({
+  sessionId: z.string().min(8, "invalid-session-id"),
+});
+
 export {
   workflowFields,
   workflowPopulate,
@@ -154,4 +165,9 @@ export {
   getSchema,
   restoreSchema,
   listSchema,
+  // New schemas
+  // Start a workflow (create session + execute first step)
+  startSchema,
+  // Clear/cancel a workflow session
+  clearSessionSchema,
 };

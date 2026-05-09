@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Button, Input, Spin, message as antdMessage } from "antd";
+import { Button, Input, Spin, message as antdMessage, Select } from "antd";
 import { FaPaperPlane } from "react-icons/fa";
 
 import AIFeature, { ChatMessage } from "../features/ai";
@@ -134,6 +134,8 @@ function Page() {
   );
 
   const [currentWorkflowSessionId, setCurrentWorkflowSessionId] = React.useState<string | null>(null);
+  const [availableWorkflows, setAvailableWorkflows] = React.useState<Array<{ name: string; description: string }>>([]);
+  const [selectedWorkflow, setSelectedWorkflow] = React.useState<string | null>(null);
 
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
@@ -153,6 +155,22 @@ function Page() {
     const container = containerRef.current;
     if (container) container.scrollTop = container.scrollHeight;
   }, [messages]);
+
+  React.useEffect(() => {
+    // Fetch available workflows for the selector
+    (async () => {
+      try {
+        const res = await fetch("/api/workflows/available", { credentials: "include" });
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (payload?.status === "success") {
+          setAvailableWorkflows(payload.workflows ?? []);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
 
   const sendMessage = async () => {
     const trimmed = input.trim();
@@ -228,6 +246,24 @@ function Page() {
                 });
               }
 
+              if (chunk.event === "workflow_reply") {
+                // Structured single reply from a workflow — show as a single
+                // assistant message (or image if the reply indicates an image).
+                if (chunkData?.type === "image" && chunkData?.content) {
+                  return appendMessage({
+                    source: "api",
+                    role: "assistant",
+                    kind: "image",
+                    title: "Workflow image",
+                    content: chunkData.content,
+                    timestamp: Date.now(),
+                  });
+                }
+
+                const text = typeof chunkData?.content === "string" ? chunkData.content : String(chunk.data);
+                return appendOrUpdateAssistantText(copy, text);
+              }
+
               if (chunk.event === "tool_call") {
                 return appendActivityToAssistantText(copy, {
                   kind: "tool_call",
@@ -289,6 +325,76 @@ function Page() {
     }
   };
 
+  const startSelectedWorkflow = async () => {
+    if (!selectedWorkflow) return;
+
+    try {
+      const res = await fetch("/api/workflows/start", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflow: selectedWorkflow }),
+      });
+
+      if (!res.ok) {
+        antdMessage.error("No se pudo iniciar el flujo.");
+        return;
+      }
+
+      const payload = await res.json();
+      if (payload?.status === "success") {
+        setCurrentWorkflowSessionId(payload.workflowSessionId ?? null);
+
+        setMessages((prev) =>
+          appendActivityToAssistantText([...prev], {
+            kind: "workflow_start",
+            title: `Flujo ${selectedWorkflow} Iniciado`,
+            details: payload.nextStep ? `Siguiente: ${payload.nextStep}` : "Completado",
+          }),
+        );
+
+        if (Array.isArray(payload.replies) && payload.replies.length > 0) {
+          setMessages((prev) => {
+            const copy = [...prev];
+            return appendOrUpdateAssistantText(copy, payload.replies.map((r: any) => r.content).join("\n"));
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      antdMessage.error("Error iniciando el flujo.");
+    }
+  };
+
+  const cancelWorkflow = async () => {
+    if (!currentWorkflowSessionId) return;
+
+    try {
+      const res = await fetch("/api/workflows/clear-session", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: currentWorkflowSessionId }),
+      });
+
+      if (res.ok) {
+        setCurrentWorkflowSessionId(null);
+        setMessages((prev) =>
+          appendActivityToAssistantText([...prev], {
+            kind: "workflow_step",
+            title: "Flujo cancelado",
+            details: "El flujo ha sido cancelado por el usuario",
+          }),
+        );
+      } else {
+        antdMessage.error("No se pudo cancelar el flujo.");
+      }
+    } catch (err) {
+      console.error(err);
+      antdMessage.error("Error al cancelar el flujo.");
+    }
+  };
+
   return (
     <GeneralLayout selectedPage="chat">
       <div className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden text-white">
@@ -320,6 +426,22 @@ function Page() {
 
         <div className="bottom-0 h-[120px] absolute w-full shrink-0 border-t border-white/10 bg-white/10">
           <div className="md:p-4 p-2 flex items-end md:gap-3 gap-2">
+            <div className="flex items-center gap-2 mr-2">
+              <Select
+                placeholder="Seleccionar flujo..."
+                value={selectedWorkflow ?? undefined}
+                onChange={(v) => setSelectedWorkflow(v)}
+                style={{ minWidth: 220 }}
+                options={availableWorkflows.map((w) => ({ label: `${w.name} — ${w.description}`, value: w.name }))}
+                allowClear
+              />
+              <Button onClick={startSelectedWorkflow} disabled={!selectedWorkflow}>
+                Iniciar
+              </Button>
+              <Button danger onClick={cancelWorkflow} disabled={!currentWorkflowSessionId}>
+                Cancelar
+              </Button>
+            </div>
             <Input.TextArea
               autoSize={{ maxRows: 6 }}
               placeholder={t("input.placeholder")}

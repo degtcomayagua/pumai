@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   loginAccountSchema,
 } from "../schemas/auth.js";
-import { ISessionAccount } from "../types/sessions";
+import { ISessionAccount } from "../types/sessions.js";
 
 export interface RegisterResponseData {
   status: "email-in-use" | "no-roles-defined" | ResponseStatus;

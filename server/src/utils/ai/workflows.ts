@@ -4,8 +4,10 @@ import OllamaChatService from "../../services/ollama/chat.js";
 
 import { WorkflowName } from "../../types/workflows.js";
 
-import { getWorkflowList, getWorkflows } from "../../services/workflows/repository.js";
-
+import {
+  getWorkflowList,
+  getWorkflows,
+} from "../../services/workflows/registry.js";
 
 function parseJsonObject(raw: string): Record<string, any> | null {
   const content = raw.trim();
@@ -19,7 +21,9 @@ function parseJsonObject(raw: string): Record<string, any> | null {
 
   try {
     const parsed = JSON.parse(candidate);
-    return parsed && typeof parsed === "object" ? parsed as Record<string, any> : null;
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, any>)
+      : null;
   } catch {
     // Continue with best-effort extraction.
   }
@@ -29,7 +33,9 @@ function parseJsonObject(raw: string): Record<string, any> | null {
   if (first >= 0 && last > first) {
     try {
       const parsed = JSON.parse(candidate.slice(first, last + 1));
-      return parsed && typeof parsed === "object" ? parsed as Record<string, any> : null;
+      return parsed && typeof parsed === "object"
+        ? (parsed as Record<string, any>)
+        : null;
     } catch {
       return null;
     }
@@ -41,20 +47,23 @@ function parseJsonObject(raw: string): Record<string, any> | null {
 export async function detectWorkflowIntent(
   prompt: string,
 ): Promise<WorkflowName | null> {
-  const intentList = getWorkflowList().map((w) => `${w.name}: ${w.description}`).join("\n- ");
+  const intentList = getWorkflowList()
+    .map((w) => `${w.name}: ${w.description}`)
+    .join("\n- ");
 
   try {
-    const response = await OllamaChatService.getInstance().generateChat<ChatResponse>({
-      prompt,
-      chat: [],
-      stream: false,
-      options: { temperature: 0 },
-      systemPrompt: `You classify whether the user is requesting a deterministic workflow.
+    const response =
+      await OllamaChatService.getInstance().generateChat<ChatResponse>({
+        prompt,
+        chat: [],
+        stream: false,
+        options: { temperature: 0 },
+        systemPrompt: `You classify whether the user is requesting a deterministic workflow.
 Allowed intents: ${intentList}
 Return ONLY valid JSON with shape: { "intent": string | null }.
 Return null when the request does not clearly match any allowed intent.
 Do not add extra keys.`,
-    });
+      });
 
     console.log("[Workflow] detectWorkflowIntent raw response", {
       content: response.message.content,

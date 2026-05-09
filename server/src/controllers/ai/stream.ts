@@ -5,18 +5,22 @@ import { TypedRequest } from "../../types/index.js";
 
 import OllamaChatService from "../../services/ollama/chat.js";
 import LoggingService from "../../services/logging.js";
+import {
+  clearWorkflowSession,
+  createWorkflowSession,
+  getActiveWorkflowSession,
+  updateWorkflowSession,
+} from "../../services/workflows/sessions.js";
+import {
+  executeWorkflowStep,
+  getWorkflow,
+} from "../../services/workflows/registry.js";
 
 import { buildAiPrompt } from "../../utils/ai/rag.js";
 
-import { detectWorkflowIntent, } from "../../utils/ai/workflows.js";
-// import { getWorkflows } from "../../services/workflows/repository.js";
-// import {
-//   clearWorkflowSession,
-//   createSession,
-//   getActiveWorkflowSession,
-// } from "../../services/workflows/sessions.js";
+import { detectWorkflowIntent } from "../../utils/ai/workflows.js";
 
-import * as AIAPITypes from "../../../../shared/api/ai.js"
+import * as AIAPITypes from "../../../../shared/api/ai.js";
 
 type StreamEventName = AIAPITypes.StreamChunk["event"];
 
@@ -41,16 +45,68 @@ function endSseStream(res: Response) {
   res.end();
 }
 
+function formatWorkflowUrl(content: string): string {
+  try {
+    const url = new URL(content);
+    return `[${url.toString()}](${url.toString()})`;
+  } catch {
+    return content;
+  }
+}
+
+function writeWorkflowReplies(
+  res: Response,
+  replies: Array<{ type: "text" | "url" | "image"; content: string }>,
+) {
+  // Send structured workflow replies so the client can treat each reply
+  // as an independent message rather than appending to the cumulative
+  // streaming `text` content. This avoids duplication/accumulation on the
+  // frontend when mixing streamed model output and workflow replies.
+  for (const reply of replies) {
+    if (reply.type === "image") {
+      writeSseEvent(res, "image", {
+        title: "Workflow image",
+        url: reply.content,
+      });
+      continue;
+    }
+
+    writeSseEvent(res, "workflow_reply", {
+      type: reply.type,
+      content:
+        reply.type === "url" ? formatWorkflowUrl(reply.content) : reply.content,
+    });
+  }
+}
+
 async function writeStreamResponse(
   res: Response,
   result: AbortableAsyncIterator<ChatResponse>,
 ) {
+  let previousContent = "";
   for await (const part of result) {
     try {
       const chunk = part.message.content ?? "";
-      if (chunk) {
-        writeSseEvent(res, "text", chunk);
+      if (!chunk) {
+        (res as Response & { flush?: () => void }).flush?.();
+        continue;
       }
+
+      // Some streaming providers return the full accumulated content on
+      // each iteration. To avoid sending duplicate text to the client
+      // (which causes the frontend to display repeated content), compute
+      // the suffix (delta) compared to previously sent content and only
+      // stream that.
+      let delta = chunk;
+      if (chunk.startsWith(previousContent)) {
+        delta = chunk.slice(previousContent.length);
+      }
+
+      if (delta) {
+        writeSseEvent(res, "text", delta);
+      }
+
+      previousContent = chunk;
       (res as Response & { flush?: () => void }).flush?.();
     } catch (writeError) {
       console.error("Error writing chunk to response:", writeError);
@@ -158,82 +214,99 @@ const handler = async (
     // #region Logged In
     // For logged in users, the same as above but with access to workflows and more advanced MCP tool calls.
 
-    // 1. Check for active workflow sessions. If exists, continue with the workflow instead of answering regularly.
-    // const activeSession = workflowSessionId
-    //   ? await getActiveWorkflowSession(workflowSessionId)
-    //   : null;
+    const activeSession = workflowSessionId
+      ? await getActiveWorkflowSession(workflowSessionId)
+      : null;
 
-    // if (activeSession) {
-    //   const workflows = getWorkflows();
-    //   const workflow = workflows[activeSession.activeWorkflow];
+    if (activeSession) {
+      const workflow = getWorkflow(activeSession.activeWorkflow);
 
-    //   if (workflow) {
-    //     const workflowInstance = new workflow();
-    //     const workflowReply = await workflowInstance.continue(activeSession, prompt);
-    //     const updatedSession = await getActiveWorkflowSession(activeSession.sessionId);
+      if (workflow) {
+        const workflowResult = await executeWorkflowStep(
+          activeSession.activeWorkflow,
+          activeSession.currentStep,
+          prompt,
+        );
 
-    //     writeSseEvent(res, "workflow_step", {
-    //       title: "Workflow continued",
-    //       workflow: activeSession.activeWorkflow,
-    //       step: updatedSession?.currentStep ?? null,
-    //     });
+        if (workflowResult.nextStep === null) {
+          await clearWorkflowSession(activeSession.sessionId);
+        } else {
+          await updateWorkflowSession(activeSession.sessionId, {
+            currentStep: workflowResult.nextStep,
+            data: {
+              ...activeSession.data,
+              lastUserInput: prompt,
+            },
+          });
+        }
 
-    //     if (workflowReply?.content) {
-    //       writeSseEvent(res, "text", workflowReply.content);
-    //     }
-    //     if (workflowReply?.imageUrl) {
-    //       writeSseEvent(res, "image", {
-    //         title: workflowReply.title ?? "Workflow image",
-    //         url: workflowReply.imageUrl,
-    //       });
-    //     }
+        console.log(workflowResult);
+        if (workflowResult.nextStep !== null) {
+          writeSseEvent(res, "workflow_step", {
+            title: workflow.description,
+            workflow: activeSession.activeWorkflow,
+            step: workflowResult.nextStep,
+          });
+        }
 
-    //     endSseStream(res);
+        writeWorkflowReplies(res, workflowResult.replies);
+        endSseStream(res);
+        return;
+      }
 
-    //     return;
-    //   }
+      await clearWorkflowSession(activeSession.sessionId);
+    }
 
-    //   // If workflow session exists but workflow is not found, end the session and answer regularly.
-    //   await clearWorkflowSession(activeSession.sessionId);
-    // }
+    const detectedIntent = await detectWorkflowIntent(prompt);
+    if (detectedIntent) {
+      const workflow = getWorkflow(detectedIntent);
 
-    // 2. If no active workflow session, attempt to detect intent and start a new workflow if intent is detected.
-    // const detectedIntent = await detectWorkflowIntent(prompt);
-    // if (detectedIntent) {
-    //   const workflows = getWorkflows();
-    //   const workflow = workflows[detectedIntent];
+      if (workflow) {
+        const workflowSession = await createWorkflowSession({
+          accountId: account.id.toString(),
+          workflow: detectedIntent,
+          currentStep: workflow.firstStep,
+          data: {
+            lastUserInput: prompt,
+          },
+        });
 
-    //   if (workflow) {
-    //     const createdWorkflow = new workflow();
-    //     const workflowSession = await createSession({
-    //       accountId: account.id.toString(),
-    //       workflow: detectedIntent,
-    //     });
+        const workflowResult = await executeWorkflowStep(
+          detectedIntent,
+          workflow.firstStep,
+          prompt,
+        );
 
+        if (workflowResult.nextStep === null) {
+          await clearWorkflowSession(workflowSession.sessionId);
+        } else {
+          await updateWorkflowSession(workflowSession.sessionId, {
+            currentStep: workflowResult.nextStep,
+            data: {
+              lastUserInput: prompt,
+            },
+          });
+        }
 
-    //     const workflowReply = await createdWorkflow.start(workflowSession, prompt);
+        writeSseEvent(res, "workflow_start", {
+          title: workflow.description,
+          workflow: detectedIntent,
+          workflowSessionId: workflowSession.sessionId,
+        });
 
-    //     writeSseEvent(res, "workflow_start", {
-    //       title: "Workflow started",
-    //       workflow: detectedIntent,
-    //       workflowSessionId: workflowSession.sessionId,
-    //       reply: workflowReply,
-    //     });
+        if (workflowResult.nextStep !== null) {
+          writeSseEvent(res, "workflow_step", {
+            title: workflow.description,
+            workflow: detectedIntent,
+            step: workflowResult.nextStep,
+          });
+        }
 
-    //     if (workflowReply?.content) {
-    //       writeSseEvent(res, "text", workflowReply.content);
-    //     }
-    //     if (workflowReply?.imageUrl) {
-    //       writeSseEvent(res, "image", {
-    //         title: workflowReply.title ?? "Workflow image",
-    //         url: workflowReply.imageUrl,
-    //       });
-    //     }
-
-    //     endSseStream(res);
-    //     return;
-    //   }
-    // }
+        writeWorkflowReplies(res, workflowResult.replies);
+        endSseStream(res);
+        return;
+      }
+    }
 
     // 3. If no intent is detected, answer regularly with RAG and basic MCP tool calls, without workflow orchestration.
     const result = await OllamaChatService.getInstance().generateChat<
@@ -340,7 +413,6 @@ const handler = async (
           error: error.message,
           stack: error.stack,
         },
-
       });
     }
 

@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "nodenext",
-    "ignoreDeprecations": "6.0",
     "moduleResolution": "nodenext",
     "baseUrl": "../",
     "paths": {

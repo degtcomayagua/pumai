@@ -1,12 +1,11 @@
-import { workflows } from "../services/workflows/repository.js";
-export type WorkflowName = keyof typeof workflows;
+export type WorkflowName = string;
 
 export type WorkflowStepResult = {
   reply?: {
     title: string;
     content: string;
     imageUrl?: string;
-  }
+  };
   nextStep: string | null; // null = workflow ends
 };
 
