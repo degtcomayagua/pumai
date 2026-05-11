@@ -340,7 +340,7 @@ const handler = async (
 
           // Send the results of executing the steps
           for (const reply of workflowResult.replies) {
-            writeSseEvent(res, reply.type, reply.content);
+            writeSseEvent(res, "workflow_step", JSON.stringify(reply));
             writeSseEvent(res, "separator", "");
           }
           endSseStream(res);
@@ -415,7 +415,7 @@ const handler = async (
 
           // Send the results of executing the steps
           for (const reply of workflowResult.replies) {
-            writeSseEvent(res, reply.type, reply.content);
+            writeSseEvent(res, "workflow_step", JSON.stringify(reply));
             writeSseEvent(res, "separator", "");
           }
           endSseStream(res);

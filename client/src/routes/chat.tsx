@@ -75,6 +75,16 @@ function appendOrUpdateAssistantText(
   return copy;
 }
 
+const upsertAssistantMessage = (copy: ChatMessage[], text: string): ChatMessage[] => {
+  const last = copy[copy.length - 1];
+  if (last?.role === "assistant" && last?.kind === "text" && last?.source === "api") {
+    copy[copy.length - 1] = { ...last, content: text };
+  } else {
+    copy.push({ source: "api", role: "assistant", kind: "text", content: text, timestamp: Date.now() });
+  }
+  return copy;
+};
+
 function appendActivityToAssistantText(
   copy: ChatMessage[],
   activity: {
@@ -129,14 +139,6 @@ function appendActivityToAssistantText(
   return copy;
 }
 
-function tryParseJson<T = Record<string, unknown>>(value: string): T | null {
-  try {
-    const parsed = JSON.parse(value);
-    return typeof parsed === "object" && parsed !== null ? parsed : null;
-  } catch {
-    return null;
-  }
-}
 
 //#region Page
 function Page() {
@@ -171,7 +173,6 @@ function Page() {
   const [loading, setLoading] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const lastChunkKeyRef = React.useRef<string | null>(null);
-  const EVENT_SEPARATOR = "<<EVENT SEPARATOR>>";
   const lastFullTextRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
@@ -215,8 +216,7 @@ function Page() {
     // })();
   }, []);
 
-  const segmentStartRef = React.useRef<number>(0);
-  const forceNewMessageRef = React.useRef<boolean>(false);
+  const textAccumulatorRef = React.useRef<string>("");
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -236,12 +236,6 @@ function Page() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
-
-    // Reset all streaming state before a new request
-    segmentStartRef.current = 0;
-    lastFullTextRef.current = null;
-    lastChunkKeyRef.current = null;
-    forceNewMessageRef.current = false;
 
     try {
       const result = await AIFeature.api.generateStream(
@@ -263,28 +257,22 @@ function Page() {
                 return copy;
               };
 
+              // Meaning: LLM Generated content
+              if (chunk.event === "text") {
+                textAccumulatorRef.current = rawFul ?? "";
+                return upsertAssistantMessage(copy, textAccumulatorRef.current);
+              }
+
               if (chunk.event === "separator") {
-                const fullText = rawFul ?? "";
-                // Only take the slice for THIS segment, not the entire accumulated string
-                const segmentText = fullText.slice(segmentStartRef.current);
-
-                if (segmentText && lastFullTextRef.current !== segmentText) {
-                  lastFullTextRef.current = segmentText;
-                  appendOrUpdateAssistantText(copy, segmentText, false);
+                // Flush the accumulated text as a finalized message, then reset
+                if (textAccumulatorRef.current) {
+                  upsertAssistantMessage(copy, textAccumulatorRef.current);
+                  textAccumulatorRef.current = "";
                 }
-
-                // Advance the segment start offset to the current end of rawFul
-                segmentStartRef.current = fullText.length;
-
-                // Force the next text chunk to create a NEW message bubble
-                forceNewMessageRef.current = true;
-                lastFullTextRef.current = null;
-                lastChunkKeyRef.current = null;
-
                 return copy;
               }
 
-              const chunkData = tryParseJson<{
+              const chunkData = JSON.parse(chunk.data) as {
                 url?: string;
                 workflow?: string;
                 name?: string;
@@ -292,18 +280,9 @@ function Page() {
                 arguments?: unknown;
                 title?: string;
                 workflowSessionId?: string;
-              }>(chunk.data);
-
-              if (chunk.event === "text") {
-                // Compute only the text belonging to the current segment
-                const segmentText = (rawFul ?? "").slice(segmentStartRef.current);
-
-                if (lastFullTextRef.current === segmentText) return copy;
-                lastFullTextRef.current = segmentText;
-
-                // forceNewMessageRef is consumed inside appendOrUpdateAssistantText
-                return appendOrUpdateAssistantText(copy, segmentText, forceNewMessageRef.current);
               }
+
+              console.log(chunkData)
 
               if (chunk.event === "image") {
                 return appendMessage({
@@ -317,7 +296,7 @@ function Page() {
               }
 
               if (chunk.event === "workflow_reply") {
-                const replyData = tryParseJson<{ type: string; content: string }>(chunk.data);
+                const replyData = JSON.parse(chunk.data);
                 if (replyData?.type === "image" && replyData?.content) {
                   return appendMessage({
                     source: "api",
@@ -330,10 +309,8 @@ function Page() {
                 }
 
                 const text =
-                  typeof replyData?.content === "string"
-                    ? replyData.content
-                    : String(chunk.data);
-                return appendOrUpdateAssistantText(copy, text, forceNewMessageRef.current);
+                  typeof replyData?.content === "string" ? replyData.content : String(chunk.data);
+                return upsertAssistantMessage(copy, text);
               }
 
               if (chunk.event === "tool_call") {
@@ -348,7 +325,6 @@ function Page() {
                 if (chunkData?.workflowSessionId) {
                   setCurrentWorkflowSessionId(chunkData.workflowSessionId);
                 }
-
                 return appendActivityToAssistantText(copy, {
                   kind: "workflow_start",
                   title: `Flujo ${chunkData?.workflow ?? ""} Iniciado`,
