@@ -1,119 +1,30 @@
 import prismaClient from "../../config/prisma.js";
 
+import { Workflow, WorkflowProtocol } from "@prisma/client";
+
 import {
-  Workflow,
-  WorkflowAuthType,
-  WorkflowProtocol,
-} from "../../../../generated/prisma/client.js";
+  WorkflowRegistryInfo,
+  WorkflowRequestBody,
+  WorkflowStepResult,
+} from "../../types/workflows.js";
 
-export type WorkflowRegistryInfo = {
-  name: string;
-  description: string;
-  firstStep: string;
-  steps: string[];
-};
-
-export type WorkflowReply = {
-  type: "text" | "url" | "image";
-  content: string;
-};
-
-export type WorkflowExecutionResult = {
-  replies: WorkflowReply[];
-  nextStep: string | null;
-};
+import { buildRequestHeaders } from "server/src/utils/workflows/auth.js";
 
 export type RegisteredWorkflow = Workflow & WorkflowRegistryInfo;
 
-type WorkflowRequestBody = {
-  intent: "get-info" | "execute-step";
-  currentStep?: string;
-  userInput?: string;
-};
-
+// State
 let registeredWorkflows: Record<string, RegisteredWorkflow> = {};
 let registryInitPromise: Promise<void> | null = null;
+
+// Time to ping remote workflows to refresh their info in the registry, in milliseconds
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 
-function parseJsonObject(raw: string): Record<string, any> | null {
-  const content = raw.trim();
-
-  if (!content) {
-    return null;
-  }
-
-  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const candidate = fenced?.[1]?.trim() || content;
-
-  try {
-    const parsed = JSON.parse(candidate);
-    return parsed && typeof parsed === "object"
-      ? (parsed as Record<string, any>)
-      : null;
-  } catch {
-    // Continue with best-effort extraction.
-  }
-
-  const first = candidate.indexOf("{");
-  const last = candidate.lastIndexOf("}");
-  if (first >= 0 && last > first) {
-    try {
-      const parsed = JSON.parse(candidate.slice(first, last + 1));
-      return parsed && typeof parsed === "object"
-        ? (parsed as Record<string, any>)
-        : null;
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-}
-
-function normalizeSteps(steps: unknown): string[] {
-  if (!Array.isArray(steps)) {
-    return [];
-  }
-
-  return steps
-    .filter((step): step is string => typeof step === "string")
-    .map((step) => step.trim())
-    .filter(Boolean);
-}
-
-function buildRequestHeaders(workflow: Workflow): HeadersInit {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-
-  if (workflow.authType === WorkflowAuthType.bearer && workflow.authToken) {
-    headers.Authorization = `Bearer ${workflow.authToken}`;
-  }
-
-  if (workflow.authType === WorkflowAuthType.api_key && workflow.authKey) {
-    headers[workflow.authHeaderName?.trim() || "x-api-key"] = workflow.authKey;
-  }
-
-  if (
-    workflow.authType === WorkflowAuthType.basic &&
-    workflow.authUsername &&
-    workflow.authPassword
-  ) {
-    const token = Buffer.from(
-      `${workflow.authUsername}:${workflow.authPassword}`,
-    ).toString("base64");
-    headers.Authorization = `Basic ${token}`;
-  }
-
-  return headers;
-}
-
+// Helper function to request workflow info or execute a workflow step, with retries and timeout
 async function requestWorkflowPayload(
   workflow: Workflow,
   body: WorkflowRequestBody,
-): Promise<Record<string, any>> {
+): Promise<WorkflowStepResult | WorkflowRegistryInfo> {
   if (workflow.protocol !== WorkflowProtocol.webhook) {
     throw new Error(`Unsupported workflow protocol: ${workflow.protocol}`);
   }
@@ -141,7 +52,7 @@ async function requestWorkflowPayload(
       }
 
       const text = await response.text();
-      const payload = parseJsonObject(text);
+      const payload = JSON.parse(text);
 
       if (!payload) {
         throw new Error("Workflow response was not valid JSON");
@@ -169,98 +80,29 @@ async function requestWorkflowPayload(
   throw new Error("Unreachable: failed to request workflow payload");
 }
 
-function normalizeRegistryInfo(
-  workflow: Workflow,
-  payload: Record<string, any>,
-): WorkflowRegistryInfo {
-  const name =
-    typeof payload.name === "string" && payload.name.trim().length > 0
-      ? payload.name.trim()
-      : workflow.name;
+//#region Workflow Steps Execution
+export async function executeWorkflowStep(
+  workflowName: string,
+  currentStep: string,
+  userInput: string,
+): Promise<WorkflowStepResult> {
+  const workflow = getWorkflow(workflowName);
 
-  const description =
-    typeof payload.description === "string" &&
-    payload.description.trim().length > 0
-      ? payload.description.trim()
-      : workflow.description;
-
-  const steps = normalizeSteps(payload.steps);
-  const firstStepFromPayload =
-    typeof payload.firstStep === "string" && payload.firstStep.trim().length > 0
-      ? payload.firstStep.trim()
-      : null;
-  const firstStep =
-    firstStepFromPayload && steps.includes(firstStepFromPayload)
-      ? firstStepFromPayload
-      : steps[0] || firstStepFromPayload || "";
-
-  return {
-    name,
-    description,
-    firstStep,
-    steps,
-  };
-}
-
-function normalizeExecutionResult(
-  payload: Record<string, any>,
-): WorkflowExecutionResult {
-  const replies = Array.isArray(payload.replies)
-    ? payload.replies
-        .map((reply): WorkflowReply | null => {
-          if (!reply || typeof reply !== "object") {
-            return null;
-          }
-
-          const type = typeof reply.type === "string" ? reply.type.trim() : "";
-          const content =
-            typeof reply.content === "string" ? reply.content.trim() : "";
-
-          if (!content) {
-            return null;
-          }
-
-          if (type === "text" || type === "url" || type === "image") {
-            return { type, content };
-          }
-
-          return { type: "text", content };
-        })
-        .filter((reply): reply is WorkflowReply => reply !== null)
-    : [];
-
-  const nextStep =
-    typeof payload.nextStep === "string" && payload.nextStep.trim().length > 0
-      ? payload.nextStep.trim()
-      : null;
-
-  return {
-    replies,
-    nextStep,
-  };
-}
-
-async function registerWorkflow(
-  workflow: Workflow,
-): Promise<RegisteredWorkflow | null> {
-  const payload = await requestWorkflowPayload(workflow, {
-    intent: "get-info",
-  });
-
-  const info = normalizeRegistryInfo(workflow, payload);
-
-  if (!info.name || !info.firstStep || info.steps.length === 0) {
-    throw new Error(
-      `Workflow ${workflow.name} did not return a valid registry payload`,
-    );
+  if (!workflow) {
+    throw new Error(`Workflow ${workflowName} is not registered`);
   }
 
-  return {
-    ...workflow,
-    ...info,
-  };
-}
+  const stepExecutionResult = (await requestWorkflowPayload(workflow, {
+    intent: "execute-step",
+    currentStep,
+    userInput,
+  })) as WorkflowStepResult;
 
+  return stepExecutionResult;
+}
+//#endregion
+
+//#region Workflow Registry Initialization and Refresh
 async function loadRegistry(): Promise<void> {
   const databaseWorkflows = await prismaClient.workflow.findMany({
     where: {
@@ -303,7 +145,7 @@ async function loadRegistry(): Promise<void> {
     // but do not throw — the application should remain available even when
     // external workflows are unreachable.
     console.warn(
-      "[WorkflowRegistry] No workflows could be registered from Prisma — continuing without registered workflows",
+      "[WorkflowRegistry] No workflows could be registered from Prisma, continuing without registered workflows",
     );
   }
 
@@ -346,11 +188,32 @@ export async function initializeWorkflowRegistry(): Promise<void> {
   return registryInitPromise;
 }
 
+async function registerWorkflow(
+  workflow: Workflow,
+): Promise<RegisteredWorkflow | null> {
+  const info = (await requestWorkflowPayload(workflow, {
+    intent: "get-info",
+  })) as WorkflowRegistryInfo;
+
+  if (!info.name || !info.firstStep || info.steps.length === 0) {
+    throw new Error(
+      `Workflow ${workflow.name} did not return a valid registry payload`,
+    );
+  }
+
+  return {
+    ...workflow,
+    ...info,
+  };
+}
+
 export async function refreshWorkflowRegistry(): Promise<void> {
   registryInitPromise = null;
   await initializeWorkflowRegistry();
 }
+//#endregion
 
+//#region Registry Accessors
 export function getWorkflows(): Record<string, RegisteredWorkflow> {
   return registeredWorkflows;
 }
@@ -368,23 +231,4 @@ export function getWorkflowList(): Array<{
 export function getWorkflow(name: string): RegisteredWorkflow | null {
   return registeredWorkflows[name] ?? null;
 }
-
-export async function executeWorkflowStep(
-  workflowName: string,
-  currentStep: string,
-  userInput: string,
-): Promise<WorkflowExecutionResult> {
-  const workflow = getWorkflow(workflowName);
-
-  if (!workflow) {
-    throw new Error(`Workflow ${workflowName} is not registered`);
-  }
-
-  const payload = await requestWorkflowPayload(workflow, {
-    intent: "execute-step",
-    currentStep,
-    userInput,
-  });
-
-  return normalizeExecutionResult(payload);
-}
+//#endregion

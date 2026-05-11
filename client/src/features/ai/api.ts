@@ -5,6 +5,8 @@ import type { StreamChunk } from "../../../../shared/api/ai";
 
 import ApiUtils from "../../utils/api";
 
+const EVENT_SEPARATOR = "<<EVENT SEPARATOR>>";
+
 const baseUrl =
   import.meta.env.MODE === "development"
     ? import.meta.env.VITE_SERVER_URL + "/api/ai"
@@ -31,7 +33,9 @@ async function readStreamText(
   let fullText = "";
   let buffer = "";
 
-  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+  const contentType = (
+    response.headers.get("content-type") ?? ""
+  ).toLowerCase();
   const isSse = contentType.includes("text/event-stream");
 
   while (true) {
@@ -55,13 +59,17 @@ async function readStreamText(
     buffer += chunk;
 
     while (true) {
-      const frameEnd = buffer.indexOf("\n\n");
+      const frameEnd = buffer.indexOf(EVENT_SEPARATOR);
       if (frameEnd === -1) {
         break;
       }
 
       const rawFrame = buffer.slice(0, frameEnd);
-      buffer = buffer.slice(frameEnd + 2);
+      buffer = buffer.slice(frameEnd + EVENT_SEPARATOR.length);
+
+      if (!rawFrame.trim()) {
+        continue;
+      }
 
       const lines = rawFrame.replace(/\r\n/g, "\n").split("\n");
       let eventName = "message";
@@ -144,7 +152,9 @@ export const api = {
       });
 
       if (!response.ok) {
-        return (await parseErrorResponse(response)) as AIAPITypes.StreamResponseData;
+        return (await parseErrorResponse(
+          response,
+        )) as AIAPITypes.StreamResponseData;
       }
 
       const result = await readStreamText(response, options.onChunk);

@@ -1,3 +1,7 @@
+// So, this file is pretty much about handling workflow sessions
+// We use redis for handling sessions, since they are short-lived
+// And need quite a lot of read/write operations
+
 import crypto from "crypto";
 
 import { getRedisClient } from "../../config/redis.js";
@@ -19,6 +23,7 @@ type UpdateWorkflowSessionParams = {
   data?: Record<string, any>;
 };
 
+//#region Session Helpers
 function buildSessionKey(sessionId: string): string {
   return `${SESSION_PREFIX}:${sessionId}`;
 }
@@ -31,7 +36,9 @@ function generateSessionId(accountId: string, workflow: string): string {
     .digest("base64url")
     .slice(0, 32);
 }
+//#endregion
 
+//#region Session Serialization
 function serializeSession(session: WorkflowSession): string {
   return JSON.stringify({
     ...session,
@@ -69,7 +76,9 @@ function deserializeSession(raw: string): WorkflowSession | null {
     return null;
   }
 }
+//#endregion
 
+//#region Session Management
 async function saveSession(session: WorkflowSession): Promise<void> {
   const redisClient = getRedisClient();
   await redisClient.setEx(
@@ -139,3 +148,4 @@ export async function clearWorkflowSession(sessionId: string): Promise<void> {
   const redisClient = getRedisClient();
   await redisClient.del(buildSessionKey(sessionId));
 }
+//#endregion

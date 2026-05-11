@@ -64,11 +64,6 @@ Return ONLY valid JSON with shape: { "intent": string | null }.
 Return null when the request does not clearly match any allowed intent.
 Do not add extra keys.`,
       });
-
-    console.log("[Workflow] detectWorkflowIntent raw response", {
-      content: response.message.content,
-    });
-
     const parsed = (parseJsonObject(response.message.content ?? "") ?? {}) as {
       intent?: string | null;
     };

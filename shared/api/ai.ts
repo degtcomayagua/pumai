@@ -2,7 +2,7 @@ import z from "zod";
 
 import { generateSchema } from "../schemas/ai.js";
 
-import { ResponseStatus } from "../models";
+import { ResponseStatus } from "../models/index.js";
 
 export type GenerateRequestBody = z.infer<typeof generateSchema>;
 export interface GenerateResponseData {
@@ -26,6 +26,10 @@ export type StreamChunkEvent =
   | "workflow_start"
   | "workflow_step"
   | "image"
+  | "error"
+  | "url"
+  | "separator"
+  | "workflow_end"
   | "system"
   | "done"
   | (string & {});

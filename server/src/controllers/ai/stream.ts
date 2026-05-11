@@ -20,9 +20,16 @@ import { buildAiPrompt } from "../../utils/ai/rag.js";
 
 import { detectWorkflowIntent } from "../../utils/ai/workflows.js";
 
+import {
+  resolveAiMcpCatalog,
+  executeMcpToolCalls,
+  buildToolContext,
+} from "../../utils/ai/mcp.js";
+
 import * as AIAPITypes from "../../../../shared/api/ai.js";
 
 type StreamEventName = AIAPITypes.StreamChunk["event"];
+const MAX_TOOL_CALL_ROUNDS = 5;
 
 function writeSseEvent(
   res: Response,
@@ -30,53 +37,38 @@ function writeSseEvent(
   data: string | Record<string, unknown>,
 ) {
   const payload = typeof data === "string" ? data : JSON.stringify(data);
-  res.write(`event: ${event}\n`);
+  console.log(payload);
 
-  const lines = String(payload).replace(/\r\n/g, "\n").split("\n");
-  for (const line of lines) {
-    res.write(`data: ${line}\n`);
+  // Write event header
+  let canContinue = res.write(`event: ${event}\n`);
+  if (!canContinue) {
+    console.warn(`[Stream] Write buffer full after event header`);
   }
 
-  res.write("\n");
+  // Write data lines
+  const lines = String(payload).replace(/\r\n/g, "\n").split("\n");
+  for (const line of lines) {
+    canContinue = res.write(`data: ${line}\n`);
+    if (!canContinue) {
+      console.warn(`[Stream] Write buffer full while writing data line`);
+    }
+  }
+
+  // Write event separator
+  canContinue = res.write("<<EVENT SEPARATOR>>");
+  if (!canContinue) {
+    console.warn(`[Stream] Write buffer full after event separator`);
+  }
+}
+
+function flushSseStream(res: Response) {
+  const httpRes = res as Response & { flush?: () => void };
+  httpRes.flush?.();
 }
 
 function endSseStream(res: Response) {
   writeSseEvent(res, "done", "[DONE]");
   res.end();
-}
-
-function formatWorkflowUrl(content: string): string {
-  try {
-    const url = new URL(content);
-    return `[${url.toString()}](${url.toString()})`;
-  } catch {
-    return content;
-  }
-}
-
-function writeWorkflowReplies(
-  res: Response,
-  replies: Array<{ type: "text" | "url" | "image"; content: string }>,
-) {
-  // Send structured workflow replies so the client can treat each reply
-  // as an independent message rather than appending to the cumulative
-  // streaming `text` content. This avoids duplication/accumulation on the
-  // frontend when mixing streamed model output and workflow replies.
-  for (const reply of replies) {
-    if (reply.type === "image") {
-      writeSseEvent(res, "image", {
-        title: "Workflow image",
-        url: reply.content,
-      });
-      continue;
-    }
-
-    writeSseEvent(res, "workflow_reply", {
-      type: reply.type,
-      content:
-        reply.type === "url" ? formatWorkflowUrl(reply.content) : reply.content,
-    });
-  }
 }
 
 async function writeStreamResponse(
@@ -88,9 +80,11 @@ async function writeStreamResponse(
     try {
       const chunk = part.message.content ?? "";
       if (!chunk) {
-        (res as Response & { flush?: () => void }).flush?.();
+        flushSseStream(res);
         continue;
       }
+
+      console.log(`[Stream] Generated chunk: ${chunk}`); // Log the generated chunk for debugging
 
       // Some streaming providers return the full accumulated content on
       // each iteration. To avoid sending duplicate text to the client
@@ -107,7 +101,7 @@ async function writeStreamResponse(
       }
 
       previousContent = chunk;
-      (res as Response & { flush?: () => void }).flush?.();
+      flushSseStream(res);
     } catch (writeError) {
       console.error("Error writing chunk to response:", writeError);
       if (!res.headersSent) {
@@ -119,6 +113,106 @@ async function writeStreamResponse(
   }
 
   endSseStream(res);
+}
+
+async function writeStreamResponseWithMcpTools(
+  res: Response,
+  prompt: string,
+  chat: ChatResponse["message"][],
+  finalPrompt: string,
+  mcpCatalog: Awaited<ReturnType<typeof resolveAiMcpCatalog>>,
+) {
+  let composedPrompt = finalPrompt;
+
+  for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round += 1) {
+    const response: ChatResponse =
+      await OllamaChatService.getInstance().generateChat<ChatResponse>({
+        prompt: composedPrompt,
+        chat,
+        stream: false,
+        options: { temperature: 0.2, num_gpu: 999 },
+        tools: [],
+        mcpServers: mcpCatalog.servers,
+      });
+
+    const toolCalls = response.message.tool_calls ?? [];
+
+    if (!toolCalls.length) {
+      // No tool calls, stream the response content
+      const content = response.message.content?.trim() ?? "";
+      if (content) {
+        writeSseEvent(res, "text", content);
+      }
+      flushSseStream(res);
+      endSseStream(res);
+      return;
+    }
+
+    // Send tool call events and execute them
+    for (const toolCall of toolCalls) {
+      writeSseEvent(res, "tool_call", {
+        title: "Tool call",
+        name: toolCall.function.name,
+        arguments: toolCall.function.arguments ?? {},
+      });
+    }
+    flushSseStream(res);
+
+    // Execute all tool calls
+    const toolExecutions = await executeMcpToolCalls(toolCalls, mcpCatalog);
+
+    if (!toolExecutions.length) {
+      // If no tools were executed, stream what we have and exit
+      const content = response.message.content?.trim() ?? "";
+      if (content) {
+        writeSseEvent(res, "text", content);
+      }
+      flushSseStream(res);
+      endSseStream(res);
+      return;
+    }
+
+    // Build context from tool results and append to prompt
+    const toolContext = buildToolContext(toolExecutions);
+    composedPrompt = [composedPrompt, toolContext].filter(Boolean).join("\n\n");
+
+    // Send tool completion events
+    for (const execution of toolExecutions) {
+      writeSseEvent(res, "system", {
+        message: `Tool ${execution.name} completed via ${execution.serverName}.`,
+      });
+    }
+    flushSseStream(res);
+
+    // Update chat history with assistant response and tool results
+    chat.push(response.message);
+    chat.push({
+      role: "user",
+      content: toolContext,
+    });
+  }
+
+  // After MAX_TOOL_CALL_ROUNDS, request final response without tool calls
+  composedPrompt = [
+    composedPrompt,
+    "Provide a final response to the user based on the tool results above. Do not call tools.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const finalResult: AbortableAsyncIterator<ChatResponse> =
+    await OllamaChatService.getInstance().generateChat<
+      AbortableAsyncIterator<ChatResponse>
+    >({
+      prompt: composedPrompt,
+      chat,
+      stream: true,
+      options: { temperature: 0.2, num_gpu: 999 },
+      tools: [],
+      mcpServers: [],
+    });
+
+  await writeStreamResponse(res, finalResult);
 }
 
 const handler = async (
@@ -141,6 +235,7 @@ const handler = async (
       workflowSessionId,
     } = req.parsedBody;
 
+    // Set up the required headers to stream SSE
     res.status(200);
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -150,6 +245,7 @@ const handler = async (
     res.socket?.setNoDelay(true);
     res.flushHeaders?.();
 
+    // Test case to demonstrate streaming various event types without going through the full workflow/AI logic
     if (prompt.trim() === "__stream_demo__") {
       writeSseEvent(res, "system", "Stream demo started");
       writeSseEvent(res, "workflow_start", {
@@ -176,7 +272,7 @@ const handler = async (
       return;
     }
 
-    // Common
+    // Common, generate the system prompt with a call RAG for relevant information
     const { finalPrompt } = await buildAiPrompt(
       prompt,
       {
@@ -194,7 +290,6 @@ const handler = async (
     if (!account) {
       // Answer regularly when no account, as workflows require an account to operate.
       // Use solely RAG and basic MCP tool calls, without workflow orchestration.
-
       const result = await OllamaChatService.getInstance().generateChat<
         AbortableAsyncIterator<ChatResponse>
       >({
@@ -214,190 +309,159 @@ const handler = async (
     // #region Logged In
     // For logged in users, the same as above but with access to workflows and more advanced MCP tool calls.
 
+    // First fetch the current session ID given what the frontend provides
     const activeSession = workflowSessionId
       ? await getActiveWorkflowSession(workflowSessionId)
       : null;
 
     if (activeSession) {
+      // Get the current workflow
       const workflow = getWorkflow(activeSession.activeWorkflow);
-
       if (workflow) {
-        const workflowResult = await executeWorkflowStep(
-          activeSession.activeWorkflow,
-          activeSession.currentStep,
-          prompt,
-        );
+        try {
+          const workflowResult = await executeWorkflowStep(
+            activeSession.activeWorkflow,
+            activeSession.currentStep,
+            prompt,
+          );
 
-        if (workflowResult.nextStep === null) {
-          await clearWorkflowSession(activeSession.sessionId);
-        } else {
-          await updateWorkflowSession(activeSession.sessionId, {
-            currentStep: workflowResult.nextStep,
-            data: {
-              ...activeSession.data,
-              lastUserInput: prompt,
-            },
+          // If the current workflow says its time to stop, then clear the session.
+          if (workflowResult.nextStep === null) {
+            await clearWorkflowSession(activeSession.sessionId);
+          } else {
+            await updateWorkflowSession(activeSession.sessionId, {
+              currentStep: workflowResult.nextStep,
+              data: {
+                ...activeSession.data,
+                lastUserInput: prompt,
+              },
+            });
+          }
+
+          // Send the results of executing the steps
+          for (const reply of workflowResult.replies) {
+            writeSseEvent(res, reply.type, reply.content);
+            writeSseEvent(res, "separator", "");
+          }
+          endSseStream(res);
+          return;
+        } catch (error) {
+          writeSseEvent(res, "system", {
+            message: `Error executing workflow step: ${error instanceof Error ? error.message : "Unknown error"}`,
           });
+          endSseStream(res);
+          return;
         }
-
-        console.log(workflowResult);
-        if (workflowResult.nextStep !== null) {
-          writeSseEvent(res, "workflow_step", {
-            title: workflow.description,
-            workflow: activeSession.activeWorkflow,
-            step: workflowResult.nextStep,
-          });
-        }
-
-        writeWorkflowReplies(res, workflowResult.replies);
-        endSseStream(res);
-        return;
       }
 
+      // If somehow we arrive here, it means there's an active session that doesn't correspond to a valid workflow. Clear it to avoid blocking the user.
       await clearWorkflowSession(activeSession.sessionId);
     }
 
+    // If there was no active workflow at the moment the user sent a message
+    // Detect the current intent of the message given the registered workflows
     const detectedIntent = await detectWorkflowIntent(prompt);
     if (detectedIntent) {
+      // If there was indeed a workflow detected, then find its declaration in the registry
       const workflow = getWorkflow(detectedIntent);
 
+      // If the registry returns a proper workflow create a workflow session and execute the first step
       if (workflow) {
-        const workflowSession = await createWorkflowSession({
-          accountId: account.id.toString(),
-          workflow: detectedIntent,
-          currentStep: workflow.firstStep,
-          data: {
-            lastUserInput: prompt,
-          },
-        });
-
-        const workflowResult = await executeWorkflowStep(
-          detectedIntent,
-          workflow.firstStep,
-          prompt,
-        );
-
-        if (workflowResult.nextStep === null) {
-          await clearWorkflowSession(workflowSession.sessionId);
-        } else {
-          await updateWorkflowSession(workflowSession.sessionId, {
-            currentStep: workflowResult.nextStep,
+        try {
+          const workflowSession = await createWorkflowSession({
+            accountId: account.id.toString(),
+            workflow: detectedIntent,
+            currentStep: workflow.firstStep,
             data: {
               lastUserInput: prompt,
             },
           });
-        }
 
-        writeSseEvent(res, "workflow_start", {
-          title: workflow.description,
-          workflow: detectedIntent,
-          workflowSessionId: workflowSession.sessionId,
-        });
+          const workflowResult = await executeWorkflowStep(
+            detectedIntent,
+            workflow.firstStep,
+            prompt,
+          );
 
-        if (workflowResult.nextStep !== null) {
-          writeSseEvent(res, "workflow_step", {
+          // If the workflow has more than one step, update the current workflow session to be the next step.
+          if (workflowResult.nextStep === null) {
+            await clearWorkflowSession(workflowSession.sessionId);
+          } else {
+            await updateWorkflowSession(workflowSession.sessionId, {
+              currentStep: workflowResult.nextStep,
+              data: {
+                lastUserInput: prompt,
+              },
+            });
+          }
+
+          // Send workflow start event
+          writeSseEvent(res, "workflow_start", {
             title: workflow.description,
             workflow: detectedIntent,
-            step: workflowResult.nextStep,
+            workflowSessionId: workflowSession.sessionId,
           });
-        }
+          flushSseStream(res);
 
-        writeWorkflowReplies(res, workflowResult.replies);
-        endSseStream(res);
-        return;
+          // Send workflow step event if there's a next step
+          if (workflowResult.nextStep !== null) {
+            writeSseEvent(res, "workflow_step", {
+              title: workflow.description,
+              workflow: detectedIntent,
+              step: workflowResult.nextStep,
+            });
+            flushSseStream(res);
+          }
+
+          // Send the results of executing the steps
+          for (const reply of workflowResult.replies) {
+            writeSseEvent(res, reply.type, reply.content);
+            writeSseEvent(res, "separator", "");
+          }
+          endSseStream(res);
+          return;
+        } catch (error) {
+          writeSseEvent(res, "system", {
+            message: `Error executing workflow: ${error instanceof Error ? error.message : "Unknown error"}`,
+          });
+          endSseStream(res);
+          return;
+        }
       }
     }
 
-    // 3. If no intent is detected, answer regularly with RAG and basic MCP tool calls, without workflow orchestration.
-    const result = await OllamaChatService.getInstance().generateChat<
-      AbortableAsyncIterator<ChatResponse>
-    >({
-      prompt: finalPrompt,
-      chat,
-      stream: true,
-      options: { temperature: 0.2, num_gpu: 999 },
-      tools: [],
-      mcpServers: [],
-    });
+    // Resolve MCP catalog for tool calling
+    const mcpCatalog = await resolveAiMcpCatalog(mcpServers ?? []);
 
-    await writeStreamResponse(res, result);
+    // If no intent is detected, answer with RAG and MCP tools (if available)
+    if (mcpCatalog.servers.length > 0) {
+      // Use MCP tool calling with multiple rounds
+      await writeStreamResponseWithMcpTools(
+        res,
+        prompt,
+        chat,
+        finalPrompt,
+        mcpCatalog,
+      );
+    } else {
+      // Answer regularly with RAG and streaming, no MCP tools
+      const result = await OllamaChatService.getInstance().generateChat<
+        AbortableAsyncIterator<ChatResponse>
+      >({
+        prompt: finalPrompt,
+        chat,
+        stream: true,
+        options: { temperature: 0.2, num_gpu: 999 },
+        tools: [],
+        mcpServers: [],
+      });
+
+      await writeStreamResponse(res, result);
+    }
 
     //#endregion Logged In
     return;
-
-    // for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round += 1) {
-    //   const response: ChatResponse =
-    //     await OllamaChatService.getInstance().generateChat<ChatResponse>({
-    //       prompt: composedPrompt,
-    //       chat,
-    //       stream: false,
-    //       options: { temperature: 0.2, num_gpu: 9999, main_gpu: 0 },
-    //       tools: [],
-    //       mcpServers: [],
-    //     });
-
-    //   const toolCalls = response.message.tool_calls ?? [];
-
-    //   if (!toolCalls.length) {
-    //     finalText = response.message.content?.trim() ?? "";
-    //     break;
-    //   }
-
-    //   for (const toolCall of toolCalls) {
-    //     writeSseData(res, `\n[Tool] Calling ${toolCall.function.name}...\n`);
-    //   }
-    //   (res as Response & { flush?: () => void }).flush?.();
-
-    //   // MCP temporarily disabled for workflow/data-extraction performance tuning.
-    //   // const toolExecutions = toolCalls.length
-    //   //   ? await executeMcpToolCalls(toolCalls, mcpCatalog)
-    //   //   : [];
-    //   const toolExecutions: Awaited<ReturnType<typeof executeMcpToolCalls>> = [];
-
-    //   if (!toolExecutions.length) {
-    //     finalText = response.message.content?.trim() ?? "";
-    //     break;
-    //   }
-
-    //   const toolContext = buildToolContext(toolExecutions);
-    //   composedPrompt = [composedPrompt, toolContext].filter(Boolean).join("\n\n");
-
-    //   for (const execution of toolExecutions) {
-    //     writeSseData(res, `\n[Tool] ${execution.name} completed via ${execution.serverName}.\n`);
-    //   }
-    //   (res as Response & { flush?: () => void }).flush?.();
-    // }
-
-    // if (finalText) {
-    //   writeSseData(res, finalText);
-    //   res.write("event: done\ndata: [DONE]\n\n");
-    //   res.end();
-    //   return;
-    // }
-
-    // composedPrompt = [
-    //   composedPrompt,
-    //   "Provide a final response to the user using the tool results above. Do not call tools.",
-    // ]
-    //   .filter(Boolean)
-    //   .join("\n\n");
-
-    // const result: AbortableAsyncIterator<ChatResponse> =
-    //   await OllamaChatService.getInstance().generateChat<
-    //     AbortableAsyncIterator<ChatResponse>
-    //   >({
-    //     prompt: composedPrompt,
-    //     chat,
-    //     stream: true,
-    //     options: { temperature: 0.7, num_gpu: 9999, main_gpu: 0 },
-    //     tools: [],
-    //     mcpServers: [],
-    //   });
-
-    // await writeStreamResponse(res, result);
-    // return;
   } catch (error) {
-    console.error("Error generating chat response:", error);
     if (!res.headersSent) {
       res.status(500).json({ status: "internal-error" });
       return;

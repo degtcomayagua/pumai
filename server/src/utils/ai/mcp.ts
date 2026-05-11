@@ -22,9 +22,7 @@ export const CENTRALIZED_AI_MCP_SERVERS: MCPServerConfig[] = [
     name: "Calendario Académico",
     description:
       "Proporciona información sobre eventos y fechas importantes en el calendario académico de la UNAH.",
-    url:
-      process.env.MCP_CALENDAR_URL ??
-      "https://n8n.asterki.xyz/mcp/a593f38e-a11d-4f90-89a6-6c10e640ff16",
+    url: process.env.MCP_CALENDAR_URL,
     protocol: "streamable-http",
     enabled: true,
   },

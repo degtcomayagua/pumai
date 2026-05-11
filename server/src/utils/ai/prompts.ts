@@ -37,12 +37,14 @@ function formatMcpServerSummary(servers: OllamaMcpServer[]): string {
     .join("\n\n");
 }
 
-export function buildSystemPrompt(params: {
-  context?: string;
-  tools?: Tool[];
-  mcpServers?: OllamaMcpServer[];
-  systemPrompt?: string;
-} = {}): string {
+export function buildSystemPrompt(
+  params: {
+    context?: string;
+    tools?: Tool[];
+    mcpServers?: OllamaMcpServer[];
+    systemPrompt?: string;
+  } = {},
+): string {
   const currentDate = new Date().toLocaleDateString("es-ES", {
     day: "2-digit",
     month: "2-digit",
@@ -75,6 +77,7 @@ export function buildFinalPrompt(context: string, prompt: string): string {
     "```text",
     context.trim(),
     "```",
+    "Si el contexto es irrelevante para la pregunta, ignóralo y responde solo con la información que el prompt solicita.",
     "",
     "Pregunta del usuario:",
     "```text",
@@ -100,4 +103,3 @@ export function trimChatHistory(chat: Message[], maxMessages = 20): Message[] {
 
   return sanitized.slice(sanitized.length - maxMessages);
 }
-
