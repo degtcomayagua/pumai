@@ -1,5 +1,6 @@
-import { workflows } from "../services/workflows/repository.js";
-export type WorkflowName = keyof typeof workflows;
+import type { WorkflowRemoteStep } from "../services/workflows/registry.js";
+
+export type WorkflowName = string;
 
 export type WorkflowStepResult = {
   reply?: {
@@ -17,9 +18,11 @@ export type StepHandler = (
 
 export type WorkflowSession = {
   sessionId: string;
-  userId: string;
+  accountId: string;
   activeWorkflow: WorkflowName;
   currentStep: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
+  steps: WorkflowRemoteStep[];
   startedAt: Date;
+  updatedAt: Date;
 };

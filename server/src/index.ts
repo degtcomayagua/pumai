@@ -7,10 +7,12 @@ import cookie from "cookie-parser";
 import path from "path";
 
 import { loadEnv } from "./config/env.js";
+import { setupRedis } from "./config/redis.js";
 import { registerRoutes } from "./routes/index.js";
 import { traceIdMiddleware } from "./middleware/traceId.js";
 import SessionsService from "./services/sessions.js";
 import SocketServer from "./services/socket.js";
+import WorkflowsRegistry from "./services/workflows/registry.js";
 
 export async function startServer() {
   loadEnv();
@@ -20,6 +22,8 @@ export async function startServer() {
 
   const app = express();
   const httpServer = createServer(app);
+
+  await setupRedis();
 
   // Middleware
   app.use(express.json({ limit: "50mb" }));
@@ -46,6 +50,9 @@ export async function startServer() {
 
   const sessions = SessionsService.prototype.getInstance();
   sessions.loadToServer(app);
+
+  const workflowsRegistry = WorkflowsRegistry.getInstance();
+  await workflowsRegistry.initialize();
 
   registerRoutes(app);
   httpServer.listen(port, () => {

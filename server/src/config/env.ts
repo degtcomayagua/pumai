@@ -8,9 +8,6 @@ export function loadEnv() {
 
   console.log(envFile, path.resolve(process.cwd(), envFile))
 
-  dotenv.config(); // Load base first
-  dotenv.config({ path: path.resolve(process.cwd(), envFile) });
-
   const requiredEnv = [
     "OLLAMA_URL",
     "OLLAMA_MODEL",

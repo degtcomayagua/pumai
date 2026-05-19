@@ -1,10 +1,9 @@
 import { ChatResponse } from "ollama";
 
 import OllamaChatService from "../../services/ollama/chat.js";
+import WorkflowsRegistry from "../../services/workflows/registry.js";
 
 import { WorkflowName } from "../../types/workflows.js";
-
-import { getWorkflowList, getWorkflows } from "../../services/workflows/repository.js";
 
 
 function parseJsonObject(raw: string): Record<string, any> | null {
@@ -41,7 +40,18 @@ function parseJsonObject(raw: string): Record<string, any> | null {
 export async function detectWorkflowIntent(
   prompt: string,
 ): Promise<WorkflowName | null> {
-  const intentList = getWorkflowList().map((w) => `${w.name}: ${w.description}`).join("\n- ");
+  const workflowsRegistry = WorkflowsRegistry.getInstance();
+  await workflowsRegistry.initialize();
+
+  const intents = workflowsRegistry.getIntentCandidates();
+
+  if (!intents.length) {
+    return null;
+  }
+
+  const intentList = intents
+    .map((workflow) => `${workflow.name}: ${workflow.description}`)
+    .join("\n- ");
 
   try {
     const response = await OllamaChatService.getInstance().generateChat<ChatResponse>({
@@ -68,9 +78,8 @@ Do not add extra keys.`,
       return null;
     }
 
-    return parsed.intent in getWorkflows()
-      ? (parsed.intent as WorkflowName)
-      : null;
+    const matched = workflowsRegistry.resolveIntent(parsed.intent);
+    return matched?.name ?? null;
   } catch (error) {
     console.error("[Workflow] detectWorkflowIntent error", {
       error: error instanceof Error ? error.message : String(error),

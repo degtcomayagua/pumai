@@ -15,7 +15,6 @@ dotenv.config({
 
 console.log(path.resolve(process.cwd(), envFile))
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL as string, {
-  database: "your_database_name"
 });
 
 (async () => {

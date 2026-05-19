@@ -5,16 +5,12 @@ import { TypedRequest } from "../../types/index.js";
 
 import OllamaChatService from "../../services/ollama/chat.js";
 import LoggingService from "../../services/logging.js";
+import WorkflowsRegistry from "../../services/workflows/registry.js";
 
 import { buildAiPrompt } from "../../utils/ai/rag.js";
 
-import { detectWorkflowIntent, } from "../../utils/ai/workflows.js";
-// import { getWorkflows } from "../../services/workflows/repository.js";
-// import {
-//   clearWorkflowSession,
-//   createSession,
-//   getActiveWorkflowSession,
-// } from "../../services/workflows/sessions.js";
+import { detectWorkflowIntent } from "../../utils/ai/workflows.js";
+import { createSession, getActiveWorkflowSession, updateWorkflowSession, clearWorkflowSession } from "../../services/workflows/sessions.js";
 
 import * as AIAPITypes from "../../../../shared/api/ai.js"
 
@@ -39,6 +35,33 @@ function writeSseEvent(
 function endSseStream(res: Response) {
   writeSseEvent(res, "done", "[DONE]");
   res.end();
+}
+
+function writeWorkflowReply(res: Response, title: string, reply: { title: string; content: string; imageUrl?: string } | undefined) {
+  if (!reply) {
+    return;
+  }
+
+  if (reply.content) {
+    writeSseEvent(res, "text", reply.content);
+  }
+
+  if (reply.imageUrl) {
+    writeSseEvent(res, "image", {
+      title: reply.title ?? title,
+      url: reply.imageUrl,
+    });
+  }
+}
+
+function mergeWorkflowData(
+  existing: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...existing,
+    ...incoming,
+  };
 }
 
 async function writeStreamResponse(
@@ -93,6 +116,9 @@ const handler = async (
     res.setHeader("Transfer-Encoding", "chunked");
     res.socket?.setNoDelay(true);
     res.flushHeaders?.();
+
+    const workflowsRegistry = WorkflowsRegistry.getInstance();
+    await workflowsRegistry.initialize();
 
     if (prompt.trim() === "__stream_demo__") {
       writeSseEvent(res, "system", "Stream demo started");
@@ -158,78 +184,94 @@ const handler = async (
     // #region Logged In
     // For logged in users, the same as above but with access to workflows and more advanced MCP tool calls.
 
-    // 1. Check for active workflow sessions. If exists, continue with the workflow instead of answering regularly.
-    // const activeSession = workflowSessionId
-    //   ? await getActiveWorkflowSession(workflowSessionId)
-    //   : null;
+    // if (workflowSessionId) {
+    //   const activeSession = await getActiveWorkflowSession(workflowSessionId);
 
-    // if (activeSession) {
-    //   const workflows = getWorkflows();
-    //   const workflow = workflows[activeSession.activeWorkflow];
+    //   if (activeSession) {
+    //     const execution = await workflowsRegistry.executeStep(
+    //       activeSession.activeWorkflow,
+    //       activeSession.currentStep,
+    //       {
+    //         prompt,
+    //         chat,
+    //         data: activeSession.data,
+    //       },
+    //     );
 
-    //   if (workflow) {
-    //     const workflowInstance = new workflow();
-    //     const workflowReply = await workflowInstance.continue(activeSession, prompt);
-    //     const updatedSession = await getActiveWorkflowSession(activeSession.sessionId);
+    //     if (execution) {
+    //       const mergedData = mergeWorkflowData(
+    //         activeSession.data,
+    //         execution.data ?? {},
+    //       );
 
-    //     writeSseEvent(res, "workflow_step", {
-    //       title: "Workflow continued",
-    //       workflow: activeSession.activeWorkflow,
-    //       step: updatedSession?.currentStep ?? null,
-    //     });
+    //       if (execution.nextStep) {
+    //         await updateWorkflowSession(activeSession.sessionId, {
+    //           currentStep: execution.nextStep,
+    //           data: mergedData,
+    //         });
+    //       } else {
+    //         await clearWorkflowSession(activeSession.sessionId);
+    //       }
 
-    //     if (workflowReply?.content) {
-    //       writeSseEvent(res, "text", workflowReply.content);
-    //     }
-    //     if (workflowReply?.imageUrl) {
-    //       writeSseEvent(res, "image", {
-    //         title: workflowReply.title ?? "Workflow image",
-    //         url: workflowReply.imageUrl,
+    //       writeSseEvent(res, "workflow_step", {
+    //         title: "Workflow continued",
+    //         workflow: activeSession.activeWorkflow,
+    //         step: execution.nextStep ?? activeSession.currentStep,
     //       });
+
+    //       writeWorkflowReply(res, "Workflow continued", execution.reply ?? undefined);
+    //       endSseStream(res);
+    //       return;
     //     }
 
-    //     endSseStream(res);
-
-    //     return;
+    //     await clearWorkflowSession(activeSession.sessionId);
     //   }
-
-    //   // If workflow session exists but workflow is not found, end the session and answer regularly.
-    //   await clearWorkflowSession(activeSession.sessionId);
     // }
 
-    // 2. If no active workflow session, attempt to detect intent and start a new workflow if intent is detected.
     // const detectedIntent = await detectWorkflowIntent(prompt);
+
     // if (detectedIntent) {
-    //   const workflows = getWorkflows();
-    //   const workflow = workflows[detectedIntent];
+    //   const workflowInfo = await workflowsRegistry.getWorkflowInfo(detectedIntent);
+    //   const workflowSession = await createSession({
+    //     accountId: account.id.toString(),
+    //     workflow: detectedIntent,
+    //     steps: workflowInfo?.steps,
+    //     data: { prompt, chat },
+    //   });
 
-    //   if (workflow) {
-    //     const createdWorkflow = new workflow();
-    //     const workflowSession = await createSession({
-    //       accountId: account.id.toString(),
-    //       workflow: detectedIntent,
-    //     });
+    //   const execution = await workflowsRegistry.executeStep(
+    //     detectedIntent,
+    //     workflowSession.currentStep,
+    //     {
+    //       prompt,
+    //       chat,
+    //       data: workflowSession.data,
+    //     },
+    //   );
 
+    //   if (execution) {
+    //     const mergedData = mergeWorkflowData(
+    //       workflowSession.data,
+    //       execution.data ?? {},
+    //     );
 
-    //     const workflowReply = await createdWorkflow.start(workflowSession, prompt);
+    //     if (execution.nextStep) {
+    //       await updateWorkflowSession(workflowSession.sessionId, {
+    //         currentStep: execution.nextStep,
+    //         data: mergedData,
+    //       });
+    //     } else {
+    //       await clearWorkflowSession(workflowSession.sessionId);
+    //     }
 
     //     writeSseEvent(res, "workflow_start", {
     //       title: "Workflow started",
     //       workflow: detectedIntent,
     //       workflowSessionId: workflowSession.sessionId,
-    //       reply: workflowReply,
+    //       reply: execution.reply,
     //     });
 
-    //     if (workflowReply?.content) {
-    //       writeSseEvent(res, "text", workflowReply.content);
-    //     }
-    //     if (workflowReply?.imageUrl) {
-    //       writeSseEvent(res, "image", {
-    //         title: workflowReply.title ?? "Workflow image",
-    //         url: workflowReply.imageUrl,
-    //       });
-    //     }
-
+    //     writeWorkflowReply(res, "Workflow started", execution.reply ?? undefined);
     //     endSseStream(res);
     //     return;
     //   }

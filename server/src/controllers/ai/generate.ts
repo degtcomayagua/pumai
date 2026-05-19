@@ -5,6 +5,9 @@ import { TypedRequest } from "../../types/index.js";
 
 import LoggingService from "../../services/logging.js";
 import OllamaChatService from "../../services/ollama/chat.js";
+import WorkflowsRegistry from "../../services/workflows/registry.js";
+import { createSession, getActiveWorkflowSession, updateWorkflowSession, clearWorkflowSession } from "../../services/workflows/sessions.js";
+import { detectWorkflowIntent } from "../../utils/ai/workflows.js";
 
 import {
   buildAiPrompt,
@@ -19,17 +22,117 @@ import {
 
 const MAX_TOOL_CALL_ROUNDS = 4;
 
+function getWorkflowReplyText(reply?: { title: string; content: string; imageUrl?: string } | null): string {
+  return reply?.content?.trim() ?? "";
+}
+
 const handler = async (
   req: TypedRequest<AiRequestBody>,
   res: Response<AiResponseData>,
   _next: NextFunction,
 ) => {
+  const account = req.user!;
   const {
     chat,
     tools,
+    prompt,
+    workflowSessionId,
   } = req.parsedBody;
 
   try {
+    const workflowsRegistry = WorkflowsRegistry.getInstance();
+    await workflowsRegistry.initialize();
+
+    if (account && workflowSessionId) {
+      const activeSession = await getActiveWorkflowSession(workflowSessionId);
+
+      if (activeSession) {
+        const execution = await workflowsRegistry.executeStep(
+          activeSession.activeWorkflow,
+          activeSession.currentStep,
+          {
+            prompt,
+            chat,
+            data: activeSession.data,
+          },
+        );
+
+        if (execution) {
+          const mergedData = {
+            ...(activeSession.data ?? {}),
+            ...(execution.data ?? {}),
+          };
+
+          if (execution.nextStep) {
+            await updateWorkflowSession(activeSession.sessionId, {
+              currentStep: execution.nextStep,
+              data: mergedData,
+            });
+          } else {
+            await clearWorkflowSession(activeSession.sessionId);
+          }
+
+          res.status(200).json({
+            status: "success",
+            result: getWorkflowReplyText(execution.reply),
+            workflowSessionId: execution.nextStep ? activeSession.sessionId : undefined,
+            workflow: activeSession.activeWorkflow,
+            currentStep: execution.nextStep ?? activeSession.currentStep,
+          });
+          return;
+        }
+
+        await clearWorkflowSession(activeSession.sessionId);
+      }
+    }
+
+    const detectedIntent = account ? await detectWorkflowIntent(prompt) : null;
+
+    if (account && detectedIntent) {
+      const workflowInfo = await workflowsRegistry.getWorkflowInfo(detectedIntent);
+      const workflowSession = await createSession({
+        accountId: account.id.toString(),
+        workflow: detectedIntent,
+        steps: workflowInfo?.steps,
+        data: { prompt, chat },
+      });
+
+      const execution = await workflowsRegistry.executeStep(
+        detectedIntent,
+        workflowSession.currentStep,
+        {
+          prompt,
+          chat,
+          data: workflowSession.data,
+        },
+      );
+
+      if (execution) {
+        const mergedData = {
+          ...(workflowSession.data ?? {}),
+          ...(execution.data ?? {}),
+        };
+
+        if (execution.nextStep) {
+          await updateWorkflowSession(workflowSession.sessionId, {
+            currentStep: execution.nextStep,
+            data: mergedData,
+          });
+        } else {
+          await clearWorkflowSession(workflowSession.sessionId);
+        }
+
+        res.status(200).json({
+          status: "success",
+          result: getWorkflowReplyText(execution.reply),
+          workflowSessionId: execution.nextStep ? workflowSession.sessionId : undefined,
+          workflow: detectedIntent,
+          currentStep: execution.nextStep ?? workflowSession.currentStep,
+        });
+        return;
+      }
+    }
+
     const { finalPrompt, ragDocuments } = await buildAiPrompt(req.parsedBody.prompt);
     // MCP temporarily disabled for workflow/data-extraction performance tuning.
     // const mcpCatalog = await resolveAiMcpCatalog(req.parsedBody.mcpServers);
