@@ -80,20 +80,20 @@ export function useList({ apiList = api.list }: UseLogsListOptions = {}) {
           loading: false,
         }));
 
-        setLogs({
-          logs: result.logs.map((log) => ({
-            _id: log._id.toString(),
-            date: log.date,
-            source: log.source,
-            level: log.level,
-            message: log.message,
-            duration: log.duration,
-            details: log.details,
-            traceId: log.traceId,
-            _references: log._references,
-          })),
-          totalLogs: result.totalLogs ?? 0,
-        });
+        // setLogs({
+        //   logs: result.logs.map((log) => ({
+        //     _id: log.id.toString(),
+        //     date: log.date,
+        //     source: log.source,
+        //     level: log.level,
+        //     message: log.message,
+        //     duration: log.duration,
+        //     details: log.details,
+        //     traceId: log.traceId,
+        //     _references: {}
+        //   })),
+        //   totalLogs: result.totalLogs ?? 0,
+        // });
       } else {
         if (message) {
           message.error(tErrorMessages(`${result.status}`));

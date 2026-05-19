@@ -1,17 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
-
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
 
 import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
-import {
-  AccountRoleInclude,
-  AccountRoleSelect,
-} from "../../../../generated/prisma/models.js";
+
+import { Prisma } from "@prisma/client";
+
+type AccountRoleSelect = Prisma.AccountRoleSelect;
+type AccountRoleInclude = Prisma.AccountRoleInclude;
 
 const handler = async (
   req: Request<{}, {}, AccountRolesAPITypes.ListRequestBody>,
@@ -29,13 +28,13 @@ const handler = async (
     });
     const fieldsToPopulate = populate
       ? getFieldsToPopulate<
-        AccountRoleInclude,
-        NonNullable<AccountRolesAPITypes.ListRequestBody["populate"]>
-      >(populate, {
-        "metadata.createdBy": ["id", "name"],
-        "metadata.updatedBy": ["id", "name"],
-        "metadata.deletedBy": ["id", "name"],
-      })
+          AccountRoleInclude,
+          NonNullable<AccountRolesAPITypes.ListRequestBody["populate"]>
+        >(populate, {
+          "metadata.createdBy": ["id", "name"],
+          "metadata.updatedBy": ["id", "name"],
+          "metadata.deletedBy": ["id", "name"],
+        })
       : {};
 
     if (search && search.query.length > 0 && search.searchIn.length > 0) {

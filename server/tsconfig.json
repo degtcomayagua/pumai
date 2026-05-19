@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "nodenext",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "moduleResolution": "nodenext",
     "baseUrl": "../",
     "paths": {
@@ -20,5 +20,11 @@
   "include": [
     "./src",
     "../shared"
+  ],
+  "exclude": [
+    "../generated",
+    "generated",
+    "../dist",
+    "node_modules"
   ]
 }

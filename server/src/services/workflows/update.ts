@@ -7,11 +7,7 @@ import {
   Account,
   MetadataUpdateHistory,
   Workflow,
-} from "../../../../generated/prisma/client.js";
-import {
-  MetadataUpdateHistoryCreateWithoutMetadataInput,
-  WorkflowUpdateInput,
-} from "../../../../generated/prisma/models.js";
+} from "@prisma/client";
 
 import prismaClient from "../../config/prisma.js";
 import LoggingService from "../logging.js";
@@ -45,14 +41,14 @@ export async function updateWorkflow(
     where: {
       id: params.workflowId,
     },
-    include: { metadata: { include: { updateHistory: true, deleted: true } } },
+    include: { metadata: true },
   });
 
   if (!existing || existing.metadata?.deleted) throw new WorkflowNotFoundError();
 
   const now = new Date();
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: WorkflowUpdateInput = {};
+  const updatePayload: Prisma.WorkflowUpdateInput = {};
 
   for (const key of Object.keys(params) as (keyof Omit<Workflow, "id" | "metadata" | "metadataId">)[]) {
     if (params[key] !== existing[key]) {
@@ -66,7 +62,7 @@ export async function updateWorkflow(
     return existing;
   }
 
-  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+  const historyEntry: Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes,

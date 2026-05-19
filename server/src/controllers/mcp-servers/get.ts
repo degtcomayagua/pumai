@@ -4,7 +4,10 @@ import prismaClient from "../../config/prisma.js";
 import * as MCPServersAPITypes from "../../../../shared/api/mcp-servers.js";
 
 import LoggingService from "../../services/logging.js";
-import { MCPServerInclude, MCPServerSelect } from "../../../../generated/prisma/models.js";
+import { Prisma } from "@prisma/client";
+
+type MCPServerSelect = Prisma.MCPServerSelect;
+type MCPServerInclude = Prisma.MCPServerInclude;
 
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 

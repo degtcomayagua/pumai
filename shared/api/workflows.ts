@@ -1,4 +1,4 @@
-import { Prisma, Workflow } from "../../generated/prisma/client.js";
+import { Prisma, Workflow } from "@prisma/client";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 

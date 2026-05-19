@@ -11,7 +11,7 @@ import { buildTextChunks } from "../../utils/ai/chunking.js";
 
 import { APIError } from "../../errors/api.js";
 
-import { CampusCode } from "../../../../generated/prisma/enums.js";
+import { CampusCode } from "@prisma/client"
 
 const handler = async (
   req: Request<{}, {}, RagDocumentsAPITypes.CreateRequestBody>,

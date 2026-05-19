@@ -2,7 +2,6 @@ import bcrypt from "bcrypt";
 import speakeasy from "speakeasy";
 import { ISessionAccount } from "@shared/types/sessions.js";
 
-import { Account } from "../../../generated/prisma/client.js";
 import { AccountWithRole } from "../types/index.js";
 
 import { Permission } from "@shared/types/permissions.js";

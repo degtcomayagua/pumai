@@ -48,15 +48,6 @@ const updateSchema = z.object({
     .max(100, "name-too-long")
     .optional(),
   email: z.email("invalid-email").optional(),
-  password: turnIntoUndefinedIfEmpty(
-    z.union(
-      [
-        z.string().min(8, "password-too-short").max(100, "password-too-long"),
-        z.undefined("password-optional"),
-      ],
-      { message: "password-optional" },
-    ),
-  ),
   campus: campusesEnum,
   roleId: z.cuid("invalid-role-id").optional(),
   disableTwoFactor: z.boolean().optional(),
@@ -64,12 +55,8 @@ const updateSchema = z.object({
 
 const getSchema = z.object({
   accountIds: z.array(z.cuid("invalid-account-id")),
-  fields: z
-    .array(accountFields, "invalid-field")
-    .optional(),
-  populate: z
-    .array(populateFields, "invalid-field")
-    .optional(),
+  fields: z.array(accountFields, "invalid-field").optional(),
+  populate: z.array(populateFields, "invalid-field").optional(),
 });
 
 const listSchema = z.object({
@@ -78,23 +65,40 @@ const listSchema = z.object({
   filters: z
     .object({
       role: z.cuid("invalid-role-id").optional(),
+      campus: z.enum(campuses, "invalid-campus").optional(),
+      status: z.enum(["active", "inactive"], "invalid-status").optional(),
     })
     .optional(),
   search: z
     .object({
       query: z.string().max(100, "query-too-long"),
-      searchIn: z.array(
-        z.enum(["profile.name", "email.value"], "invalid-search-field"),
-      ),
+      searchIn: z.array(z.enum(["name", "email"], "invalid-search-field")),
     })
     .optional(),
   includeDeleted: z.boolean().optional(),
-  fields: z
-    .array(accountFields, "invalid-field")
-    .optional(),
-  populate: z
-    .array(populateFields, "invalid-field")
-    .optional(),
+  fields: z.array(accountFields, "invalid-field").optional(),
+  populate: z.array(populateFields, "invalid-field").optional(),
 });
 
-export { createSchema, deleteSchema, getSchema, updateSchema, listSchema };
+const updatePasswordSchema = z.object({
+  accountId: z.cuid("invalid-account-id"),
+  newPassword: z
+    .string()
+    .min(8, "password-too-short")
+    .max(256, "password-too-long"),
+});
+
+const updateStatusSchema = z.object({
+  accountId: z.cuid("invalid-account-id"),
+  newStatus: z.enum(["active", "inactive"], "invalid-status"),
+});
+
+export {
+  createSchema,
+  deleteSchema,
+  getSchema,
+  updateSchema,
+  listSchema,
+  updatePasswordSchema,
+  updateStatusSchema,
+};

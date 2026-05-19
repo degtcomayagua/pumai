@@ -8,7 +8,8 @@ import prismaClient from "../../config/prisma.js";
 import { createAccountWithRetry } from "../../services/accounts/create.js";
 
 import { APIError } from "../../errors/api.js";
-import { CampusCode } from "../../../../generated/prisma/enums.js";
+
+import { CampusCode } from "@prisma/client";
 
 const handler = async (
   req: Request<{}, {}, AccountsAPITypes.CreateRequestBody>,
@@ -28,7 +29,7 @@ const handler = async (
       select: { id: true },
     });
 
-    if (existingAccount) {
+    if (existingAccount.length > 0) {
       throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
         "email-in-use",
         400,
@@ -46,17 +47,17 @@ const handler = async (
       );
     }
 
+    console.log("Admin account role level:", adminAccount.role?.level);
+    console.log("Role level to assign:", role.level);
+
     const createdByAccountLevel = adminAccount.role?.level;
-    if (typeof createdByAccountLevel === "number" && role.level <= createdByAccountLevel) {
+    if (
+      role.level <= createdByAccountLevel &&
+      role.level != createdByAccountLevel
+    ) {
       throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
         "role-cannot-be-assigned",
         400,
-      );
-    } // Pass session explicitly to service
-    if (createdByAccountLevel === undefined) {
-      throw new APIError<AccountsAPITypes.CreateResponseData["status"]>(
-        "internal-error", // Means something very bad happened with the admin account, but we don't want to leak details
-        500,
       );
     }
 

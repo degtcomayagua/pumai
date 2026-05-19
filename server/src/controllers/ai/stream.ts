@@ -13,6 +13,7 @@ import { detectWorkflowIntent } from "../../utils/ai/workflows.js";
 import { createSession, getActiveWorkflowSession, updateWorkflowSession, clearWorkflowSession } from "../../services/workflows/sessions.js";
 
 import * as AIAPITypes from "../../../../shared/api/ai.js"
+import { CampusCode } from "@prisma/client";
 
 type StreamEventName = AIAPITypes.StreamChunk["event"];
 
@@ -153,7 +154,7 @@ const handler = async (
         rag: true,
       },
       {
-        campuses,
+        campuses: campuses as CampusCode[],
         category,
         deliveryModes,
         includeArchived: false,

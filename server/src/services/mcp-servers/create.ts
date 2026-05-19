@@ -10,7 +10,7 @@ import {
   Prisma,
   MCPAuthType,
   MCPServerProtocol,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
 
 import LoggingService from "../logging.js";
 

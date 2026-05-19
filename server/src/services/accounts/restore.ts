@@ -7,8 +7,9 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client.js";
-import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models.js";
+} from "@prisma/client";
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
 

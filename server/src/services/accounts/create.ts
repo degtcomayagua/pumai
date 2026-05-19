@@ -8,7 +8,7 @@ import {
   MetadataStatus,
   Account,
   Prisma,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
 

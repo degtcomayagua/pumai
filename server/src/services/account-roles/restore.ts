@@ -8,10 +8,11 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
-import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models.js";
 
 type RestoreAccountRoleOptions = {
   traceId?: string;
@@ -40,8 +41,8 @@ export async function restoreAccountRole(
       metadata: {
         is: {
           deleted: true,
-        }
-      }
+        },
+      },
     },
     include: {
       metadata: {

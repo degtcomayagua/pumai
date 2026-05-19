@@ -1,4 +1,4 @@
-import { Log } from "../../generated/prisma/client.js";
+import { Log } from "@prisma/client";
 import { ResponseStatus } from "./index.js";
 
 import { z } from "zod";

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 
 import * as WorkflowsAPITypes from "../../../../shared/api/workflows.js";
 
@@ -9,10 +9,8 @@ import prismaClient from "../../config/prisma.js";
 import LoggingService from "../../services/logging.js";
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 
-import {
-  WorkflowInclude,
-  WorkflowSelect,
-} from "../../../../generated/prisma/models.js";
+type WorkflowSelect = Prisma.WorkflowSelect;
+type WorkflowInclude = Prisma.WorkflowInclude;
 
 const handler = async (
   req: Request<{}, {}, WorkflowsAPITypes.ListRequestBody>,

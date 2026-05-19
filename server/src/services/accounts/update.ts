@@ -7,11 +7,11 @@ import {
   MetadataStatus,
   Account,
   MetadataUpdateHistory,
-} from "../../../../generated/prisma/client.js";
-import {
-  AccountUpdateInput,
-  MetadataUpdateHistoryCreateWithoutMetadataInput,
-} from "../../../../generated/prisma/models.js";
+} from "@prisma/client";
+
+type AccountUpdateInput = Prisma.AccountUpdateInput;
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import prismaClient from "../../config/prisma.js";
 import LoggingService from "../../services/logging.js";
@@ -25,6 +25,7 @@ interface UpdateAccountParameters {
   accountId: string;
   email?: string;
   name?: string;
+  status?: Account["status"];
   roleId?: string;
   campus?: Account["campus"];
   password?: string;
@@ -84,6 +85,11 @@ export async function updateAccount(
   if (typeof params.name !== "undefined") {
     updatePayload.name = params.name;
     changes["name"] = params.name;
+  }
+
+  if (typeof params.status !== "undefined") {
+    updatePayload.status = params.status;
+    changes["status"] = params.status;
   }
 
   if (typeof params.roleId !== "undefined") {

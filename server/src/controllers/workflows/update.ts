@@ -8,7 +8,7 @@ import {
   updateWorkflow,
 } from "../../services/workflows/update.js";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 
 const handler = async (
   req: Request<{}, {}, WorkflowsAPITypes.UpdateRequestBody>,

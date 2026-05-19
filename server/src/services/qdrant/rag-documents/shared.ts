@@ -8,7 +8,7 @@ import {
   DeliveryMode,
   DocumentCategory,
   SourceType,
-} from "../../../../../generated/prisma/enums.js"
+} from "@prisma/client"
 
 import { IRAGChunk } from "@shared/models/chroma/rag-chunk.js";
 

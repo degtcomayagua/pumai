@@ -4,7 +4,11 @@ import prismaClient from "../../config/prisma.js";
 import * as AccountAPITypes from "../../../../shared/api/accounts.js";
 
 import LoggingService from "../../services/logging.js";
-import { AccountInclude, AccountSelect } from "../../../../generated/prisma/models.js";
+
+import { Prisma } from "@prisma/client";
+
+type AccountInclude = Prisma.AccountInclude;
+type AccountSelect = Prisma.AccountSelect;
 
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 
@@ -19,20 +23,19 @@ const handler = async (
   try {
     let fieldsToSelect = getFieldsToSelect<AccountSelect>(fields, {
       id: true,
-      name: true
-    })
+      name: true,
+    });
     const fieldsToPopulate = populate
       ? getFieldsToPopulate<
-        AccountInclude,
-        NonNullable<AccountAPITypes.ListRequestBody["populate"]>
-      >(populate, {
-        "metadata.createdBy": ["id", "name"],
-        "metadata.updatedBy": ["id", "name"],
-        "metadata.deletedBy": ["id", "name"],
-        "role": ["id", "name", "level"],
-      })
+          AccountInclude,
+          NonNullable<AccountAPITypes.ListRequestBody["populate"]>
+        >(populate, {
+          "metadata.createdBy": ["id", "name"],
+          "metadata.updatedBy": ["id", "name"],
+          "metadata.deletedBy": ["id", "name"],
+          role: ["id", "name", "level"],
+        })
       : {};
-
 
     const accounts = await prismaClient.account.findMany({
       where: {

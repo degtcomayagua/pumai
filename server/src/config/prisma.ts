@@ -1,5 +1,5 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { PrismaClient } from "../../../generated/prisma/client.js";
+import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import path from "path";
 import setupServer from "../setup.js";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { campuses } from ".";
+import { campuses } from "./index.js";
 
 export const generateSchema = z.object({
   prompt: z.string().min(1, "prompt-too-short").max(5000, "prompt-too-long"),

@@ -7,11 +7,7 @@ import {
   Account,
   MetadataUpdateHistory,
   RAGDocument,
-} from "../../../../generated/prisma/client.js";
-import {
-  MetadataUpdateHistoryCreateWithoutMetadataInput,
-  RAGDocumentUpdateInput,
-} from "../../../../generated/prisma/models.js";
+} from "@prisma/client";
 
 import prismaClient from "../../config/prisma.js";
 import LoggingService from "../../services/logging.js";
@@ -56,7 +52,7 @@ export async function updateRAGDocument(
 
   const now = new Date();
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: RAGDocumentUpdateInput = {};
+  const updatePayload: Prisma.RAGDocumentUpdateInput = {};
 
   for (const key of Object.keys(params) as (keyof Omit<RAGDocument, "id" | "metadata" | "metadataId">)[]) {
     if (params[key] !== existing[key]) {
@@ -70,7 +66,7 @@ export async function updateRAGDocument(
     return existing;
   }
 
-  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+  const historyEntry: Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes,

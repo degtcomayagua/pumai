@@ -1,4 +1,4 @@
-import { AccountRole, Prisma } from "../../generated/prisma/client.js";
+import { AccountRole, Prisma } from "@prisma/client";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
@@ -25,7 +25,7 @@ export interface GetResponseData {
   accountRoles?: Prisma.AccountRoleGetPayload<{
     include: {
       metadata: true;
-    }
+    };
   }>[];
 }
 
@@ -34,7 +34,7 @@ export interface ListResponseData {
   accountRoles?: Prisma.AccountRoleGetPayload<{
     include: {
       metadata: true;
-    }
+    };
   }>[];
   totalAccountRoles?: number;
 }

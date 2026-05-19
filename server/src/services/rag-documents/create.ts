@@ -12,7 +12,7 @@ import {
   CampusCode,
   DeliveryMode,
   SourceType,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
 

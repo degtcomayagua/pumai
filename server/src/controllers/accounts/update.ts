@@ -2,13 +2,17 @@ import { Request, Response, NextFunction } from "express";
 
 import * as AccountAPITypes from "../../../../shared/api/accounts.js";
 
-import { updateAccountWithRetry } from "../../services/accounts/update.js";
+import {
+  updateAccountWithRetry,
+  EmailInUseError,
+  AccountNotFoundError,
+} from "../../services/accounts/update.js";
 import LoggingService from "../../services/logging.js";
 import { APIError } from "../../errors/api.js";
 
 import prismaClient from "../../config/prisma.js";
 
-import { CampusCode } from "../../../../generated/prisma/enums.js";
+import { CampusCode } from "@prisma/client";
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.UpdateRequestBody>,
@@ -17,28 +21,30 @@ const handler = async (
 ) => {
   const start = performance.now();
   const userAccount = req.user!;
-  const { accountId, email, name, roleId, password, campus } = req.body;
+  const { accountId, email, name, roleId, campus } = req.body;
 
   try {
-    // Validate the role exists and admin can assign it
-    const role = await prismaClient.accountRole.findUnique({
-      where: { id: roleId },
-      include: { metadata: true },
-    });
+    if (roleId) {
+      // Validate the role exists and admin can assign it
+      const role = await prismaClient.accountRole.findUnique({
+        where: { id: roleId },
+        include: { metadata: true },
+      });
 
-    if (!role || role.metadata?.deleted) {
-      throw new APIError<AccountAPITypes.UpdateResponseData["status"]>(
-        "role-not-found",
-        404,
-      );
-    }
+      if (!role || role.metadata?.deleted) {
+        throw new APIError<AccountAPITypes.UpdateResponseData["status"]>(
+          "role-not-found",
+          404,
+        );
+      }
 
-    const adminRoleLevel = userAccount.role.level ?? 1000;
-    if (role.level <= adminRoleLevel) {
-      throw new APIError<AccountAPITypes.UpdateResponseData["status"]>(
-        "role-cannot-be-assigned",
-        401,
-      );
+      const adminRoleLevel = userAccount.role.level ?? 1000;
+      if (role.level <= adminRoleLevel) {
+        throw new APIError<AccountAPITypes.UpdateResponseData["status"]>(
+          "role-cannot-be-assigned",
+          401,
+        );
+      }
     }
 
     const updatedAccount = await updateAccountWithRetry(
@@ -48,7 +54,6 @@ const handler = async (
         campus: campus as CampusCode, // Checked by Zod schema, safe to assert
         email: email?.toLowerCase(),
         name: name?.trim(),
-        password: password,
       },
       {
         traceId: req.traceId,
@@ -62,7 +67,16 @@ const handler = async (
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;
-    console.log(error);
+
+    if (error instanceof EmailInUseError) {
+      res.status(409).json({ status: "email-in-use" });
+      return;
+    }
+
+    if (error instanceof AccountNotFoundError) {
+      res.status(404).json({ status: "account-not-found" });
+      return;
+    }
 
     if (error instanceof APIError) {
       res.status(error.httpStatus).json({ status: error.status });

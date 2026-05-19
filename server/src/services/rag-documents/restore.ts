@@ -8,10 +8,9 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
-import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models.js";
 
 type RestoreRAGDocumentOptions = {
   traceId?: string;
@@ -60,7 +59,7 @@ export async function restoreRAGDocument(
 
   const now = new Date();
 
-  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+  const historyEntry: Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes: {

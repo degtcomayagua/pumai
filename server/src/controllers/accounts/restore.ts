@@ -7,7 +7,7 @@ import {
   AccountNotFoundError,
 } from "../../services/accounts/restore.js";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.RestoreRequestBody>,
@@ -45,8 +45,8 @@ const handler = async (
         message: "Prisma error during account restore",
         traceId: req.traceId,
         details: {
-          code: error.code,
-          meta: error.meta,
+          code: error,
+          meta: error,
         },
         duration,
       });

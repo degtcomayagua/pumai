@@ -8,16 +8,15 @@ import {
   MetadataStatus,
   MetadataUpdateHistory,
   Prisma,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
 import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 
-import {
-  AccountRoleUpdateInput,
-  MetadataUpdateHistoryCreateWithoutMetadataInput,
-  MetadataUpdateInput,
-} from "../../../../generated/prisma/models.js";
+type AccountRoleUpdateInput = Prisma.AccountRoleUpdateInput;
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
+type MetadataUpdateInput = Prisma.MetadataUpdateInput;
 
 type UpdateAccountRoleParameters = {
   roleId: string;
@@ -33,9 +32,6 @@ type UpdateAccountRoleOptions = {
   userAccount?: Account;
 };
 
-/**
- * Indicates the requested account role was not found or is deleted.
- */
 export class AccountRoleNotFoundError extends Error {
   retryable = false;
   /** @param message Error message */
@@ -45,9 +41,6 @@ export class AccountRoleNotFoundError extends Error {
   }
 }
 
-/**
- * Indicates a unique constraint collision when updating an account role (e.g., name already in use).
- */
 export class AccountRoleExistsError extends Error {
   retryable = false;
   /** @param message Error message */
@@ -57,12 +50,6 @@ export class AccountRoleExistsError extends Error {
   }
 }
 
-/**
- * Update an account role and append a metadata updateHistory entry.
- * @param params Update parameters
- * @param options traceId and adminAccount
- * @returns updated AccountRole
- */
 export async function updateAccountRole(
   params: UpdateAccountRoleParameters,
   options: UpdateAccountRoleOptions,
@@ -95,28 +82,28 @@ export async function updateAccountRole(
 
   // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updateData: Prisma.AccountRoleUpdateInput = {};
+  const updatePayload: Prisma.AccountRoleUpdateInput = {};
 
   // Doing it like this because otherwise we lose type safety
   if (name !== undefined) {
     changes.name = name;
-    updateData.name = name;
+    updatePayload.name = name;
   }
   if (description !== undefined) {
     changes.description = description;
-    updateData.description = description;
+    updatePayload.description = description;
   }
   if (level !== undefined) {
     changes.level = level;
-    updateData.level = level;
+    updatePayload.level = level;
   }
   if (permissions !== undefined) {
     changes.permissions = permissions;
-    updateData.permissions = permissions.join(",");
+    updatePayload.permissions = permissions.join(",");
   }
   if (requiresTwoFactor !== undefined) {
     changes.requiresTwoFactor = requiresTwoFactor;
-    updateData.requiresTwoFactor = requiresTwoFactor;
+    updatePayload.requiresTwoFactor = requiresTwoFactor;
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
@@ -132,8 +119,6 @@ export async function updateAccountRole(
       create: historyEntry,
     },
   };
-
-  const updatePayload: AccountRoleUpdateInput = {};
 
   if (existingRole.metadata) {
     updatePayload.metadata = { update: metadataUpdatePayload };
@@ -195,12 +180,6 @@ export async function updateAccountRole(
   }
 }
 
-/**
- * Wrapper that retries updateAccountRole on retryable errors, bails on not-found.
- * @param params Update parameters
- * @param options Update options
- * @returns updated AccountRole
- */
 export async function updateAccountRoleWithRetry(
   params: UpdateAccountRoleParameters,
   options: UpdateAccountRoleOptions,

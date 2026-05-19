@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 
 import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents.js";
 
@@ -8,10 +8,9 @@ import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
-import {
-  RAGDocumentInclude,
-  RAGDocumentSelect,
-} from "../../../../generated/prisma/models.js";
+
+type RAGDocumentSelect = Prisma.RAGDocumentSelect;
+type RAGDocumentInclude = Prisma.RAGDocumentInclude;
 
 const handler = async (
   req: Request<{}, {}, RAGDocumentsAPITypes.ListRequestBody>,

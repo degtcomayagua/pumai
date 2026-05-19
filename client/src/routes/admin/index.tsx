@@ -53,18 +53,6 @@ function RouteComponent() {
     }
   }, [account, dispatch, navigate]);
 
-  const hasPermission = (permission: Permission): boolean => {
-    if (account) {
-      if (
-        (account.data.role as AccountRole).permissions.includes(permission) ||
-        (account.data.role as AccountRole).permissions.includes("*")
-      )
-        return true;
-      return false;
-    }
-    return false;
-  };
-
   const menuItems: Array<{
     key: string;
     link: string;

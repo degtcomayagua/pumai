@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 
 import * as MCPServersAPITypes from "../../../../shared/api/mcp-servers.js";
 
@@ -8,10 +8,9 @@ import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
-import {
-  MCPServerInclude,
-  MCPServerSelect,
-} from "../../../../generated/prisma/models.js";
+
+type MCPServerSelect = Prisma.MCPServerSelect;
+type MCPServerInclude = Prisma.MCPServerInclude;
 
 const handler = async (
   req: Request<{}, {}, MCPServersAPITypes.ListRequestBody>,

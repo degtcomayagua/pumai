@@ -8,7 +8,7 @@ import {
   restoreMCPServerWithRetry,
 } from "../../services/mcp-servers/restore.js";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 
 const handler = async (
   req: Request<{}, {}, MCPServersAPITypes.RestoreRequestBody>,

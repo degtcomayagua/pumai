@@ -7,8 +7,9 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client.js";
-import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models.js";
+} from "@prisma/client";
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
 
@@ -39,8 +40,8 @@ export async function deleteAccount(
       metadata: {
         is: {
           deleted: false,
-        }
-      }
+        },
+      },
     },
     include: {
       metadata: {
@@ -52,9 +53,7 @@ export async function deleteAccount(
   });
 
   if (!existingAccount) {
-    throw new AccountNotFoundError(
-      "Account not found or already deleted",
-    );
+    throw new AccountNotFoundError("Account not found or already deleted");
   }
 
   const now = new Date();

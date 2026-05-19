@@ -2,7 +2,7 @@ import api from "./api";
 import * as schemas from "../../../../shared/schemas/workflows";
 
 import * as WorkflowsAPITypes from "../../../../shared/api/workflows";
-import { Workflow, WorkflowAuthType, WorkflowType } from "../../../../generated/prisma/client"
+import { Workflow, WorkflowAuthType, WorkflowType } from "@prisma/client"
 
 interface ListWorkflow {
   id: string;

@@ -1,4 +1,4 @@
-import { MCPServer, Prisma } from "../../generated/prisma/client.js";
+import { MCPServer, Prisma } from "@prisma/client";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 

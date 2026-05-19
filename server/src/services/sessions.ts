@@ -62,7 +62,7 @@ class SessionManager {
               });
 
             // Check the account status
-            if (account.status == "locked")
+            if (account.status == "inactive")
               return done(null, false, {
                 message: "account-locked",
               });

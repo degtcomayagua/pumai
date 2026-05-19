@@ -8,10 +8,9 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
 
 import LoggingService from "../logging.js";
-import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models.js";
 
 type RestoreMCPServerOptions = {
   traceId?: string;
@@ -55,7 +54,7 @@ export async function restoreMCPServer(
 
   const now = new Date();
 
-  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+  const historyEntry: Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes: {

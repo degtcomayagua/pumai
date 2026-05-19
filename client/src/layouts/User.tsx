@@ -47,14 +47,6 @@ export default function GeneralLayout({
     keyPrefix: "general",
   });
 
-  // Connection status
-  const { status: serverConnectionStatus } = useSelector(
-    (state: RootState) => state.status,
-  );
-
-  // serverConnectionStatus === "succeeded" means connected
-  const isConnected = serverConnectionStatus === "succeeded";
-
   // Preferences
   const { preferences: userPreferences } = useSelector(
     (state: RootState) => state.preferences,

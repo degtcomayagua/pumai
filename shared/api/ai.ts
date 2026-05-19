@@ -2,7 +2,7 @@ import z from "zod";
 
 import { generateSchema } from "../schemas/ai.js";
 
-import { ResponseStatus } from "../models";
+import { ResponseStatus } from "@shared/models/index.js";
 
 export type GenerateRequestBody = z.infer<typeof generateSchema>;
 export interface GenerateResponseData {

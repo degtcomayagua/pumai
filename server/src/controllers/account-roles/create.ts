@@ -1,8 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import {
-  AccountRole,
-  Prisma,
-} from "../../../../generated/prisma/client.js";
+import { AccountRole, Prisma } from "@prisma/client";
 
 import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
 
@@ -92,7 +89,7 @@ const handler = async (
         accountRoleId: createdRole.id,
         createdById: userAccount.id,
         name,
-        level
+        level,
       },
       _references: {
         accountRoleId: "AccountRole",
@@ -126,8 +123,8 @@ const handler = async (
         message: "Prisma error during account role creation",
         traceId: req.traceId,
         details: {
-          code: error.code,
-          meta: error.meta,
+          code: error,
+          meta: error,
         },
       });
     } else if (error instanceof Error) {

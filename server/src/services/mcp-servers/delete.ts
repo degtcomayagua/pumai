@@ -8,8 +8,7 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client.js";
-import { MetadataUpdateHistoryCreateWithoutMetadataInput } from "../../../../generated/prisma/models.js";
+} from "@prisma/client";
 
 import LoggingService from "../logging.js";
 
@@ -53,7 +52,7 @@ export async function deleteMCPServer(
 
   const now = new Date();
 
-  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+  const historyEntry: Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes: {

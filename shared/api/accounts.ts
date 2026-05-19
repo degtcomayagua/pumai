@@ -1,4 +1,4 @@
-import { Account, Prisma } from "../../generated/prisma/client.js";
+import { Account, Prisma } from "@prisma/client";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 
@@ -8,6 +8,8 @@ import {
   getSchema,
   updateSchema,
   listSchema,
+  updatePasswordSchema,
+  updateStatusSchema,
 } from "../schemas/accounts.js";
 
 // Inferred types from Zod schemas
@@ -17,6 +19,8 @@ export type DeleteRequestBody = z.infer<typeof deleteSchema>;
 export type UpdateRequestBody = z.infer<typeof updateSchema>;
 export type ListRequestBody = z.infer<typeof listSchema>;
 export type RestoreRequestBody = z.infer<typeof deleteSchema>;
+export type UpdatePasswordRequestBody = z.infer<typeof updatePasswordSchema>;
+export type UpdateStatusRequestBody = z.infer<typeof updateStatusSchema>;
 
 // Response types
 
@@ -26,7 +30,7 @@ export interface GetResponseData {
     include: {
       metadata: true;
       role: true;
-    }
+    };
   }>[];
 }
 
@@ -36,7 +40,7 @@ export interface ListResponseData {
     include: {
       metadata: true;
       role: true;
-    }
+    };
   }>[];
   totalAccounts?: number;
 }
@@ -72,4 +76,20 @@ export interface UpdateResponseData {
   | "role-cannot-be-assigned"
   | "email-in-use";
   account?: Account;
+}
+
+export interface UpdatePasswordResponseData {
+  status:
+  | ResponseStatus
+  | "account-not-found"
+  | "cannot-change-own-password"
+  | "cannot-change-password-due-to-role-level";
+}
+
+export interface UpdateStatusResponseData {
+  status:
+  | ResponseStatus
+  | "account-not-found"
+  | "cannot-update-own-status"
+  | "cannot-update-status-due-to-role-level";
 }

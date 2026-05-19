@@ -1,4 +1,4 @@
-import type { Permission } from "../types/permissions";
+import type { Permission } from "../types/permissions.js";
 
 const permissions: Permission[] = [
   "*",

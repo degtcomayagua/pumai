@@ -8,7 +8,9 @@ import {
   MetadataSource,
   MetadataStatus,
   Prisma,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
 
@@ -39,8 +41,8 @@ export async function deleteAccountRole(
       metadata: {
         is: {
           deleted: false,
-        }
-      }
+        },
+      },
     },
     include: {
       metadata: {
@@ -59,17 +61,15 @@ export async function deleteAccountRole(
 
   const now = new Date();
 
-  const historyEntry = {
+  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
-    updatedById: userAccountId ?? null,
+    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes: {
       "metadata.deleted": true,
       "metadata.deletedAt": now.toISOString(),
       ...(userAccountId && { "metadata.deletedById": userAccountId }),
     },
-    accountId: userAccountId ?? null,
   };
-
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: true,
     deletedAt: now,

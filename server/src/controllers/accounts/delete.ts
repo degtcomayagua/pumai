@@ -23,7 +23,10 @@ const handler = async (
     const adminId = userAccount.id;
 
     if (adminId === accountId) {
-      console.log("some jackass is trying to delete their own account, blame on", userAccount.email);
+      console.log(
+        "some jackass is trying to delete their own account, blame on",
+        userAccount.email,
+      );
       throw new APIError<AccountsAPITypes.DeleteResponseData["status"]>(
         "cannot-delete-self",
         400,

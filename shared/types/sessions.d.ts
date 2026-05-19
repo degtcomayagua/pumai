@@ -14,7 +14,7 @@ export type ISessionAccount = {
     role: Omit<AccountRole, 'permissions'> & {
       permissions: Permission[]
     }
-    status: "active" | "locked";
+    status: "active" | "inactive";
   };
   preferences: {
     security: {

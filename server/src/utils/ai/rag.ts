@@ -1,6 +1,6 @@
 import { Message, Tool } from "ollama";
 
-import { CampusCode, DeliveryMode, DocumentCategory } from "../../../../shared/models";
+import { CampusCode, DeliveryMode, DocumentCategory } from "@prisma/client";
 
 import OllamaChatService from "../../services/ollama/chat.js";
 import OllamaEmbeddingService from "../../services/ollama/embed.js";

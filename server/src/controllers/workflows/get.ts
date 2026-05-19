@@ -4,7 +4,10 @@ import prismaClient from "../../config/prisma.js";
 import * as WorkflowsAPITypes from "../../../../shared/api/workflows.js";
 
 import LoggingService from "../../services/logging.js";
-import { WorkflowInclude, WorkflowSelect } from "../../../../generated/prisma/models.js";
+
+import { Prisma } from "@prisma/client";
+type WorkflowSelect = Prisma.WorkflowSelect;
+type WorkflowInclude = Prisma.WorkflowInclude;
 
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 

@@ -1,17 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
-
 import * as AccountAPITypes from "../../../../shared/api/accounts.js";
 
 import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
-import {
-  AccountInclude,
-  AccountSelect,
-} from "../../../../generated/prisma/models.js";
+
+import { Prisma, CampusCode } from "@prisma/client";
+
+type AccountInclude = Prisma.AccountInclude;
+type AccountSelect = Prisma.AccountSelect;
 
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.ListRequestBody>,
@@ -19,7 +18,8 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { page, count, fields, populate, search, includeDeleted } = req.body;
+  const { page, count, fields, populate, filters, search, includeDeleted } =
+    req.body;
 
   try {
     const where: Prisma.AccountWhereInput = {};
@@ -29,14 +29,14 @@ const handler = async (
     });
     const fieldsToPopulate = populate
       ? getFieldsToPopulate<
-        AccountInclude,
-        NonNullable<AccountAPITypes.ListRequestBody["populate"]>
-      >(populate, {
-        "metadata.createdBy": ["id", "name"],
-        "metadata.updatedBy": ["id", "name"],
-        "metadata.deletedBy": ["id", "name"],
-        "role": ["id", "name", "level"],
-      })
+          AccountInclude,
+          NonNullable<AccountAPITypes.ListRequestBody["populate"]>
+        >(populate, {
+          "metadata.createdBy": ["id", "name"],
+          "metadata.updatedBy": ["id", "name"],
+          "metadata.deletedBy": ["id", "name"],
+          role: ["id", "name", "level"],
+        })
       : {};
 
     if (search && search.query.length > 0 && search.searchIn.length > 0) {
@@ -45,6 +45,19 @@ const handler = async (
           contains: search.query,
         },
       })) as Prisma.AccountWhereInput[];
+    }
+
+    if (filters) {
+      if (filters.role) {
+        where.roleId = filters.role;
+      }
+      if (filters.status) {
+        where.status = filters.status;
+      }
+
+      if (filters.campus) {
+        where.campus = filters.campus as CampusCode; // Type assertion since Prisma doesn't recognize the string enum type from Zod
+      }
     }
 
     if (!includeDeleted) {

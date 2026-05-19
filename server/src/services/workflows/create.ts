@@ -12,7 +12,7 @@ import {
   WorkflowAuthType,
   WorkflowProtocol,
   WorkflowType,
-} from "../../../../generated/prisma/client.js";
+} from "@prisma/client";
 
 import LoggingService from "../logging.js";
 

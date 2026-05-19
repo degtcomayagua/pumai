@@ -4,16 +4,12 @@ import * as AccountRolesAPITypes from "../../../../shared/api/account-roles.js";
 import LoggingService from "../../services/logging.js";
 import {
   AccountRoleNotFoundError,
-  updateAccountRole,
+  updateAccountRoleWithRetry,
 } from "../../services/account-roles/update.js";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 import prismaClient from "../../config/prisma.js";
 
-/**
- * Error thrown when an admin attempts to update a role
- * below their own privilege level.
- */
 class CannotUpdateRoleAtThisLevelError extends Error {
   constructor(message: string) {
     super(message);
@@ -21,9 +17,6 @@ class CannotUpdateRoleAtThisLevelError extends Error {
   }
 }
 
-/**
- * Error thrown when the requested role level is already in use.
- */
 class LevelInUseError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,7 +62,33 @@ const handler = async (
       }
     }
 
-    const updatedRole = await updateAccountRole(
+    const roleToUpdate = await prismaClient.accountRole.findFirst({
+      where: {
+        id: roleId,
+        metadata: {
+          is: {
+            deleted: false,
+          },
+        },
+      },
+      select: { id: true, level: true },
+    });
+
+    if (!roleToUpdate) {
+      throw new AccountRoleNotFoundError("Account role not found or deleted");
+    }
+
+    if (
+      (roleToUpdate.level !== undefined &&
+        roleToUpdate.level < userAccountRoleLevel) ||
+      roleToUpdate.level === -1 // Special case for default role with level -1
+    ) {
+      throw new CannotUpdateRoleAtThisLevelError(
+        "Cannot update a role at this level or lower than your own.",
+      );
+    }
+
+    const updatedRole = await updateAccountRoleWithRetry(
       {
         roleId,
         name,
@@ -98,7 +117,7 @@ const handler = async (
       _references: {
         updatedById: "Account",
         accountRoleId: "AccountRole",
-      }
+      },
     });
 
     res.status(200).json({
@@ -129,7 +148,7 @@ const handler = async (
         level: "error",
         message: "Prisma error during account role update",
         traceId: req.traceId,
-        details: { code: error.code, meta: error.meta },
+        details: { code: error, meta: error },
         duration,
       });
     } else if (error instanceof Error) {

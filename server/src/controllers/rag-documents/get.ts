@@ -4,7 +4,10 @@ import prismaClient from "../../config/prisma.js";
 import * as RAGDocumentAPITypes from "../../../../shared/api/rag-documents.js";
 
 import LoggingService from "../../services/logging.js";
-import { RAGDocumentInclude, RAGDocumentSelect } from "../../../../generated/prisma/models.js";
+
+import { Prisma } from "@prisma/client";
+type RAGDocumentSelect = Prisma.RAGDocumentSelect;
+type RAGDocumentInclude = Prisma.RAGDocumentInclude;
 
 import { getFieldsToPopulate, getFieldsToSelect } from "../../utils/prisma.js";
 

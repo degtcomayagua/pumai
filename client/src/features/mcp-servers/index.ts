@@ -2,7 +2,7 @@ import api from "./api";
 import * as schemas from "../../../../shared/schemas/mcp-servers";
 
 import * as MCPServersAPITypes from "../../../../shared/api/mcp-servers";
-import { MCPServer } from "../../../../generated/prisma/client"
+import { MCPServer } from "@prisma/client"
 
 interface ListMCPServer {
   id: string;

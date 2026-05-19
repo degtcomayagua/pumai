@@ -1,4 +1,4 @@
-import { Prisma, RAGDocument } from "../../generated/prisma/client.js";
+import { Prisma, RAGDocument } from "@prisma/client";
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 

@@ -2,8 +2,7 @@ import api from "./api";
 import * as schemas from "../../../../shared/schemas/rag-documents";
 
 import * as RAGDocumentsAPITypes from "../../../../shared/api/rag-documents";
-import { RAGDocument } from "../../../../generated/prisma/client"
-import { CampusCode, DocumentCategory } from "../../../../generated/prisma/enums"
+import { RAGDocument, CampusCode, DocumentCategory } from "@prisma/client"
 
 interface ListRAGDocument {
   id: string;

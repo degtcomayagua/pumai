@@ -7,7 +7,7 @@ import {
   updateRAGDocument,
 } from "../../services/rag-documents/update.js";
 
-import { Prisma } from "../../../../generated/prisma/client.js";
+import { Prisma } from "@prisma/client";
 import prismaClient from "../../config/prisma.js";
 
 const handler = async (

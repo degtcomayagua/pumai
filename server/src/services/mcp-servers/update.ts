@@ -7,11 +7,7 @@ import {
   Account,
   MetadataUpdateHistory,
   MCPServer,
-} from "../../../../generated/prisma/client.js";
-import {
-  MetadataUpdateHistoryCreateWithoutMetadataInput,
-  MCPServerUpdateInput,
-} from "../../../../generated/prisma/models.js";
+} from "@prisma/client";
 
 import prismaClient from "../../config/prisma.js";
 import LoggingService from "../logging.js";
@@ -57,7 +53,7 @@ export async function updateMCPServer(
 
   const now = new Date();
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: MCPServerUpdateInput = {};
+  const updatePayload: Prisma.MCPServerUpdateInput = {};
 
   for (const key of Object.keys(params) as (keyof Omit<MCPServer, "id" | "metadata" | "metadataId">)[]) {
     if (params[key] !== existing[key]) {
@@ -71,7 +67,7 @@ export async function updateMCPServer(
     return existing;
   }
 
-  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
+  const historyEntry: Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes,

@@ -1,6 +1,6 @@
 import "express";
 import express from "express";
-import { Account, AccountRole } from "../../../generated/prisma/client.js";
+import { Account, AccountRole } from "@prisma/client";
 
 export type AccountWithRole = Account & {
   role: AccountRole

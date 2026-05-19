@@ -1,4 +1,4 @@
-import { Config } from "../../generated/prisma/client.js";
+import { Config } from "@prisma/client";
 
 import { z } from "zod";
 import { updateConfigSchema } from "../schemas/config.js";

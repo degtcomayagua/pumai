@@ -3,8 +3,7 @@ import { performance } from "perf_hooks";
 
 import LoggingService from "../../logging.js";
 
-import { Account } from "generated/prisma/client.js";
-
+import { Account } from "@prisma/client"
 
 import {
   buildRagDocIdFilter,

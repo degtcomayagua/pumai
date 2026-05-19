@@ -247,11 +247,11 @@ function Page() {
           const aiMsg: ChatMessage = {
             source: "api",
             role: "assistant",
-            content: result.result,
+            content: result.result!,
             timestamp: Date.now(),
           };
           setMessages((prev) => [...prev, aiMsg]);
-          speak(result.result);
+          speak(result.result!);
         } else {
           antdMessage.error("Error generando respuesta del modelo.");
         }
