@@ -146,20 +146,20 @@ function MessageComponent({
       >
         {showHandle && (
           <div
-            className={`flex items-center gap-2 mb-1 text-xs dark:text-neutral-400 ${isAI ? "flex-row" : "flex-row-reverse"
+            className={`flex items-center gap-2 mb-1 text-xs ${isAI ? "flex-row" : "flex-row-reverse"
               }`}
           >
             {isAI ? (
               <FaRobot className="text-blue-400" />
             ) : (
-              <FaUser className="dark:text-gray-300" />
+              <FaUser className="text-gray-900" />
             )}
-            <span>{isAI ? "PumAI" : "Tú"}</span>
+            <span className="text-gray-900">{isAI ? "PumAI" : "Tú"}</span>
           </div>
         )}
 
         {isAI && (
-          <div className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-relaxed shadow-sm">
+          <div className="w-full rounded-2xl text-neutral-900 px-4 py-3 text-sm leading-relaxed shadow-sm">
             {activityTrace}
             {renderBody()}
           </div>
@@ -170,8 +170,8 @@ function MessageComponent({
             className={`
             px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm
             ${isAI
-                ? "bg-white/10 border border-white/10 dark:text-neutral-100 text-neutral-900 rounded-tl-none"
-                : "bg-gradient-to-br from-blue-500 to-blue-400 dark:text-white rounded-tr-none"
+                ? "bg-white/10 border border-white/10 text-neutral-900 rounded-tl-none"
+                : "bg-[#1e3976] rounded-tr-none"
               }
             transition-all duration-300
           `}

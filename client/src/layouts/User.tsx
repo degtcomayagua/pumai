@@ -31,6 +31,7 @@ import type { RootState } from "../store";
 import { useTranslation } from "react-i18next";
 
 import PreferencesFeature from "../features/preferences";
+import { lightUnahTheme } from "../themes/unah";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -127,82 +128,13 @@ export default function GeneralLayout({
       selectedKeys={[selectedPage]}
       items={items}
       onClick={handleMenuClick}
-      className="text-white"
-      style={{
-        background: "transparent",
-        color: "#fff",
-        borderRight: "none",
-      }}
     />
   );
-
-  const darkTheme = {
-    algorithm: theme.darkAlgorithm,
-    token: {
-      // Primary
-      colorPrimary: "#1e3976",
-
-      // Backgrounds
-      colorBgBase: "#0f1115", // app background (almost black)
-      colorBgLayout: "#0f1115",
-      colorBgContainer: "#16181d", // cards, sider, header
-      colorBgElevated: "#1d2026", // dropdowns, modals, popovers
-      colorBgSpotlight: "#262a33", // highlights, selected items
-
-      // Text
-      colorTextBase: "#e6e9f0",
-      colorTextSecondary: "#b8c1d9",
-
-      // Borders
-      colorBorder: "#262a33",
-      colorSplit: "#262a33",
-
-      // Status
-      colorSuccess: "#366533",
-      colorWarning: "#f0b92d",
-      colorError: "#8a1518",
-      colorInfo: "#5facc5",
-
-      // UI
-      borderRadius: 8,
-      fontSize: 15,
-    },
-  };
-
-  const lightTheme = {
-    algorithm: theme.defaultAlgorithm,
-    token: {
-      // Primary
-      colorPrimary: "#1e3976",
-
-      // Backgrounds
-      colorBgBase: "#ffffff",
-      colorBgContainer: "#ffffff",
-      colorBgLayout: "#f5f7fb",
-
-      // Text
-      colorTextBase: "#1f2937",
-      colorTextSecondary: "#4b5563",
-
-      // Borders
-      colorBorder: "#e5e7eb",
-
-      // Status
-      colorSuccess: "#366533",
-      colorWarning: "#f0b92d",
-      colorError: "#8a1518",
-      colorInfo: "#5facc5",
-
-      // UI
-      borderRadius: 8,
-      fontSize: 15,
-    },
-  };
 
   return (
     <ConfigProvider
       locale={esES}
-      theme={userPreferences?.theme === "dark" ? darkTheme : lightTheme}
+      theme={lightUnahTheme}
     >
       <PreferencesFeature.components.PreferencesModal
         state={preferencesModalState}
@@ -211,10 +143,9 @@ export default function GeneralLayout({
       />
 
       <Layout
-        className={`${userPreferences?.theme === "dark" ? "dark" : "light"}`}
       >
         {/* HEADER */}
-        <div className="z-10 h-16 flex items-center gap-4 justify-start px-4 md:px-6 bg-[#001529]">
+        <div className="z-10 h-16 flex items-center gap-4 justify-start px-4 md:px-6 bg-[#1e3976]">
           <div className="md:hidden" aria-hidden>
             {/* Mobile menu button */}
             <button
@@ -227,14 +158,7 @@ export default function GeneralLayout({
 
           {/* Brand / Title */}
           <Link to="/chat" className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center border"
-              aria-hidden
-            >
-              <div className="inline-block bg-linear-to-br bg-[linear-gradient(90deg,#00f5ff_0%,#0084ff_25%,#7b2ff7_50%,#ff00d4_75%,#00f5ff_100%)] bg-[length:300%_300%] bg-clip-text text-transparent animate-gradient font-mono">
-                AI
-              </div>
-            </div>
+            <img src="/assets/img/puma.png" alt="Puma AI" className="w-8 h-8" />
 
             <div style={{ lineHeight: 1 }}>
               <Typography.Title
@@ -279,7 +203,6 @@ export default function GeneralLayout({
             collapsed={collapsed}
             onCollapse={(value) => setCollapsed(value)}
             className="z-20 hidden md:flex flex-col"
-            theme={userPreferences?.theme === "dark" ? "dark" : "light"}
           >
             <div style={{ padding: "12px 8px", flex: 1, overflow: "auto" }}>
               {SidebarMenu}
@@ -288,7 +211,7 @@ export default function GeneralLayout({
             <div style={{ padding: 12, opacity: 0.12 }}>
               <img
                 src="/assets/img/lucem.png"
-                className="grayscale w-full invert dark:invert-0"
+                className="grayscale w-full"
               />
             </div>
           </Sider>

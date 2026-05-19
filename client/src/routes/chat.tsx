@@ -337,14 +337,14 @@ function Page() {
           )}
         </div>
 
-        <div className="bottom-0 h-[120px] absolute w-full shrink-0 border-t border-white/10 bg-white/10">
+        <div className="bottom-0 h-[120px] bg-white z-100 absolute w-full shrink-0 border-t border-white/10">
           <div className="md:p-4 p-2 flex items-end md:gap-3 gap-2">
-            <Button
+            {/* <Button
               icon={<FaPlus />}
               onClick={() => setIsSelectionModalOpen(true)}
               className="rounded-full p-2 h-auto"
               title="Select workflows or MCP servers"
-            />
+            /> */}
             <Input.TextArea
               autoSize={{ maxRows: 6 }}
               placeholder={t("input.placeholder")}
@@ -376,6 +376,8 @@ function Page() {
             {t("disclaimer")}
           </p>
         </div>
+
+        <img src="/assets/img/sol-cut.png" className="fixed top-0 right-0 -scale-x-100 h-screen opacity-10" />
 
         {/* Selection Modal */}
         <Modal
@@ -421,8 +423,8 @@ function Page() {
                               );
                             }}
                             className={`cursor-pointer p-3 rounded border ${selectedWorkflows.includes(workflow.id)
-                                ? "border-blue-500 bg-blue-500/10"
-                                : "border-gray-300 hover:border-gray-400"
+                              ? "border-blue-500 bg-blue-500/10"
+                              : "border-gray-300 hover:border-gray-400"
                               }`}
                           >
                             <List.Item.Meta
@@ -459,8 +461,8 @@ function Page() {
                               );
                             }}
                             className={`cursor-pointer p-3 rounded border ${selectedMCPServers.includes(server.id)
-                                ? "border-blue-500 bg-blue-500/10"
-                                : "border-gray-300 hover:border-gray-400"
+                              ? "border-blue-500 bg-blue-500/10"
+                              : "border-gray-300 hover:border-gray-400"
                               }`}
                           >
                             <List.Item.Meta

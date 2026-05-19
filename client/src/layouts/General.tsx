@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import type { RootState } from "../store";
 
-import { unahTheme } from "../themes/unah";
+import { darkUnahTheme, lightUnahTheme } from "../themes/unah";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,7 +28,7 @@ export default function GeneralLayout({ children }: LayoutProps) {
   return (
     <ConfigProvider
       locale={esES}
-      theme={unahTheme}
+      theme={lightUnahTheme}
     >
       <Layout hasSider>
         {/* Main Content */}

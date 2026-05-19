@@ -40,7 +40,7 @@ import ConfigFeature from "../features/config/";
 import type { RootState } from "../store";
 
 import { hasPermissions } from "../utils/permissions";
-import { unahTheme } from "../themes/unah";
+import { darkUnahTheme, lightUnahTheme } from "../themes/unah";
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -243,7 +243,7 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
   const isDark = true;
 
   return (
-    <ConfigProvider locale={esES} theme={unahTheme}>
+    <ConfigProvider locale={esES} theme={lightUnahTheme}>
       {/* Top Navbar */}
       <Header
         className={`px-4 flex items-center justify-between bg-white dark:bg-neutral-800 ${isDark ? "dark" : ""}`}
