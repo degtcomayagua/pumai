@@ -1,5 +1,7 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+
 import { PrismaClient } from "@prisma/client";
+
 import dotenv from "dotenv";
 import path from "path";
 import setupServer from "../setup.js";
@@ -13,8 +15,15 @@ dotenv.config({
   quiet: true,
 });
 
-console.log(path.resolve(process.cwd(), envFile))
-const adapter = new PrismaMariaDb(process.env.DATABASE_URL as string, {
+console.log(process.env.DATABASE_URL!)
+const url = new URL(process.env.DATABASE_URL!);
+
+const adapter = new PrismaMariaDb({
+  host: url.hostname,
+  port: Number(url.port || 3306),
+  user: url.username,
+  password: url.password,
+  database: url.pathname.slice(1),
 });
 
 (async () => {
@@ -33,4 +42,3 @@ const prisma = new PrismaClient({
 });
 
 export default prisma;
-

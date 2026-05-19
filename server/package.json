@@ -7,10 +7,11 @@
   "scripts": {
     "dev": "nodemon --config nodemon.json",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && cp -r ./src/emails/ ./dist",
+    "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "cross-env NODE_ENV=production node ./dist/server/src/index.js"
   },
   "devDependencies": {
+    "tsc-alias": "^1.8.17",
     "tsconfig-paths": "^4.2.0"
   }
 }

@@ -12,6 +12,7 @@ export default defineConfig({
     viteReact(),
     tailwindcss(),
   ],
+  build: {},
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),

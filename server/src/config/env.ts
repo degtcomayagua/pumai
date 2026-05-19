@@ -1,12 +1,18 @@
 import dotenv from "dotenv";
-import path from "path";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function loadEnv() {
-  const baseEnv = ".env";
-  const envFile =
-    process.env.NODE_ENV === "production" ? "../.env.prod" : "../.env.dev";
+  const envPath = path.resolve(
+    __dirname,
+    process.env.NODE_ENV === "production" ? "../.env.prod" : "../.env.dev",
+  );
 
-  console.log(envFile, path.resolve(process.cwd(), envFile))
+  dotenv.config({ path: envPath });
+
 
   const requiredEnv = [
     "OLLAMA_URL",
@@ -19,7 +25,6 @@ export function loadEnv() {
     "QDRANT_URI",
     "QDRANT_RAG_DOCS_COLLECTION",
 
-    "ALLOWED_ORIGINS",
     "SESSION_SECRET",
     "PORT"
   ];
