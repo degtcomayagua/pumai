@@ -333,7 +333,7 @@ export const lightUnahTheme: ThemeConfig = {
     Layout: {
       bodyBg: "#f6f8fb",
       headerBg: "#1e3976",
-      siderBg: "#1e3976",
+      siderBg: "#ffffff",
       triggerBg: "#1e3976",
       triggerColor: "#0f1724",
       footerBg: "#ffffff",
@@ -344,15 +344,15 @@ export const lightUnahTheme: ThemeConfig = {
     },
 
     Menu: {
-      itemBg: "#2b287700",
-      subMenuItemBg: "#2b2877",
+      itemBg: "#ffffff",
+      subMenuItemBg: "#fafcff",
       popupBg: "#ffffff",
 
-      itemColor: "#ffffff",
+      itemColor: "#475569",
       itemHoverColor: "#0f1724",
       itemHoverBg: "#f0f4fb",
 
-      itemSelectedBg: "#2e5f9a",
+      itemSelectedBg: "#1e3976",
       itemSelectedColor: "#ffffff",
       groupTitleColor: "#6b7280",
       subMenuItemSelectedColor: "#1e3976",

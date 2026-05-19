@@ -1,27 +1,27 @@
 import { Form, Input, Modal, Select } from "antd";
 import { useTranslation } from "react-i18next";
-import { FaPlus } from "react-icons/fa";
+import { FaRecycle } from "react-icons/fa";
 
-import type { CreateAccountModalState } from "../hooks/useCreateModal";
+import type { UpdateDrawerState } from "../hooks/useUpdateModal";
 import { CampusCode } from "@prisma/client";
 
-type CreateAccountFormProps = {
-  roles: { id: string; name: string; level: number }[];
-  state: CreateAccountModalState;
-  setState: React.Dispatch<React.SetStateAction<CreateAccountModalState>>;
+type UpdateModalProps = {
+  state: UpdateDrawerState;
+  setState: React.Dispatch<React.SetStateAction<UpdateDrawerState>>;
   onClose: () => void;
-  onCreate: () => void;
+  onUpdate: () => void;
+  accountRoles?: { id: string; name: string; level: number }[];
 };
 
-export function CreateAccountModal({
+export function UpdateModal({
   state,
-  roles,
   setState,
   onClose,
-  onCreate,
-}: CreateAccountFormProps) {
+  onUpdate,
+  accountRoles = [],
+}: UpdateModalProps) {
   const { t } = useTranslation(["features"], {
-    keyPrefix: "accounts.components.createModal",
+    keyPrefix: "accounts.components.updateModal",
   });
   const { t: tCommon } = useTranslation(["common"]);
 
@@ -31,10 +31,10 @@ export function CreateAccountModal({
       open={state.isOpen}
       onCancel={onClose}
       cancelText={tCommon("cancel")}
-      onOk={onCreate}
+      onOk={onUpdate}
       okButtonProps={{
         loading: state.loading,
-        icon: <FaPlus />,
+        icon: <FaRecycle />,
         disabled: state.loading,
       }}
       okText={t("title")}
@@ -42,53 +42,37 @@ export function CreateAccountModal({
       <Form layout="vertical">
         <Form.Item label={t("fields.name")} required >
           <Input
-            maxLength={100}
-            showCount
             value={state.name}
-            placeholder={t("fields.namePlaceholder")}
             onChange={(e) =>
               setState((prev) => ({ ...prev, name: e.target.value }))
             }
+            disabled={state.loading}
           />
         </Form.Item>
-
-        <Form.Item label={t("fields.email")} required>
+        <Form.Item label={t("fields.email")} required >
           <Input
             value={state.email}
-            placeholder={t("fields.emailPlaceholder")}
             onChange={(e) =>
               setState((prev) => ({ ...prev, email: e.target.value }))
             }
+            disabled={state.loading}
           />
         </Form.Item>
-
-        <Form.Item label={t("fields.password")} required>
-          <Input.Password
-            maxLength={256}
-            value={state.password}
-            showCount
-            placeholder={t("fields.passwordPlaceholder")}
-            onChange={(e) =>
-              setState((prev) => ({ ...prev, password: e.target.value }))
-            }
-          />
-        </Form.Item>
-
-        <Form.Item label={t("fields.role")} required>
+        <Form.Item label={t("fields.role")} required >
           <Select
-            placeholder={t("fields.selectRole")}
             value={state.roleId}
-            options={roles.map((role) => ({
-              value: role.id,
-              label: `${role.name} (${role.level})`,
-            }))}
-            onChange={(value) =>
-              setState((prev) => ({ ...prev, roleId: value }))
+            onChange={(val) =>
+              setState((prev) => ({ ...prev, roleId: val }))
             }
+            defaultValue={state.roleId}
+            disabled={state.loading}
+            options={accountRoles.map((role) => ({
+              label: `${role.name} (${role.level})`,
+              value: role.id,
+            }))}
           />
         </Form.Item>
-
-        <Form.Item label={t("fields.campus")} required>
+        <Form.Item label={t("fields.campus")} required >
           <Select
             placeholder={t("fields.campusPlaceholder")}
             options={[
@@ -110,3 +94,5 @@ export function CreateAccountModal({
     </Modal>
   );
 }
+
+

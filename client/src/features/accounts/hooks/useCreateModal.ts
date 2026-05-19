@@ -27,8 +27,7 @@ export function useCreateModal({
     email: "",
     password: "",
     roleId: "",
-    locale: "es",
-    notify: false,
+    campus: "COMAYAGUA",
   };
 
   const [state, setState] = useState<CreateAccountModalState>(defaultState);
@@ -55,13 +54,21 @@ export function useCreateModal({
 
       // Then we add the variant to the list
       if (onSuccess) onSuccess(result.account);
+      return;
+    } else if (
+      result.status == "email-in-use" ||
+      result.status == "role-not-found" ||
+      result.status == "role-cannot-be-assigned"
+    ) {
+      message.warning(t(`messages.${result.status}`));
     } else {
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-      }));
       message.error(tErrorMessages(`${result.status}`));
     }
+
+    setState((prev) => ({
+      ...prev,
+      loading: false,
+    }));
   }, [state, message, t]);
 
   const openModal = useCallback(

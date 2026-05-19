@@ -2,7 +2,7 @@ import { Form, Input, InputNumber, Modal } from "antd";
 
 import { useTranslation } from "react-i18next";
 
-import { CreateAccountRoleModalState } from "../hooks/useCreateAccountRoleModal";
+import { CreateAccountRoleModalState } from "../hooks/useCreateModal";
 import { FaPlus } from "react-icons/fa";
 
 type CreateAccountRoleModalProps = {
@@ -12,7 +12,7 @@ type CreateAccountRoleModalProps = {
   onCreate: () => void;
 };
 
-export function CreateAccountRoleModal({
+export function CreateModal({
   onCreate,
   onClose,
   state,
@@ -46,6 +46,7 @@ export function CreateAccountRoleModal({
               max: 100,
               show: true,
             }}
+            value={state.name}
             onChange={(e) =>
               setState((prev) => ({ ...prev, name: e.target.value }))
             }
@@ -59,6 +60,7 @@ export function CreateAccountRoleModal({
               max: 500,
               show: true,
             }}
+            value={state.description}
             placeholder={t("fields.descriptionPlaceholder")}
             onChange={(e) =>
               setState((prev) => ({ ...prev, description: e.target.value }))
@@ -75,6 +77,7 @@ export function CreateAccountRoleModal({
             style={{ width: "100%" }}
             type="number"
             variant="outlined"
+            value={state.level}
             placeholder={t("fields.levelPlaceholder")}
             onChange={(value) =>
               setState((prev) => ({

@@ -1,29 +1,20 @@
 import { useState, useCallback } from "react";
 
-import AccountRolesFeature, { RolesAPITypes } from "../";
+import AccountRolesFeature, { ListAccountRole, RolesAPITypes } from "..";
 import { useTranslation } from "react-i18next";
 import { App } from "antd";
 
-interface ListAccountRole {
-  id: string;
-  name: string;
-  level: number;
-  totalPermissions: number;
-  createdAt: Date;
-  deleted: boolean;
-}
-
 type NullableAccountsListState = {
   [K in keyof RolesAPITypes.ListRequestBody]?:
-  | RolesAPITypes.ListRequestBody[K]
-  | null;
+    | RolesAPITypes.ListRequestBody[K]
+    | null;
 };
 
 type UseAccountRolesListOptions = {
   apiList?: typeof AccountRolesFeature.api.list;
 };
 
-export function useAccountRolesList({
+export function useList({
   apiList = AccountRolesFeature.api.list,
 }: UseAccountRolesListOptions) {
   const { message } = App.useApp();
@@ -37,7 +28,14 @@ export function useAccountRolesList({
     RolesAPITypes.ListRequestBody & { loading: boolean }
   >({
     loading: true,
-    fields: ["metadata.createdAt", "id", "name", "permissions", "level", "metadata.deleted"],
+    fields: [
+      "metadata.createdAt",
+      "metadata.deleted",
+      "id",
+      "name",
+      "permissions",
+      "level",
+    ],
     count: 50,
     page: 0,
   });
@@ -79,10 +77,10 @@ export function useAccountRolesList({
 
         setAccountRoles({
           accountRoles: result.accountRoles!.map((role) => ({
-            id: role.id.toString(),
+            id: role.id,
             name: role.name ?? "",
             level: role.level ?? 0,
-            totalPermissions: role.permissions?.split(",").length ?? 0,
+            totalPermissions: role.permissions!.split(",").length,
             createdAt: role.metadata
               ? new Date(role.metadata.createdAt ?? Date.now())
               : new Date(),

@@ -1,6 +1,7 @@
+import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Table, Space, Dropdown, Button, Tag } from "antd";
+import { Table, Space, Dropdown, Button, Tag, Select } from "antd";
 import {
   FaPencilAlt,
   FaTrash,
@@ -8,43 +9,49 @@ import {
   FaEllipsisH,
   FaKey,
   FaFlag,
+  FaFilter,
 } from "react-icons/fa";
 
 import type { ListAccount } from "..";
+import { FetchAccountsFn, NullableAccountsListState } from "../hooks/useAccountsList";
+
 import type { Permission } from "../../../../../shared/types/permissions";
+import { useSelector } from "react-redux";
+import { RootState } from "client/src/store";
+import { hasPermissions } from "client/src/utils/permissions";
+import { CampusCode } from "@shared/models";
 
 type AccountsTableProps = {
   accounts: { accounts: ListAccount[]; totalAccounts: number };
-  accountsListState: {
-    count: number;
-    page: number;
-    loading: boolean;
-  };
-  fetchAccounts: (params: { count: number; page: number }) => void;
-  accountPermissions: Permission[]; // current user permissions
-  accountLevel: number;
+  accountsListState: NullableAccountsListState & { loading: boolean; count: number; page: number };
+  fetchAccounts: FetchAccountsFn;
   onUpdate: (account: ListAccount) => void;
   onChangePassword: (account: ListAccount) => void;
   onUpdateStatus: (account: ListAccount) => void;
   onDelete: (account: ListAccount) => void;
   onRestore: (account: ListAccount) => void;
+  accountRoles?: { id: string; name: string; level: number }[];
 };
 
 export function AccountsTable({
   accounts,
   accountsListState,
   fetchAccounts,
-  accountPermissions,
-  accountLevel,
   onUpdate,
   onDelete,
   onRestore,
   onUpdateStatus,
   onChangePassword,
+  accountRoles = [],
 }: AccountsTableProps) {
   const { t: tComponent } = useTranslation(["features"], {
     keyPrefix: "accounts.components.table",
   });
+  const { t: tCampus } = useTranslation(["campus"]);
+
+  const { account } = useSelector((state: RootState) => state.auth);
+  const accountLevel = account?.data.role.level || 0;
+  const accountPermissions = account?.data.role.permissions || [];
 
   return (
     <div className="mt-4">
@@ -68,45 +75,193 @@ export function AccountsTable({
             ),
           },
           {
+            title: tComponent("status"),
+            key: "status",
+            dataIndex: "status",
+            render: (_: any, record: ListAccount) => (
+              <Tag color={record.status === "active" ? "green" : "red"}>
+                {tComponent(record.status)}
+              </Tag>
+            ),
+            filterIcon: () => {
+              const hasFilter =
+                (accountsListState.filters ?? {}).status !== undefined;
+              return (
+                <FaFilter className={`${hasFilter ? "text-blue-500" : ""}`} />
+              );
+            },
+            filterDropdown: () => {
+              return (
+                <Space className="p-2 flex gap-2 items-center">
+                  <Select
+                    placeholder={tComponent("filterStatusPlaceholder")}
+                    allowClear
+                    onClear={() => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...accountsListState.filters,
+                          status: undefined,
+                        },
+                      });
+                    }}
+                    value={(accountsListState.filters ?? {}).status}
+                    options={[
+                      { label: tComponent("active"), value: "active" },
+                      { label: tComponent("inactive"), value: "inactive" },
+                    ] as { label: string; value: string }[]}
+                    onChange={(val) => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...(accountsListState.filters ?? {}),
+                          status: val,
+                        },
+                      });
+                    }}
+                  />
+                </Space>
+              );
+            },
+          },
+          {
+            title: tComponent("campus"),
+            key: "campus",
+            dataIndex: "campus",
+            render: (_: any, record: ListAccount) => (
+              <Tag color="blue">{tCampus(record.campus)}</Tag>
+            ),
+            filterIcon: () => {
+              const hasFilter =
+                (accountsListState.filters ?? {}).campus !== undefined;
+              return (
+                <FaFilter className={`${hasFilter ? "text-blue-500" : ""}`} />
+              );
+            },
+            filterDropdown: () => {
+              return (
+                <Space className="p-2 flex gap-2 items-center">
+                  <Select
+                    placeholder={tComponent("filterCampusPlaceholder")}
+                    allowClear
+                    onClear={() => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...accountsListState.filters,
+                          campus: undefined,
+                        },
+                      });
+                    }}
+                    value={(accountsListState.filters ?? {}).campus}
+                    options={[
+                      { label: "Comayagua", value: "COMAYAGUA" },
+                      { label: "Tegucigalpa", value: "TEGUCIGALPA" },
+                      { label: "San Pedro Sula", value: "SANPEDRO" },
+                      { label: "Olancho", value: "OLANCHO" },
+                      { label: "La Ceiba", value: "LA_CEIBA" },
+                      { label: "Choluteca", value: "CHOLUTECA" },
+                      { label: "Danlí", value: "DANLI" },
+                      { label: "Santa Rosa de Copán", value: "SANTA_ROSA" },
+                    ] as { label: string; value: CampusCode }[]}
+                    onChange={(val) => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...(accountsListState.filters ?? {}),
+                          campus: val,
+                        },
+                      });
+                    }}
+                  />
+                </Space>
+              );
+            },
+          },
+
+          {
             title: tComponent("email"),
             render: (_: any, record: ListAccount) => <p>{record.email}</p>,
           },
           {
-            filterSearch: true,
-            onFilter: (value, record: ListAccount) => record.role.id === value,
             title: tComponent("role"),
             render: (_: any, record: ListAccount) => (
               <p>
                 {record.role.name} ({record.role.level})
               </p>
             ),
+            filterIcon: () => {
+              const hasFilter =
+                (accountsListState.filters ?? {}).role !== undefined;
+              return (
+                <FaFilter className={`${hasFilter ? "text-blue-500" : ""}`} />
+              );
+            },
+            filterDropdown: () => {
+              return (
+                <Space className="p-2 flex gap-2 items-center">
+                  <Select
+                    placeholder={tComponent("filterRolePlaceholder")}
+                    allowClear
+                    onClear={() => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...accountsListState.filters,
+                          role: undefined,
+                        },
+                      });
+                    }}
+                    value={(accountsListState.filters ?? {}).role}
+                    options={accountRoles.map((role) => ({
+                      label: `${role.name} (${role.level})`,
+                      value: role.id,
+                    }))}
+                    onChange={(val) => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...(accountsListState.filters ?? {}),
+                          role: val,
+                        },
+                      });
+                    }}
+                  />
+                </Space>
+              );
+            },
           },
           {
             title: tComponent("actions"),
             key: "actions",
             fixed: "right",
             render: (_: any, record: ListAccount) => {
-              const canUpdateStatus =
-                (accountPermissions.includes("*") ||
-                  accountPermissions.includes("accounts:update-status")) &&
-                record.role.level >= accountLevel;
+              const canUpdateStatus = hasPermissions(accountPermissions, [
+                "accounts:update-status",
+              ]) &&
+                record.role.level > accountLevel;
+
               const canChangePassword =
-                (accountPermissions.includes("*") ||
-                  accountPermissions.includes("accounts:change-password")) &&
-                record.role.level >= accountLevel;
+                hasPermissions(accountPermissions, [
+                  "accounts:change-password",
+                ]) &&
+                record.role.level > accountLevel;
               const canUpdate =
-                (accountPermissions.includes("*") ||
-                  accountPermissions.includes("accounts:update")) &&
-                record.role.level >= accountLevel;
+                hasPermissions(accountPermissions, [
+                  "accounts:update",
+                ]) &&
+                record.role.level > accountLevel;
               const canDelete =
-                (accountPermissions.includes("*") ||
-                  accountPermissions.includes("accounts:delete")) &&
-                record.role.level >= accountLevel &&
+                hasPermissions(accountPermissions, [
+                  "accounts:delete",
+                ]) &&
+                record.role.level > accountLevel &&
                 !record.deleted;
               const canRestore =
-                (accountPermissions.includes("*") ||
-                  accountPermissions.includes("accounts:restore")) &&
-                record.role.level >= accountLevel &&
+                hasPermissions(accountPermissions, [
+                  "accounts:restore",
+                ]) &&
+                record.role.level > accountLevel &&
                 record.deleted;
 
               const menuItems = !record.deleted
@@ -182,7 +337,7 @@ export function AccountsTable({
             });
           },
         }}
-        rowKey="_id"
+        rowKey="id"
         loading={accountsListState.loading}
       />
     </div>

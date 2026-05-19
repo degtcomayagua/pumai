@@ -1,27 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { useTranslation } from "react-i18next";
 
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 
-import { App, Button, Input, Modal, Drawer, Typography, Switch } from "antd";
+import { App, Button, Input, Typography, Switch } from "antd";
 const { Title, Text } = Typography;
 
 import AdminPageLayout from "../../../layouts/Admin";
-import {
-  FaPlus,
-  FaSave,
-  FaTrash,
-  FaUsersCog,
-  FaUserShield,
-} from "react-icons/fa";
+import { FaPlus, FaUserShield } from "react-icons/fa";
 
-import AccountRolesFeature, {
-  AccountRole,
-  RolesAPITypes,
-} from "../../../features/roles";
+import AccountRolesFeature from "../../../features/roles";
 
 export const Route = createFileRoute("/admin/accounts/roles")({
   component: RouteComponent,
@@ -31,7 +22,7 @@ function RouteComponent() {
   const { account } = useSelector((state: RootState) => state.auth);
 
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const { t: tPage } = useTranslation(["pages"], {
     keyPrefix: "admin.account-roles",
@@ -39,35 +30,37 @@ function RouteComponent() {
   const { t: tCommon } = useTranslation(["common"]);
 
   const { accountRoles, fetchAccountRoles, accountRolesListState } =
-    AccountRolesFeature.hooks.useAccountRolesList({});
+    AccountRolesFeature.hooks.useList({});
 
-  // Create Role
+  //#region Create Role
   const {
     openModal: openCreateAccountRoleModal,
     closeModal: closeCreateAccountRoleModal,
     setState: setCreateAccountRoleModalState,
     state: createAccountRoleModalState,
     createAccount: handleCreateAccountRole,
-  } = AccountRolesFeature.hooks.useCreateAccountRoleModal({
+  } = AccountRolesFeature.hooks.useCreateModal({
     onSuccess: async () => {
       await fetchAccountRoles({});
     },
   });
+  //#endregion
 
-  // Delete Role
-  const { t: tDeleteModal } = useTranslation(["features"], {
-    keyPrefix: "account-roles.components.deleteModal",
-  });
-  const {
-    openModal: openDeleteAccountRoleModal,
-    closeModal: closeDeleteAccountRoleModal,
-    state: deleteAccountRoleModalState,
-    deleteAccount: handleDeleteAccountRole,
-  } = AccountRolesFeature.hooks.useDeleteAccountRoleModal({
-    onSuccess: async () => {
-      await fetchAccountRoles({});
-    },
-  });
+  //#region Delete Role
+  const handleDeleteAccountRole = async (accId: string) => {
+    if (!accId) return;
+    const result = await AccountRolesFeature.api.delete({
+      roleId: accId,
+    });
+
+    if (result.status == "success") {
+      message.success(tPage("messages.delete.success"));
+      fetchAccountRoles({ count: 50, page: 0 });
+    } else {
+      message.error(tPage(`error-messages:${result.status}`));
+    }
+  };
+  //#endregion
 
   //#region Restore a role
   const handleRestoreAccountRole = async (accId: string) => {
@@ -77,7 +70,7 @@ function RouteComponent() {
     });
 
     if (result.status == "success") {
-      message.success(tPage("dashboard:roles.modals.restore.messages.success"));
+      message.success(tPage("messages.restore.success"));
       fetchAccountRoles({ count: 50, page: 0 });
     } else {
       message.error(tPage(`error-messages:${result.status}`));
@@ -87,81 +80,16 @@ function RouteComponent() {
 
   // #region Update a role
   const {
-    form: updateAccountRoleForm,
-    validate: updateAccountRoleValidation,
-    defaultValues: updateAccountRoleDefaultValues,
-    onValuesChange: updateAccountRoleOnvaluesChange,
-  } = AccountRolesFeature.hooks.useUpdateAccountRoleFormValidation(tPage);
-
-  const loadUpdateAccountRole = async (roleId: string) => {
-    if (!roleId) return;
-    const result = await AccountRolesFeature.api.get({
-      roleIds: [roleId],
-    });
-    if (result.status === "success") {
-      const role = result.accountRoles![0];
-      if (role) {
-        updateAccountRoleForm.setFieldsValue({
-          permissions: role.permissions,
-          roleId: role._id.toString(),
-          description: role.description,
-          level: role.level,
-          name: role.name,
-          requiresTwoFactor: role.requiresTwoFactor,
-        });
-      }
-    } else {
-      message.error(tPage(`error-messages:${result.status}`));
-    }
-  };
-
-  const [updateAccountRoleModalState, setUpdateAccountRoleModalState] =
-    useState<{
-      isOpen: boolean;
-      loading: boolean;
-    }>({
-      isOpen: false,
-      loading: false,
-    });
-  const resetUpdateAccountModalState = () => {
-    setUpdateAccountRoleModalState({ isOpen: false, loading: false });
-    updateAccountRoleForm.resetFields();
-  };
-
-  const handleAccountRoleUpdate = async () => {
-    if (updateAccountRoleModalState.loading) return;
-
-    // Use hook’s validate method — sets form errors internally
-    const values = updateAccountRoleForm.getFieldsValue(true);
-    if (!updateAccountRoleValidation(values)) {
-      return;
-    }
-
-    setUpdateAccountRoleModalState((prev) => ({ ...prev, loading: true }));
-    const result = await AccountRolesFeature.api.update(values);
-
-    if (result.status === "success") {
-      message.success(tPage("dashboard:roles.modals.update.messages.success"));
-
-      updateAccountRoleForm.resetFields();
-      setUpdateAccountRoleModalState({ isOpen: false, loading: false });
-
+    state: updateAccountRoleState,
+    setState: setUpdateAccountRoleState,
+    openDrawer: openUpdateAccountRoleDrawer,
+    update: handleUpdateAccountRole,
+    reset: closeUpdateAccountRoleDrawer,
+  } = AccountRolesFeature.hooks.useUpdateDrawer({
+    onSuccess: async () => {
       await fetchAccountRoles({});
-    } else if (result.status === "level-in-use") {
-      setCreateAccountRoleModalState((prev) => ({ ...prev, loading: false }));
-      message.error(
-        tPage("dashboard:roles.modals.create.messages.level-in-use"),
-      );
-    } else if (result.status === "level-too-high") {
-      setCreateAccountRoleModalState((prev) => ({ ...prev, loading: false }));
-      message.error(
-        tPage("dashboard:roles.modals.create.messages.level-too-high"),
-      );
-    } else {
-      setUpdateAccountRoleModalState((prev) => ({ ...prev, loading: false }));
-      message.error(tPage(`error-messages:${result.status}`));
-    }
-  };
+    },
+  });
   //#endregion
 
   useEffect(() => {
@@ -183,53 +111,19 @@ function RouteComponent() {
   return (
     <AdminPageLayout selectedPage="account-roles">
       {/* Create Role */}
-      <AccountRolesFeature.components.CreateAccountRoleModal
+      <AccountRolesFeature.components.CreateModal
         onClose={closeCreateAccountRoleModal}
         onCreate={handleCreateAccountRole}
         state={createAccountRoleModalState}
         setState={setCreateAccountRoleModalState}
       />
 
-      {/* Update Role */}
-      <Drawer
-        title={tPage("dashboard:roles.modals.update.title")}
-        open={updateAccountRoleModalState.isOpen}
-        onClose={resetUpdateAccountModalState}
-        width={1000}
-        extra={
-          <Button
-            icon={<FaSave />}
-            type="primary"
-            loading={updateAccountRoleModalState.loading}
-            onClick={handleAccountRoleUpdate}
-          >
-            {tPage("dashboard:common.save")}
-          </Button>
-        }
-      >
-        <AccountRolesFeature.components.UpdateAccountRoleForm
-          form={updateAccountRoleForm}
-          defaultValues={updateAccountRoleDefaultValues}
-          onValuesChange={updateAccountRoleOnvaluesChange}
-        />
-      </Drawer>
-
-      {/* Delete Role */}
-      <Modal
-        title={tDeleteModal("title")}
-        open={deleteAccountRoleModalState.isOpen}
-        onOk={handleDeleteAccountRole}
-        okButtonProps={{
-          icon: <FaTrash />,
-          loading: deleteAccountRoleModalState.loading,
-          danger: true,
-        }}
-        okText={tCommon("delete")}
-        cancelText={tCommon("cancel")}
-        onCancel={closeDeleteAccountRoleModal}
-      >
-        <p>{tDeleteModal("description")}</p>
-      </Modal>
+      <AccountRolesFeature.components.UpdateDrawer
+        state={updateAccountRoleState}
+        setState={setUpdateAccountRoleState}
+        onClose={closeUpdateAccountRoleDrawer}
+        onUpdate={handleUpdateAccountRole}
+      />
 
       <div className="mb-2">
         {tCommon("loggedInAs", {
@@ -272,7 +166,6 @@ function RouteComponent() {
           variant="outlined"
           allowClear
           onSearch={(query) => {
-            if (!query || query.trim() === "") return;
             fetchAccountRoles({
               search: {
                 query: query.trim(),
@@ -294,24 +187,26 @@ function RouteComponent() {
           fetchAccountRoles={fetchAccountRoles}
           accountRoles={accountRoles}
           accountRolesListState={accountRolesListState}
-          accountPermissions={(account.data.role as AccountRole).permissions}
           onRestore={(accRole) => {
-            handleRestoreAccountRole(accRole._id);
-          }}
-          onUpdate={async (acc) => {
-            if (acc.level === -1) {
-              return message.warning(
-                "No puedes editar el rol de administrador.",
-              );
-            }
-            setUpdateAccountRoleModalState({
-              isOpen: true,
-              loading: false,
+            modal.confirm({
+              title: tPage("modals.restore.title"),
+              content: tPage("modals.restore.content", {
+                name: accRole.name,
+              }),
+              onOk: () => handleRestoreAccountRole(accRole.id),
             });
-            await loadUpdateAccountRole(acc._id);
+          }}
+          onUpdate={(accRole) => {
+            openUpdateAccountRoleDrawer(accRole.id);
           }}
           onDelete={(accRole) => {
-            openDeleteAccountRoleModal(accRole._id);
+            modal.confirm({
+              title: tPage("modals.delete.title"),
+              content: tPage("modals.delete.content", {
+                name: accRole.name,
+              }),
+              onOk: () => handleDeleteAccountRole(accRole.id),
+            });
           }}
         />
       )}

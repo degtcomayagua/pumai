@@ -208,10 +208,10 @@ export default function GeneralLayout({
               {SidebarMenu}
             </div>
 
-            <div style={{ padding: 12, opacity: 0.12 }}>
+            <div style={{ padding: 12, opacity: 0.82 }}>
               <img
                 src="/assets/img/lucem.png"
-                className="grayscale w-full"
+                className="w-full"
               />
             </div>
           </Sider>

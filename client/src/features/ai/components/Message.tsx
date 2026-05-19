@@ -137,7 +137,7 @@ function MessageComponent({
 
   return (
     <div
-      className={`w-full flex ${isAI ? "justify-start" : "justify-end"
+      className={`z-100 w-full flex ${isAI ? "justify-start" : "justify-end"
         } transition-all duration-300 ${groupedWithPrevious ? "mt-1" : "mt-4"}`}
     >
       <div
@@ -159,7 +159,7 @@ function MessageComponent({
         )}
 
         {isAI && (
-          <div className="w-full rounded-2xl text-neutral-900 px-4 py-3 text-sm leading-relaxed shadow-sm">
+          <div className="w-full bg-white rounded-2xl text-neutral-900 px-4 py-3 text-sm leading-relaxed shadow-sm">
             {activityTrace}
             {renderBody()}
           </div>
@@ -170,7 +170,7 @@ function MessageComponent({
             className={`
             px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm
             ${isAI
-                ? "bg-white/10 border border-white/10 text-neutral-900 rounded-tl-none"
+                ? "bg-white border border-white/10 text-neutral-900 rounded-tl-none"
                 : "bg-[#1e3976] rounded-tr-none"
               }
             transition-all duration-300

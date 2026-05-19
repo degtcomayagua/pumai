@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { FaUser, FaTrash, FaPlus, FaSave } from "react-icons/fa";
+import { FaUser, FaPlus } from "react-icons/fa";
 
-import AccountsFeature, { AccountAPITypes } from "../../../features/accounts";
-import AccountRolesFeature, { AccountRole } from "../../../features/roles";
+import AccountsFeature from "../../../features/accounts";
+import AccountRolesFeature from "../../../features/roles";
 
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
@@ -24,7 +24,7 @@ function RouteComponent() {
   const { account } = useSelector((state: RootState) => state.auth);
 
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   // Translations
   const { t: tPage } = useTranslation(["pages"], {
@@ -33,13 +33,12 @@ function RouteComponent() {
   const { t: tCommon } = useTranslation(["common"]);
 
   const { accounts, fetchAccounts, accountsListState } =
-    AccountsFeature.hooks.useAccountsList({ message });
+    AccountsFeature.hooks.useAccountsList({});
 
   const { accountRoles, fetchAccountRoles } =
-    AccountRolesFeature.hooks.useAccountRolesList({});
+    AccountRolesFeature.hooks.useList({});
 
-  // # region Create Account
-
+  //#region Create Account
   const {
     setState: setCreateModalState,
     state: createModalState,
@@ -49,106 +48,73 @@ function RouteComponent() {
   } = AccountsFeature.hooks.useCreateModal({
     onSuccess: () => fetchAccounts({}),
   });
+  //#endregion
 
-  // Delete
-  type DeleteAccountModalState = AccountAPITypes.DeleteRequestBody & {
-    isOpen: boolean;
-    loading: boolean;
-  };
-  const defaultDeleteAccountModalState: DeleteAccountModalState = {
-    accountId: "",
-    isOpen: false,
-    loading: false,
-  };
-  const [deleteAccountState, setDeleteAccountState] =
-    useState<DeleteAccountModalState>(defaultDeleteAccountModalState);
-  const handleDeleteAccount = async () => {
-    setDeleteAccountState((prev) => ({ ...prev, loading: true }));
+  //#region Update Password
+  const {
+    setState: setUpdatePasswordModalState,
+    closeModal: closeUpdatePasswordModal,
+    updatePassword: handleUpdatePassword,
+    state: updatePasswordModalState,
+    openModal: openUpdatePasswordModal,
+  } = AccountsFeature.hooks.useUpdatePasswordModal({
+    onSuccess: () => fetchAccounts({}),
+  });
+  //#endregion
 
+  //#region Update State 
+  const {
+    setState: setUpdateStatusModalState,
+    closeModal: closeUpdateStatusModal,
+    updateStatus: handleUpdateStatus,
+    state: updateStatusModalState,
+    openModal: openUpdateStatusModal,
+  } = AccountsFeature.hooks.useUpdateStatusModal({
+    onSuccess: () => fetchAccounts({}),
+  });
+  //#endregion
+
+  //#region Update Account
+  const {
+    setState: setUpdateModalState,
+    reset: closeUpdateModal,
+    update: handleUpdateAccount,
+    state: updateModalState,
+    openModal: openUpdateModal,
+  } = AccountsFeature.hooks.useUpdateModal({
+    onSuccess: () => fetchAccounts({}),
+  });
+  //#endregion
+
+  //#region Delete Account
+  const handleDeleteAccount = async (accountId: string) => {
     const result = await AccountsFeature.api.delete({
-      accountId: deleteAccountState.accountId!,
+      accountId,
     });
 
     if (result.status === "success") {
-      setDeleteAccountState(defaultDeleteAccountModalState);
-      await fetchAccounts({});
-      message.success(
-        tPage("dashboard:accounts.modals.delete.messages.success"),
-      );
-    } else if (result.status === "cannot-delete-self") {
-      message.error(
-        tPage("dashboard:accounts.modals.delete.messages.cannot-delete-self"),
-      );
-    } else if (result.status === "cannot-delete-due-to-role-level") {
-      message.error(
-        tPage(
-          "dashboard:accounts.modals.delete.messages.cannot-delete-due-to-role-level",
-        ),
-      );
-    } else {
-      message.error(`t(error-messages:${result.status})`);
-    }
-
-    setDeleteAccountState((prev) => ({ ...prev, loading: false }));
-  };
-
-  // Restore account
-  const handleRestoreAccount = async (accountId: string) => {
-    const result = await AccountsFeature.api.restore({ accountId });
-    if (result.status == "success") {
-      message.success(
-        tPage("dashboard:accounts.modals.restore.messages.success"),
-      );
-      await fetchAccounts({ count: 50, page: 0 });
-    } else {
-      message.error(`t(error-messages:${result.status})`);
-    }
-  };
-
-  // Update
-  const {
-    onValuesChange: onUpdateAccountValuesChange,
-    form: updateAccountForm,
-    validate: validateUpdateAccountForm,
-    setDefaultValues: setUpdateAccountFormDefaultValues,
-    defaultValues: defaultUpdateAccountFields,
-  } = AccountsFeature.hooks.useUpdateAccountFormValidation(tPage);
-
-  const resetUpdateAccountModalState = () => {
-    setUpdateAccountModalState({ isOpen: false, loading: false });
-    updateAccountForm.resetFields();
-  };
-
-  const [updateAccountModalState, setUpdateAccountModalState] = useState({
-    isOpen: false,
-    loading: false,
-  });
-  const handleUpdateAccount = async () => {
-    if (updateAccountModalState.loading) return;
-
-    // Use hook’s validate method — sets form errors internally
-    const values = updateAccountForm.getFieldsValue(true);
-    if (!validateUpdateAccountForm(values)) {
-      return;
-    }
-
-    setUpdateAccountModalState((prev) => ({ ...prev, loading: true }));
-    const result = await AccountsFeature.api.update(values);
-
-    if (result.status === "success") {
-      message.success(
-        tPage("dashboard:accounts.modals.update.messages.success"),
-      );
-
-      updateAccountForm.resetFields();
-      setUpdateAccountModalState({ isOpen: false, loading: false });
-
+      message.success(tPage("messages.delete.success"));
       await fetchAccounts({});
     } else {
-      setUpdateAccountModalState((prev) => ({ ...prev, loading: false }));
       message.error(tPage(`error-messages:${result.status}`));
     }
   };
+  //#endregion
+
+  //#region Restore account
+  const handleRestoreAccount = async (accountId: string) => {
+    const result = await AccountsFeature.api.restore({
+      accountId,
+    });
+
+    if (result.status === "success") {
+      message.success(tPage("messages.restore.success"));
+      await fetchAccounts({});
+    } else {
+      message.error(tPage(`error-messages:${result.status}`));
+    }
+  };
+  //#endregion
 
   useEffect(() => {
     if (!account) return; // Admin layout will handle this
@@ -170,52 +136,34 @@ function RouteComponent() {
   return (
     <AdminPageLayout selectedPage="accounts">
       <AccountsFeature.components.CreateAccountModal
+        onClose={closeCreateAccountModal}
+        onCreate={handleCreateAccount}
         state={createModalState}
         setState={setCreateModalState}
         roles={accountRoles.accountRoles}
-        onClose={closeCreateAccountModal}
-        onCreate={handleCreateAccount}
       />
 
-      {/* This window manages the account deletion */}
-      <Modal
-        open={deleteAccountState.isOpen}
-        onCancel={() => setDeleteAccountState(defaultDeleteAccountModalState)}
-        cancelText={tPage("dashboard:common.cancel")}
-        okText={tPage("dashboard:accounts.modals.delete.title")}
-        okButtonProps={{
-          danger: true,
-          loading: deleteAccountState.loading,
-          icon: <FaTrash />,
-        }}
-        onOk={handleDeleteAccount}
-        title={tPage("dashboard:accounts.modals.delete.title")}
-      >
-        <p>{tPage("dashboard:accounts.modals.delete.description")}</p>
-        <p className="mt-2">{tPage("dashboard:accounts.modals.delete.note")}</p>
-      </Modal>
+      <AccountsFeature.components.UpdatePasswordModal
+        onClose={closeUpdatePasswordModal}
+        onUpdatePassword={handleUpdatePassword}
+        state={updatePasswordModalState}
+        setState={setUpdatePasswordModalState}
+      />
 
-      <Modal
-        title={tPage("dashboard:accounts.modals.update.title")}
-        open={updateAccountModalState.isOpen}
-        onCancel={resetUpdateAccountModalState}
-        cancelText={tPage("common.cancel")}
-        onOk={handleUpdateAccount}
-        okButtonProps={{
-          loading: updateAccountModalState.loading,
-          icon: <FaSave />,
-          disabled: updateAccountModalState.loading,
-        }}
-        okText={tPage("dashboard:accounts.modals.update.title")}
-      >
-        <AccountsFeature.components.UpdateAccountForm
-          form={updateAccountForm}
-          defaultValues={defaultUpdateAccountFields}
-          t={tPage}
-          roles={accountRoles.accountRoles}
-          onValuesChange={onUpdateAccountValuesChange}
-        />
-      </Modal>
+      <AccountsFeature.components.UpdateStatusModal
+        onClose={closeUpdateStatusModal}
+        onUpdateStatus={handleUpdateStatus}
+        state={updateStatusModalState}
+        setState={setUpdateStatusModalState}
+      />
+
+      <AccountsFeature.components.UpdateModal
+        onClose={closeUpdateModal}
+        onUpdate={handleUpdateAccount}
+        state={updateModalState}
+        setState={setUpdateModalState}
+        accountRoles={accountRoles.accountRoles}
+      />
 
       <div className="mb-2">
         {tCommon("loggedInAs", {
@@ -260,11 +208,10 @@ function RouteComponent() {
             });
           }}
           onSearch={async (query) => {
-            if (!query || query.trim() === "") return;
             await fetchAccounts({
               search: {
                 query: query,
-                searchIn: ["email.value", "profile.name"],
+                searchIn: ["email", "name"],
               },
               page: 0,
             });
@@ -280,40 +227,37 @@ function RouteComponent() {
           fetchAccounts={fetchAccounts}
           accounts={accounts}
           onDelete={(acc) => {
-            setDeleteAccountState({
-              accountId: acc.id,
-              isOpen: true,
-              loading: false,
+            modal.confirm({
+              title: tPage("modals.delete.title"),
+              content: tPage("modals.delete.content", { name: acc.name }),
+              okText: tCommon("yes"),
+              cancelText: tCommon("no"),
+              onOk: () => {
+                handleDeleteAccount(acc.id);
+              },
             });
           }}
           onUpdate={(acc) => {
-            setUpdateAccountModalState({
-              loading: false,
-              isOpen: true,
-            });
-            setUpdateAccountFormDefaultValues({
-              roleId: acc.role.id ?? "",
-              password: "",
-              notify: false,
-              name: acc.name,
-              email: acc.email,
-              disableTwoFactor: false,
-              accountId: acc.id,
-            });
+            openUpdateModal(acc.id);
           }}
           onRestore={(acc) => {
-            handleRestoreAccount(acc.id);
+            modal.confirm({
+              title: tPage("modals.restore.title"),
+              content: tPage("modals.restore.content", { name: acc.name }),
+              okText: tCommon("yes"),
+              cancelText: tCommon("no"),
+              onOk: () => {
+                handleRestoreAccount(acc.id);
+              },
+            });
           }}
           onChangePassword={(acc) => {
-            message.info(tPage("changePasswordNotAvailable"));
+            openUpdatePasswordModal(acc.id);
           }}
           onUpdateStatus={(acc) => {
-            message.info(tPage("updateStatusNotAvailable"));
+            openUpdateStatusModal(acc.id);
           }}
-          accountPermissions={
-            (account?.data.role as AccountRole).permissions ?? []
-          }
-          accountLevel={(account?.data.role as AccountRole).level ?? 0}
+          accountRoles={accountRoles.accountRoles}
         />
       )}
 

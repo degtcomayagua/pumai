@@ -6,15 +6,10 @@ import {
   FaTrashRestore,
   FaEllipsisH,
 } from "react-icons/fa";
-
-interface ListAccountRole {
-  _id: string;
-  name: string;
-  level: number;
-  totalPermissions: number;
-  createdAt: Date;
-  deleted: boolean;
-}
+import { ListAccountRole } from "..";
+import { useSelector } from "react-redux";
+import { RootState } from "client/src/store";
+import { hasPermissions } from "client/src/utils/permissions";
 
 type AccountRolesTableProps = {
   accountRoles: { accountRoles: ListAccountRole[]; totalAccountRoles: number };
@@ -24,7 +19,6 @@ type AccountRolesTableProps = {
     loading: boolean;
   };
   fetchAccountRoles: (params: { count: number; page: number }) => void;
-  accountPermissions: string[]; // current user permissions
   onUpdate: (account: ListAccountRole) => void;
   onDelete: (account: ListAccountRole) => void;
   onRestore: (account: ListAccountRole) => void;
@@ -34,7 +28,6 @@ export function AccountRolesTable({
   accountRoles,
   accountRolesListState,
   fetchAccountRoles,
-  accountPermissions,
   onUpdate,
   onDelete,
   onRestore,
@@ -42,6 +35,9 @@ export function AccountRolesTable({
   const { t } = useTranslation(["features"], {
     keyPrefix: "account-roles.components.table",
   });
+  const { account } = useSelector((state: RootState) => state.auth);
+  const accountLevel = account?.data.role.level || 0;
+  const accountPermissions = account?.data.role.permissions || [];
 
   return (
     <div className="mt-4">
@@ -84,43 +80,49 @@ export function AccountRolesTable({
             fixed: "right",
             render: (_: any, record: ListAccountRole) => {
               const canUpdate =
-                accountPermissions.includes("*") ||
-                accountPermissions.includes("account-roles:update");
+                hasPermissions(accountPermissions, [
+                  "*",
+                  "account-roles:update",
+                ]) && record.level !== -1;
               const canDelete =
-                accountPermissions.includes("*") ||
-                accountPermissions.includes("account-roles:delete");
+                hasPermissions(accountPermissions, [
+                  "*",
+                  "account-roles:delete",
+                ]) && record.level !== -1;
               const canRestore =
-                accountPermissions.includes("*") ||
-                accountPermissions.includes("account-roles:restore");
+                hasPermissions(accountPermissions, [
+                  "*",
+                  "account-roles:restore",
+                ]) && record.level !== -1;
 
               const menuItems = !record.deleted
                 ? [
-                    {
-                      key: "update",
-                      label: t("actionButtons.update"),
-                      icon: <FaPencilAlt />,
-                      disabled: !canUpdate,
-                      onClick: () => onUpdate(record),
-                    },
-                    {
-                      key: "delete",
-                      label: t("actionButtons.delete"),
-                      danger: true,
-                      icon: <FaTrash />,
-                      disabled: !canDelete,
-                      onClick: () => onDelete(record),
-                    },
-                  ]
+                  {
+                    key: "update",
+                    label: t("actionButtons.update"),
+                    icon: <FaPencilAlt />,
+                    disabled: !canUpdate,
+                    onClick: () => onUpdate(record),
+                  },
+                  {
+                    key: "delete",
+                    label: t("actionButtons.delete"),
+                    danger: true,
+                    icon: <FaTrash />,
+                    disabled: !canDelete,
+                    onClick: () => onDelete(record),
+                  },
+                ]
                 : [
-                    {
-                      key: "restore",
-                      label: t("actionButtons.restore"),
-                      icon: <FaTrashRestore />,
-                      disabled: !canRestore || !record.deleted,
-                      className: record.deleted ? "hidden" : "",
-                      onClick: () => onRestore(record),
-                    },
-                  ];
+                  {
+                    key: "restore",
+                    label: t("actionButtons.restore"),
+                    icon: <FaTrashRestore />,
+                    disabled: !canRestore || !record.deleted,
+                    className: record.deleted ? "hidden" : "",
+                    onClick: () => onRestore(record),
+                  },
+                ];
 
               return (
                 <Space>

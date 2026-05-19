@@ -102,6 +102,36 @@ export const categoriesApi = {
       return ApiUtils.handleAxiosError(error);
     }
   },
+
+  async updateStatus(
+    data: AccountsAPITypes.UpdateStatusRequestBody,
+  ): Promise<AccountsAPITypes.UpdateStatusResponseData> {
+    try {
+      const response =
+        await axiosClient.post<AccountsAPITypes.UpdateStatusResponseData>(
+          "/update-status",
+          data,
+        );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
+
+  async updatePassword(
+    data: AccountsAPITypes.UpdatePasswordRequestBody,
+  ): Promise<AccountsAPITypes.UpdatePasswordResponseData> {
+    try {
+      const response =
+        await axiosClient.post<AccountsAPITypes.UpdatePasswordResponseData>(
+          "/update-password",
+          data,
+        );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
 };
 
 export default categoriesApi;
