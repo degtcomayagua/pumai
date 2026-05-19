@@ -8,12 +8,18 @@ export type GenerateRequestBody = z.infer<typeof generateSchema>;
 export interface GenerateResponseData {
   status: ResponseStatus;
   result?: string;
+  workflowSessionId?: string;
+  workflow?: string;
+  currentStep?: string;
 }
 
 export type StreamRequestBody = GenerateRequestBody;
 export interface StreamResponseData {
   status: ResponseStatus;
   result?: string;
+  workflowSessionId?: string;
+  workflow?: string;
+  currentStep?: string;
 }
 export type GenerateStreamOptions = {
   onChunk?: (chunk: StreamChunk, fullText: string) => void;

@@ -2,15 +2,6 @@ networks:
   pumai-net:
 
 services:
-  mongo:
-    image: mongo:latest
-    container_name: pumai-db-legacy
-    volumes:
-      - mongo-data:/data/db
-    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
-    restart: unless-stopped
-    networks:
-      - pumai-net
 
   mariadb: # Added MariaDB service
     image: mariadb:latest
@@ -28,37 +19,14 @@ services:
     networks:
       - pumai-net
 
-  mongoinit:
-    image: mongo:latest
-    depends_on:
-      - mongo
-    entrypoint: ["bash", "-c"]
-    command: >
-      "
-      echo 'Waiting for MongoDB...' &&
-      until mongosh --host mongo --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do
-      sleep 1;
-      done &&
-      mongosh --host mongo --eval '
-      rs.initiate({
-        _id: \"rs0\",
-        members: [{ _id: 0, host: \"mongo:27017\" }]
-      });
-      '
-      "
-    restart: "no"
-    networks:
-      - pumai-net
-
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: pumai-app
     depends_on:
-      - mongoinit
+      - mariadb 
       - qdrant
-      - mongo
       - redis
     environment:
       - NODE_ENV=production
@@ -75,7 +43,7 @@ services:
     image: qdrant/qdrant:latest
     container_name: pumai-qdrant
     depends_on:
-      - mongo
+      - mariadb 
     volumes:
       - qdrant-data:/data
     restart: unless-stopped
@@ -96,7 +64,6 @@ services:
       - pumai-net
 
 volumes:
-  mongo-data:
   qdrant-data:
   redis-data:
   mariadb-data:

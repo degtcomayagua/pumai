@@ -1,0 +1,290 @@
+{
+  "name": "UNAH Dynamic Workflow Example",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "unah-dynamic-workflow",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 320],
+      "webhookId": "unah-dynamic-workflow-example"
+    },
+    {
+      "parameters": {
+        "value1": "={{ $json.body.intent }}",
+        "rules": [
+          {
+            "operation": "equal",
+            "value2": "get-info"
+          },
+          {
+            "operation": "equal",
+            "value2": "execute-step"
+          }
+        ]
+      },
+      "id": "intentRouter",
+      "name": "Intent Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [520, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { name: 'UNAH Dynamic Workflow Example', steps: [ { name: 'step1', messages: [ { type: 'system', content: 'Eres un asistente determinista de la UNAH.' }, { type: 'text', content: 'Escribe guia, estado o salir.' } ], inputs: [ { name: 'prompt', type: 'text', required: true, description: 'Mensaje libre del usuario' } ], options: { guide: true, status: true, finish: true }, nextStep: 'step2' }, { name: 'step2', messages: [ { type: 'text', content: 'Confirma tu elección con un si o no.' } ], inputs: [ { name: 'prompt', type: 'text', required: true, description: 'Respuesta confirmatoria del usuario' } ], options: { confirm: true, retry: true }, nextStep: 'step3' }, { name: 'step3', messages: [ { type: 'image', content: 'https://placehold.co/900x500/png?text=UNAH+Workflow' }, { type: 'url', content: 'https://unah.edu.hn/' }, { type: 'text', content: 'La ruta fue completada.' } ], inputs: [], options: { done: true }, nextStep: null } ] } }}"
+      },
+      "id": "getInfoResponse",
+      "name": "Get Info Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [780, 160]
+    },
+    {
+      "parameters": {
+        "value1": "={{ $json.body.step }}",
+        "rules": [
+          {
+            "operation": "equal",
+            "value2": "step1"
+          },
+          {
+            "operation": "equal",
+            "value2": "step2"
+          },
+          {
+            "operation": "equal",
+            "value2": "step3"
+          }
+        ]
+      },
+      "id": "stepRouter",
+      "name": "Step Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [780, 320]
+    },
+    {
+      "parameters": {
+        "value1": "={{ ($json.body.data.prompt || '').toLowerCase() }}",
+        "rules": [
+          {
+            "operation": "contains",
+            "value2": "guia"
+          },
+          {
+            "operation": "contains",
+            "value2": "estado"
+          },
+          {
+            "operation": "contains",
+            "value2": "salir"
+          }
+        ]
+      },
+      "id": "step1ChoiceRouter",
+      "name": "Step 1 Choice Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [1040, 260]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { step: 'step1', nextStep: 'step2', reply: { title: 'Ruta de guia', content: 'Tomaste la ruta de guia. Continúa con el siguiente paso.' }, data: { route: 'guide' } } }}"
+      },
+      "id": "step1GuideResponse",
+      "name": "Step 1 Guide Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1300, 160]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { step: 'step1', nextStep: 'step2', reply: { title: 'Ruta de estado', content: 'Tomaste la ruta de estado. Continúa con el siguiente paso.' }, data: { route: 'status' } } }}"
+      },
+      "id": "step1StatusResponse",
+      "name": "Step 1 Status Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1300, 260]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { step: 'step1', nextStep: null, reply: { title: 'Flujo finalizado', content: 'Entendido. Cerrando el flujo.' }, data: { route: 'finish' } } }}"
+      },
+      "id": "step1FinishResponse",
+      "name": "Step 1 Finish Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1300, 360]
+    },
+    {
+      "parameters": {
+        "value1": "={{ ($json.body.data.prompt || '').toLowerCase() }}",
+        "rules": [
+          {
+            "operation": "contains",
+            "value2": "si"
+          },
+          {
+            "operation": "contains",
+            "value2": "no"
+          }
+        ]
+      },
+      "id": "step2DecisionRouter",
+      "name": "Step 2 Decision Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [1040, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { step: 'step2', nextStep: 'step3', reply: { title: 'Confirmado', content: 'Perfecto, avanzamos al paso final.' }, data: { confirmed: true } } }}"
+      },
+      "id": "step2YesResponse",
+      "name": "Step 2 Yes Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1300, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { step: 'step2', nextStep: 'step2', reply: { title: 'Reintenta', content: 'Escribe si para continuar o no para repetir el paso.' }, data: { confirmed: false } } }}"
+      },
+      "id": "step2NoResponse",
+      "name": "Step 2 No Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1300, 520]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { step: 'step3', nextStep: null, reply: { title: 'Flujo terminado', content: 'Tu solicitud quedó resuelta.' }, data: { done: true } } }}"
+      },
+      "id": "step3Response",
+      "name": "Step 3 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 580]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Intent Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Router": {
+      "main": [
+        [
+          {
+            "node": "Get Info Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step Router": {
+      "main": [
+        [
+          {
+            "node": "Step 1 Choice Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 2 Decision Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 3 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1 Choice Router": {
+      "main": [
+        [
+          {
+            "node": "Step 1 Guide Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 1 Status Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 1 Finish Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 Decision Router": {
+      "main": [
+        [
+          {
+            "node": "Step 2 Yes Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 2 No Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "versionId": "example-2"
+}

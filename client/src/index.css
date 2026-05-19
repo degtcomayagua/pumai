@@ -2,3 +2,80 @@
 @config "../tailwind.config.js";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --unah-primary: #1e3976;
+  --unah-bg-base: #0f1115;
+  --unah-bg-layout: #0f1115;
+  --unah-bg-container: #16181d;
+  --unah-bg-elevated: #1d2026;
+  --unah-bg-spotlight: #262a33;
+
+  --unah-text: #e6e9f0;
+  --unah-text-secondary: #b8c1d9;
+  --unah-text-muted: #8f98ad;
+
+  --unah-border: #262a33;
+
+  --unah-success: #366533;
+  --unah-warning: #f0b92d;
+  --unah-error: #8a1518;
+  --unah-info: #5facc5;
+
+  --scrollbar-track: #16181d;
+  --scrollbar-thumb: #1e3976;
+  --scrollbar-thumb-hover: #274892;
+  --scrollbar-corner: #16181d;
+}
+
+html {
+  background-color: var(--unah-bg-base);
+  color: var(--unah-text);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+body {
+  background-color: var(--unah-bg-base);
+  color: var(--unah-text);
+}
+
+* {
+  border-color: var(--unah-border);
+}
+
+::selection {
+  background: rgba(30, 57, 118, 0.45);
+  color: #ffffff;
+}
+
+/* WebKit scrollbar */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
+/* Optional: nicer app chrome */
+#root {
+  min-height: 100vh;
+  background: var(--unah-bg-layout);
+  color: var(--unah-text);
+}

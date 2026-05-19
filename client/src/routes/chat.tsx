@@ -1,10 +1,12 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Button, Input, Spin, message as antdMessage } from "antd";
-import { FaPaperPlane } from "react-icons/fa";
+import { Button, Input, Spin, message as antdMessage, Modal, Tabs, List, Empty, Skeleton } from "antd";
+import { FaPaperPlane, FaPlus } from "react-icons/fa";
 
 import AIFeature, { ChatMessage } from "../features/ai";
 import GeneralLayout from "../layouts/User";
+import WorkflowsFeature from "../features/workflows";
+import MCPServersFeature from "../features/mcp-servers";
 
 import { useTranslation } from "react-i18next";
 
@@ -134,6 +136,15 @@ function Page() {
   );
 
   const [currentWorkflowSessionId, setCurrentWorkflowSessionId] = React.useState<string | null>(null);
+  const [selectedWorkflows, setSelectedWorkflows] = React.useState<string[]>([]);
+  const [selectedMCPServers, setSelectedMCPServers] = React.useState<string[]>([]);
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = React.useState(false);
+
+  // Workflows hook
+  const { workflows, fetchWorkflows, workflowsListState } = WorkflowsFeature.hooks.useWorkflowsList({});
+
+  // MCP Servers hook
+  const { mcpServers, fetchMCPServers, mcpServersListState } = MCPServersFeature.hooks.useMCPServerList({});
 
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
@@ -148,6 +159,14 @@ function Page() {
   const [input, setInput] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch workflows and MCP servers when modal opens
+  React.useEffect(() => {
+    if (isSelectionModalOpen) {
+      fetchWorkflows({});
+      fetchMCPServers({});
+    }
+  }, [isSelectionModalOpen]);
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -183,15 +202,15 @@ function Page() {
           deliveryModes: ["onsite", "online", "hybrid"],
           category: undefined,
           campuses: ["COMAYAGUA"],
-          mcpServers: [
-            // {
-            //   name: "Calendario Académico",
-            //   url: "https://n8n.asterki.xyz/mcp/a593f38e-a11d-4f90-89a6-6c10e640ff16",
-            //   protocol: "streamable-http",
-            //   enabled: true,
-
-            // }
-          ]
+          mcpServers: selectedMCPServers
+            .map((serverId) => mcpServers.mcpServers.find((s) => s.id === serverId))
+            .filter(Boolean)
+            .map((server) => ({
+              name: server!.name,
+              url: server!.url,
+              protocol: "streamable-http" as const,
+              enabled: true,
+            })),
         },
         {
           onChunk: (chunk, fullText) => {
@@ -320,6 +339,12 @@ function Page() {
 
         <div className="bottom-0 h-[120px] absolute w-full shrink-0 border-t border-white/10 bg-white/10">
           <div className="md:p-4 p-2 flex items-end md:gap-3 gap-2">
+            <Button
+              icon={<FaPlus />}
+              onClick={() => setIsSelectionModalOpen(true)}
+              className="rounded-full p-2 h-auto"
+              title="Select workflows or MCP servers"
+            />
             <Input.TextArea
               autoSize={{ maxRows: 6 }}
               placeholder={t("input.placeholder")}
@@ -351,6 +376,107 @@ function Page() {
             {t("disclaimer")}
           </p>
         </div>
+
+        {/* Selection Modal */}
+        <Modal
+          title="Select Workflows or MCP Servers"
+          open={isSelectionModalOpen}
+          onCancel={() => setIsSelectionModalOpen(false)}
+          width={700}
+          footer={[
+            <Button key="cancel" onClick={() => setIsSelectionModalOpen(false)}>
+              Cancel
+            </Button>,
+            <Button
+              key="submit"
+              type="primary"
+              onClick={() => setIsSelectionModalOpen(false)}
+            >
+              Done
+            </Button>,
+          ]}
+        >
+          <Tabs
+            items={[
+              {
+                key: "workflows",
+                label: "Workflows",
+                children: (
+                  <div>
+                    {workflowsListState.loading ? (
+                      <Skeleton active paragraph={{ rows: 4 }} />
+                    ) : workflows.workflows.length === 0 ? (
+                      <Empty description="No workflows found" />
+                    ) : (
+                      <List
+                        dataSource={workflows.workflows.filter((w) => w.isActive)}
+                        renderItem={(workflow) => (
+                          <List.Item
+                            key={workflow.id}
+                            onClick={() => {
+                              setSelectedWorkflows((prev) =>
+                                prev.includes(workflow.id)
+                                  ? prev.filter((id) => id !== workflow.id)
+                                  : [...prev, workflow.id]
+                              );
+                            }}
+                            className={`cursor-pointer p-3 rounded border ${selectedWorkflows.includes(workflow.id)
+                                ? "border-blue-500 bg-blue-500/10"
+                                : "border-gray-300 hover:border-gray-400"
+                              }`}
+                          >
+                            <List.Item.Meta
+                              title={workflow.name}
+                              description={`Type: ${workflow.type} | URL: ${workflow.url}`}
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: "mcp-servers",
+                label: "MCP Servers",
+                children: (
+                  <div>
+                    {mcpServersListState.loading ? (
+                      <Skeleton active paragraph={{ rows: 4 }} />
+                    ) : mcpServers.mcpServers.length === 0 ? (
+                      <Empty description="No MCP servers found" />
+                    ) : (
+                      <List
+                        dataSource={mcpServers.mcpServers.filter((s) => s.isActive)}
+                        renderItem={(server) => (
+                          <List.Item
+                            key={server.id}
+                            onClick={() => {
+                              setSelectedMCPServers((prev) =>
+                                prev.includes(server.id)
+                                  ? prev.filter((id) => id !== server.id)
+                                  : [...prev, server.id]
+                              );
+                            }}
+                            className={`cursor-pointer p-3 rounded border ${selectedMCPServers.includes(server.id)
+                                ? "border-blue-500 bg-blue-500/10"
+                                : "border-gray-300 hover:border-gray-400"
+                              }`}
+                          >
+                            <List.Item.Meta
+                              title={server.name}
+                              description={`URL: ${server.url}`}
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </Modal>
       </div>
     </GeneralLayout>
   );
