@@ -1,278 +1,69 @@
-# ============================================================
-#  pumai — production docker-compose
-#  Includes: MariaDB, App, Qdrant, Redis
-#  Backup:   mariadb-backup (mysqldump), file-backup (qdrant + uploads)
-# ============================================================
-
-name: pumai
-
 networks:
   pumai-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/24
 
-# ────────────────────────────────────────────────────────────
-# Shared health-check defaults (anchors)
-x-healthcheck-defaults: &healthcheck-defaults
-  interval: 30s
-  timeout: 10s
-  retries: 5
-  start_period: 30s
-
-# ────────────────────────────────────────────────────────────
 services:
 
-  # ──────────────────────────── DATABASE ────────────────────
-  mariadb:
-    image: mariadb:11
+  mariadb: # Added MariaDB service
+    image: mariadb:latest
     container_name: pumai-mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE:      ${MYSQL_DATABASE}
-      MYSQL_USER:          ${MYSQL_USER}
-      MYSQL_PASSWORD:      ${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=your_root_password
+      - MYSQL_DATABASE=your_database_name
+      - MYSQL_USER=your_user
+      - MYSQL_PASSWORD=your_password
     volumes:
       - mariadb-data:/var/lib/mysql
-      - ./config/mariadb/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
-      - mariadb-backups:/backups          # ← backup target
     ports:
-      - "${MARIADB_PORT:-3306}:3306"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      <<: *healthcheck-defaults
-    networks:
-      pumai-net:
-        ipv4_address: 172.20.0.10
-    logging: &default-logging
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  # ──────────────────────────── MARIADB BACKUP ──────────────
-  mariadb-backup:
-    image: mariadb:11                       # same image = same client tools
-    container_name: pumai-mariadb-backup
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    environment:
-      MYSQL_HOST:          mariadb
-      MYSQL_USER:          root
-      MYSQL_PASSWORD:      ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE:      ${MYSQL_DATABASE}
-      BACKUP_RETENTION:    ${BACKUP_RETENTION:-7}   # days to keep
-    volumes:
-      - mariadb-backups:/backups
-      - ./scripts/mariadb-backup.sh:/usr/local/bin/backup.sh:ro
-    entrypoint: ["sh", "-c"]
-    # Dump every night at 02:00, prune old dumps, then sleep until tomorrow
-    command:
-      - |
-        chmod +x /usr/local/bin/backup.sh
-        while true; do
-          /usr/local/bin/backup.sh
-          # sleep until next 02:00
-          NOW=$(date +%s)
-          NEXT=$(date -d 'tomorrow 02:00' +%s 2>/dev/null || \
-                 date -v+1d -j -f "%H:%M:%S" "02:00:00" +%s)
-          SLEEP=$(( NEXT - NOW ))
-          echo "Next backup in ${SLEEP}s"
-          sleep "${SLEEP}"
-        done
+      - "3306:3306"
     restart: unless-stopped
     networks:
       - pumai-net
-    logging: *default-logging
 
-  # ──────────────────────────── VECTOR DB ───────────────────
-  qdrant:
-    image: qdrant/qdrant:v1.9.7             # pin to a stable version
-    container_name: pumai-qdrant
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    volumes:
-      - qdrant-data:/qdrant/storage
-      - qdrant-backups:/qdrant/snapshots    # ← Qdrant built-in snapshot dir
-      - ./config/qdrant/config.yaml:/qdrant/config/production.yaml:ro
-    ports:
-      - "${QDRANT_PORT:-6333}:6333"         # HTTP  (comment out in prod)
-      - "${QDRANT_GRPC_PORT:-6334}:6334"    # gRPC  (comment out in prod)
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
-      <<: *healthcheck-defaults
-    networks:
-      pumai-net:
-        ipv4_address: 172.20.0.11
-    logging: *default-logging
-
-  # ──────────────────────────── QDRANT BACKUP ───────────────
-  qdrant-backup:
-    image: curlimages/curl:8.7.1
-    container_name: pumai-qdrant-backup
-    depends_on:
-      qdrant:
-        condition: service_healthy
-    environment:
-      QDRANT_HOST:        qdrant
-      QDRANT_PORT:        6333
-      BACKUP_RETENTION:   ${BACKUP_RETENTION:-7}
-    volumes:
-      - qdrant-backups:/snapshots
-      - ./scripts/qdrant-backup.sh:/usr/local/bin/backup.sh:ro
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        while true; do
-          sh /usr/local/bin/backup.sh
-          sleep 86400   # every 24 h
-        done
-    restart: unless-stopped
-    networks:
-      - pumai-net
-    logging: *default-logging
-
-  # ──────────────────────────── CACHE ───────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: pumai-redis
-    command: >
-      redis-server
-      --save 900 1
-      --save 300 10
-      --save 60  10000
-      --appendonly yes
-      --appendfsync everysec
-      --requirepass ${REDIS_PASSWORD}
-      --loglevel notice
-    volumes:
-      - redis-data:/data
-      - redis-backups:/redis-backups        # ← RDB / AOF copies
-    ports:
-      - "${REDIS_PORT:-6379}:6379"          # comment out in prod
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      <<: *healthcheck-defaults
-    networks:
-      pumai-net:
-        ipv4_address: 172.20.0.12
-    logging: *default-logging
-
-  # ──────────────────────────── REDIS BACKUP ────────────────
-  redis-backup:
-    image: redis:7-alpine
-    container_name: pumai-redis-backup
-    depends_on:
-      redis:
-        condition: service_healthy
-    environment:
-      REDIS_HOST:         redis
-      REDIS_PORT:         6379
-      REDIS_PASSWORD:     ${REDIS_PASSWORD}
-      BACKUP_RETENTION:   ${BACKUP_RETENTION:-7}
-    volumes:
-      - redis-data:/data:ro                 # source (read-only)
-      - redis-backups:/redis-backups
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        while true; do
-          STAMP=$(date +%Y%m%d_%H%M%S)
-          # BGSAVE then copy the RDB
-          redis-cli -h redis -a "$$REDIS_PASSWORD" BGSAVE
-          sleep 5
-          cp /data/dump.rdb /redis-backups/dump_$$STAMP.rdb
-          # Prune old backups
-          find /redis-backups -name "dump_*.rdb" -mtime +${BACKUP_RETENTION:-7} -delete
-          echo "Redis backup done: dump_$$STAMP.rdb"
-          sleep 86400
-        done
-    restart: unless-stopped
-    networks:
-      - pumai-net
-    logging: *default-logging
-
-  # ──────────────────────────── APPLICATION ─────────────────
   app:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NODE_ENV: production
-    image: pumai-app:${APP_VERSION:-latest}
     container_name: pumai-app
     depends_on:
-      mariadb:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - mariadb 
+      - qdrant
+      - redis
     environment:
-      NODE_ENV:       production
-      APP_VERSION:    ${APP_VERSION:-latest}
-    env_file:
-      - ./server/.env.prod                  # keeps secrets out of compose
+      - NODE_ENV=production
     volumes:
-      - app-uploads:/app/uploads            # user-uploaded files
-      - app-logs:/app/logs
+      - ./server/.env.prod:/app/server/.env.prod
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "3000:3000"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
-      <<: *healthcheck-defaults
-    command: ["sh", "-c", "npm run start"]  # no sleep needed — depends_on: healthy
-    networks:
-      pumai-net:
-        ipv4_address: 172.20.0.20
-    logging: *default-logging
-
-  # ──────────────────────────── APP FILE BACKUP ─────────────
-  app-backup:
-    image: alpine:3.20
-    container_name: pumai-app-backup
-    depends_on:
-      app:
-        condition: service_healthy
-    environment:
-      BACKUP_RETENTION: ${BACKUP_RETENTION:-7}
-    volumes:
-      - app-uploads:/source/uploads:ro
-      - app-logs:/source/logs:ro
-      - app-backups:/backups
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        while true; do
-          STAMP=$(date +%Y%m%d_%H%M%S)
-          tar -czf /backups/app_$$STAMP.tar.gz -C /source uploads logs
-          find /backups -name "app_*.tar.gz" -mtime +${BACKUP_RETENTION:-7} -delete
-          echo "App backup done: app_$$STAMP.tar.gz"
-          sleep 86400
-        done
-    restart: unless-stopped
+    command: ["sh", "-c", "sleep 5 && npm run start"]
     networks:
       - pumai-net
-    logging: *default-logging
 
-# ────────────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: pumai-qdrant
+    depends_on:
+      - mariadb 
+    volumes:
+      - qdrant-data:/data
+    restart: unless-stopped
+    ports: # Just for development, remove in production
+      - "6333:6333"
+    networks:
+      - pumai-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: pumai-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports: # Just for development, remove in production
+      - "6379:6379"
+    networks:
+      - pumai-net
+
 volumes:
-  # ── Live data
-  mariadb-data:
   qdrant-data:
   redis-data:
-  app-uploads:
-  app-logs:
-
-  # ── Backup destinations  (mount these to a NAS / S3 via bind or volume driver)
-  mariadb-backups:
-  qdrant-backups:
-  redis-backups:
-  app-backups:
+  mariadb-data:

@@ -29,12 +29,13 @@ const adapter = new PrismaMariaDb({
 (async () => {
   try {
     await adapter.connect();
-    console.log("[PRISMA] Connected to MariaDB successfully");
     await setupServer();
   } catch (err) {
     console.error("[PRISMA] Connection failed:", (err as Error).message);
     process.exit(1);
   }
+
+  console.log("[PRISMA] Connected to MariaDB successfully");
 })();
 
 const prisma = new PrismaClient({
