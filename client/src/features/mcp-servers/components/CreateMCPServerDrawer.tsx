@@ -113,10 +113,82 @@ export function CreateMCPServerDrawer({
                 label: t("fields.authType.options.none"),
                 value: "none",
               },
+              {
+                label: t("fields.authType.options.basic"),
+                value: "basic",
+              },
+              {
+                label: t("fields.authType.options.bearer"),
+                value: "bearer",
+              },
+              {
+                label: t("fields.authType.options.api_key"),
+                value: "api_key",
+              },
             ]}
           />
         </Form.Item>
 
+        {state.auth.type === "basic" && (
+          <>
+            <Form.Item label={t("fields.authUsername.label")} required>
+              <Input
+                placeholder={t("fields.authUsername.placeholder")}
+                value={state.auth.username}
+                onChange={(e) =>
+                  setState((prev) => ({
+                    ...prev,
+                    auth: { ...prev.auth, username: e.target.value },
+                  }))
+                }
+              />
+            </Form.Item>
+            <Form.Item label={t("fields.authPassword.label")} required>
+              <Input.Password
+                placeholder={t("fields.authPassword.placeholder")}
+                value={state.auth.password}
+                onChange={(e) =>
+                  setState((prev) => ({
+                    ...prev,
+                    auth: { ...prev.auth, password: e.target.value },
+                  }))
+                }
+              />
+            </Form.Item>
+          </>
+        )}
+
+        {state.auth.type === "bearer" && (
+          <Form.Item label={t("fields.authToken.label")} required>
+            <Input
+              placeholder={t("fields.authToken.placeholder")}
+              value={state.auth.token}
+              onChange={(e) =>
+                setState((prev) => ({
+                  ...prev,
+                  auth: { ...prev.auth, token: e.target.value },
+                }))
+              }
+            />
+          </Form.Item>
+        )}
+
+        {state.auth.type === "api_key" && (
+          <>
+            <Form.Item label={t("fields.authApiKey.label")} required>
+              <Input
+                placeholder={t("fields.authApiKey.placeholder")}
+                value={state.auth.key}
+                onChange={(e) =>
+                  setState((prev) => ({
+                    ...prev,
+                    auth: { ...prev.auth, apiKeyValue: e.target.value },
+                  }))
+                }
+              />
+            </Form.Item>
+          </>
+        )}
       </Form>
     </Drawer>
   );

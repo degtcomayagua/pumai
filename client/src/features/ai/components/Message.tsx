@@ -137,7 +137,7 @@ function MessageComponent({
 
   return (
     <div
-      className={`z-100 w-full flex ${isAI ? "justify-start" : "justify-end"
+      className={`z-100 w-full flex ${isAI ? "justify-start" : "justify-end text-white"
         } transition-all duration-300 ${groupedWithPrevious ? "mt-1" : "mt-4"}`}
     >
       <div

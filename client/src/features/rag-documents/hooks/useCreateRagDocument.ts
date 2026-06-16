@@ -19,7 +19,7 @@ export function useCreateRagDocumentModal({
     keyPrefix: "rag-documents.hooks.useCreateModal",
   });
   const { t: tErrorMessages } = useTranslation(["error-messages"]);
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const defaultState: CreateRagDocumentModalState = {
     isOpen: false,
@@ -75,7 +75,13 @@ export function useCreateRagDocumentModal({
     [],
   );
 
-  const closeModal = useCallback(() => setState(defaultState), []);
+  const closeModal = useCallback(() => {
+    modal.confirm({
+      title: t("modals.confirmClose.title"),
+      content: t("modals.confirmClose.content"),
+      onOk: () => setState(defaultState),
+    });
+  }, []);
 
   return {
     state,

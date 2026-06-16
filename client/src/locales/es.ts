@@ -256,6 +256,14 @@ const translation = {
       },
       hooks: {
         useCreateModal: {
+          modals: {
+            confirmClose: {
+              title: "¿Cerrar sin guardar?",
+              content:
+                "¿Está seguro de que desea cerrar el formulario? Se perderán los cambios no guardados.",
+            }
+          },
+
           messages: {
             success: "Documento subido correctamente",
             fileRequired: "El archivo es obligatorio",
@@ -270,6 +278,57 @@ const translation = {
     },
     "mcp-servers": {
       components: {
+        createDrawer: {
+          title: "Crear Nuevo Servidor MCP",
+          fields: {
+            name: {
+              label: "Nombre del Servidor",
+              placeholder: "Ingrese el nombre del servidor MCP",
+            },
+            description: {
+              label: "Descripción",
+              placeholder: "Ingrese una descripción para el servidor MCP",
+            },
+            url: {
+              label: "URL del Servidor",
+              placeholder: "Ingrese la URL del servidor MCP",
+            },
+            protocol: {
+              label: "Protocolo",
+              options: {
+                sse: "SSE (Server-Sent Events)",
+                streamable_http: "HTTP Streamable",
+              }
+            },
+            authType: {
+              label: "Tipo de Autenticación",
+              options: {
+                none: "Ninguna",
+                bearer: "Bearer",
+                api_key: "API Key",
+                basic: "Básica",
+              }
+            },
+            authUsername: {
+              label: "Nombre de Usuario (para autenticación básica)",
+              placeholder: "Ingrese el nombre de usuario para autenticación básica",
+            },
+            authPassword: {
+              label: "Contraseña (para autenticación básica)",
+              placeholder: "Ingrese la contraseña para autenticación básica",
+            },
+            authToken: {
+              label: "Token (para autenticación Bearer)",
+              placeholder: "Ingrese el token para autenticación Bearer",
+            },
+            authApiKey: {
+              label: "Clave API (para autenticación API Key)",
+              placeholder: "Ingrese la clave API para autenticación API Key",
+            },
+
+          }
+        },
+
         table: {
           name: "Nombre",
           url: "URL",
@@ -277,6 +336,10 @@ const translation = {
           type: "Tipo",
           authType: "Tipo de Autenticación",
           createdAt: "Creado El",
+
+          searchByNamePlaceholder: "Buscar por nombre",
+          filterIsActivePlaceholder: "Filtrar por estado",
+
           actions: "Acciones",
           active: "Activo",
           inactive: "Inactivo",

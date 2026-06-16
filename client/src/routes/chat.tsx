@@ -377,7 +377,12 @@ function Page() {
           </p>
         </div>
 
-        <img src="/assets/img/sol-cut.png" className="fixed top-0 right-0 -scale-x-100 h-screen opacity-10" />
+        <div className="fixed top-0 right-0 h-screen overflow-hidden">
+          <img
+            src="/assets/img/sol-cut.png"
+            className="-scale-x-100 h-screen w-auto max-w-none opacity-10"
+          />
+        </div>
 
         {/* Selection Modal */}
         <Modal

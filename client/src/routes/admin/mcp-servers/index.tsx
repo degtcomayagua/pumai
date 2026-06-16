@@ -131,29 +131,6 @@ function RouteComponent() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-2 items-center">
-        <Input.Search
-          type="text"
-          variant="outlined"
-          allowClear
-          onSearch={(query) => {
-            if (!query || query.trim() === "") return;
-            fetchMCPServers({
-              search: {
-                query: query.trim(),
-                searchIn: ["name"],
-              },
-              count: 50,
-              page: 0,
-            });
-          }}
-          loading={mcpServersListState.loading}
-          enterButton={tCommon("search")}
-          placeholder={tPage("searchPlaceholder")}
-        />
-      </div>
-
       {/* Documents List */}
       {account && (
         <MCPServersFeature.components.MCPServersTable

@@ -92,7 +92,10 @@ export function CreateRagDocumentDrawer({
         <Form.Item label={t("fields.contentType")} required>
           <Select
             placeholder={t("fields.selectPlaceholder")}
-            options={[{ label: "Text", value: "text" }]}
+            options={[
+              { label: "Texto", value: "text" },
+              { label: "Documento", value: "document" },
+            ]}
             value="text"
             disabled
             onChange={() => { }}
@@ -232,8 +235,13 @@ export function CreateRagDocumentDrawer({
           />
         </Form.Item>
 
-        <Form.Item label={t("fields.warnings")}>
+        <Form.Item
+          label={t("fields.warnings")}
+          className="space-y-2 gap-2"
+          layout="vertical"
+        >
           <Input
+            className="mb-2"
             placeholder={t("fields.warningsLegal")}
             value={state.warnings?.legal || ""}
             onChange={(e) =>
@@ -244,6 +252,7 @@ export function CreateRagDocumentDrawer({
             }
           />
           <Input
+            className="mb-2"
             placeholder={t("fields.warningsTimeSensitive")}
             value={state.warnings?.timeSensitive || ""}
             onChange={(e) =>

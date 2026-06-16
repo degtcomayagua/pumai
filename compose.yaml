@@ -1,6 +1,3 @@
-networks:
-  pumai-net:
-
 services:
 
   mariadb: # Added MariaDB service
@@ -16,8 +13,6 @@ services:
     ports:
       - "3306:3306"
     restart: unless-stopped
-    networks:
-      - pumai-net
 
   app:
     build:
@@ -36,8 +31,6 @@ services:
       - "3000:3000"
     restart: unless-stopped
     command: ["sh", "-c", "sleep 5 && npm run start"]
-    networks:
-      - pumai-net
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -49,8 +42,6 @@ services:
     restart: unless-stopped
     ports: # Just for development, remove in production
       - "6333:6333"
-    networks:
-      - pumai-net
 
   redis:
     image: redis:7-alpine
@@ -60,8 +51,6 @@ services:
       - redis-data:/data
     ports: # Just for development, remove in production
       - "6379:6379"
-    networks:
-      - pumai-net
 
 volumes:
   qdrant-data:

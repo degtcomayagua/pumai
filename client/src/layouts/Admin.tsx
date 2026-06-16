@@ -302,7 +302,7 @@ export default function PageLayout({ children, selectedPage }: LayoutProps) {
         {/* Main Content */}
         <Layout
           style={{ background: "transparent" }}
-          className={`min-h-screen ${isDark ? "dark" : ""}`}
+          className={`min-h-screen`}
         >
           <div className="p-6 dark:text-white min-h-[calc(100vh-64px)]">
             {account && children}
